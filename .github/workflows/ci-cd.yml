@@ -313,8 +313,10 @@ jobs:
           echo "Health check PASSED"
 
       - name: Rotate old production Docker images
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
         run: |
-          ssh root@${{ secrets.PROD_HOST }} 'bash -s' <<'REMOTE'
+          ssh "root@$PROD_HOST" 'bash -s' <<'REMOTE'
           set -u
 
           skip_rotation() {
