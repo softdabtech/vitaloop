@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Tuple
 
 from app.services.biomarker_reference import BIOMARKER_DATABASE, convert_unit
+from app.services.clinical_engine.units import normalize_unit, unit_matches
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
 
 PROGRESS_OVERVIEW_VERSION = "progress_overview_v1"
@@ -44,7 +45,81 @@ def _canonical_key(name: Any) -> str:
     raw = str(name or "").strip()
     if not raw:
         return ""
-    return to_canonical_name(raw)
+    canonical = to_canonical_name(raw).removeprefix("canonical_")
+    if canonical in BIOMARKER_DATABASE:
+        return canonical
+    matches = [
+        marker_id
+        for marker_id, data in BIOMARKER_DATABASE.items()
+        if to_canonical_name(str(data.get("display_name") or "")) == canonical
+    ]
+    return matches[0] if len(matches) == 1 else canonical
+
+
+def _unit_key(unit: Any) -> str:
+    return "".join(str(unit or "").split()).casefold()
+
+
+def _known_unit(marker_id: str, unit: Any) -> str | None:
+    units = (BIOMARKER_DATABASE.get(marker_id) or {}).get("units") or {}
+    normalized = normalize_unit(str(unit or ""))
+    return next(
+        (name for name in units if unit_matches(normalized, name)),
+        None,
+    )
+
+
+def _unit_safe_points(
+    marker_key: str,
+    points: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], str | None, str | None, str | None]:
+    """Return points that can be compared in one known unit.
+
+    The latest dated point with a known unit establishes the comparison unit.
+    Source values in other units use the existing biomarker conversion table;
+    missing or unsupported units are excluded and surfaced to the response.
+    """
+    ordered_points = sorted(points, key=lambda item: item["date"])
+    biomarker_id = _canonical_key(marker_key)
+    target = next(
+        (
+            _known_unit(biomarker_id, point.get("unit"))
+            for point in reversed(ordered_points)
+            if _known_unit(biomarker_id, point.get("unit"))
+        ),
+        None,
+    )
+    if not target:
+        return [], None, "insufficient_comparable_history", "unverified_unit_conversion"
+
+    target_key = _unit_key(target)
+    comparable: List[Dict[str, Any]] = []
+    unsafe_reason: str | None = None
+
+    for point in ordered_points:
+        source = point.get("unit")
+        source_name = _known_unit(biomarker_id, source)
+        source_key = _unit_key(source_name)
+        if not source_name:
+            unsafe_reason = unsafe_reason or "unverified_unit_conversion"
+            continue
+        if source_key == target_key:
+            comparable.append({**point, "unit": target})
+            continue
+        try:
+            converted = convert_unit(float(point["value"]), biomarker_id, source_name, target)
+        except (KeyError, TypeError, ValueError):
+            converted = None
+        if converted is None:
+            unsafe_reason = unsafe_reason or "incompatible_units"
+            continue
+        comparable.append({**point, "value": round(float(converted), 4), "unit": target})
+
+    if unsafe_reason and len(comparable) < 2:
+        return comparable, target, "insufficient_comparable_history", unsafe_reason
+    if unsafe_reason:
+        return comparable, target, "comparable_with_exclusions", unsafe_reason
+    return comparable, target, "comparable", None
 
 
 def _unit_key(unit: Any) -> str:

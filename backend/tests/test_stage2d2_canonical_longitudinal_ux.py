@@ -166,6 +166,82 @@ def test_unit_safe_progress_converts_supported_units_before_comparison():
     assert change["canonical_unit"] == "g/dL"
 
 
+def test_vitamin_d_canonical_identity_produces_one_comparable_series():
+    rows = [
+        {"id": "u1", "test_date": "2022-06-10", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 22, "unit": "ng/mL", "status": "DEFICIENT"},
+        ]},
+        {"id": "u2", "test_date": "2025-03-22", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 31, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 38, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert marker["canonical_name"] == "vitamin_d"
+    assert [point["value"] for point in marker["history"]] == [22.0, 31.0, 38.0]
+    assert marker["comparison_status"] == "comparable"
+
+
+def test_tsh_shared_unit_normalizer_accepts_uiu_and_miu_per_liter():
+    rows = [
+        {"id": "u1", "test_date": "2023-01-15", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 3.6, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2025-11-30", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 2.7, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 2.3, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert marker["canonical_name"] == "tsh"
+    assert [point["value"] for point in marker["history"]] == [3.6, 2.7, 2.3]
+    assert marker["canonical_unit"] == "mIU/L"
+
+
+def test_hemoglobin_identity_merge_preserves_latest_real_test_date():
+    rows = [
+        {"id": "u1", "test_date": "2026-10-01", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 135, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-10-09", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 89, "unit": "g/L", "status": "DEFICIENT"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 132, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    markers = [
+        marker for marker in overview["all_comparable_markers"]
+        if marker["canonical_name"] == "hemoglobin"
+    ]
+    assert len(markers) == 1
+    marker = markers[0]
+    assert [point["value"] for point in marker["history"]] == [135.0, 89.0, 132.0]
+    assert marker["latest_value"] == 132.0
+    assert marker["latest_date"] == "2026-10-12"
+
+
+def test_same_day_hemoglobin_duplicates_collapse_deterministically():
+    rows = [
+        {"id": "u1", "test_date": "2022-01-04", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 148, "unit": "г/л", "status": "ELEVATED"},
+        ]},
+        {"id": "u2", "test_date": "2022-01-04", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 148, "unit": "г/л", "status": "ELEVATED"},
+        ]},
+        {"id": "u3", "test_date": "2023-08-05", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 118, "unit": "g/L", "status": "DEFICIENT"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert [point["test_date"] for point in marker["history"]] == ["2022-01-04", "2023-08-05"]
+    assert marker["history"][0]["value"] == 148.0
+
 def test_unit_safe_progress_rejects_unsupported_mixed_units_without_trend():
     rows = [
         {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
