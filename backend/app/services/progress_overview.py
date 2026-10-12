@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Tuple
 
-from app.services.biomarker_reference import convert_unit
+from app.services.biomarker_reference import BIOMARKER_DATABASE, convert_unit
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
 
 PROGRESS_OVERVIEW_VERSION = "progress_overview_v1"
@@ -51,19 +51,30 @@ def _unit_key(unit: Any) -> str:
     return "".join(str(unit or "").split()).casefold()
 
 
+def _known_unit(marker_id: str, unit: Any) -> str | None:
+    units = (BIOMARKER_DATABASE.get(marker_id) or {}).get("units") or {}
+    key = _unit_key(unit)
+    return next((name for name in units if _unit_key(name) == key), None)
+
+
 def _unit_safe_points(
     marker_key: str,
     points: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], str | None, str | None, str | None]:
     """Return points that can be compared in one known unit.
 
-    The first dated point with a unit establishes the comparison unit. Source
-    values in other units use the existing biomarker conversion table; missing
-    or unsupported units are excluded and surfaced to the response.
+    The latest dated point with a known unit establishes the comparison unit.
+    Source values in other units use the existing biomarker conversion table;
+    missing or unsupported units are excluded and surfaced to the response.
     """
     ordered_points = sorted(points, key=lambda item: item["date"])
+    biomarker_id = marker_key.removeprefix("canonical_")
     target = next(
-        (point.get("unit") for point in reversed(ordered_points) if _unit_key(point.get("unit"))),
+        (
+            _known_unit(biomarker_id, point.get("unit"))
+            for point in reversed(ordered_points)
+            if _known_unit(biomarker_id, point.get("unit"))
+        ),
         None,
     )
     if not target:
@@ -72,19 +83,19 @@ def _unit_safe_points(
     target_key = _unit_key(target)
     comparable: List[Dict[str, Any]] = []
     unsafe_reason: str | None = None
-    biomarker_id = marker_key.removeprefix("canonical_")
 
     for point in ordered_points:
         source = point.get("unit")
-        source_key = _unit_key(source)
-        if not source_key:
+        source_name = _known_unit(biomarker_id, source)
+        source_key = _unit_key(source_name)
+        if not source_name:
             unsafe_reason = unsafe_reason or "unverified_unit_conversion"
             continue
         if source_key == target_key:
             comparable.append({**point, "unit": target})
             continue
         try:
-            converted = convert_unit(float(point["value"]), biomarker_id, str(source), str(target))
+            converted = convert_unit(float(point["value"]), biomarker_id, source_name, target)
         except (KeyError, TypeError, ValueError):
             converted = None
         if converted is None:
@@ -297,6 +308,14 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
                 "canonical_name": key,
                 "name": _marker_label(marker_points, key),
                 "unit": only.get("unit") if collapsed else canonical_unit,
+                "history": [
+                    {
+                        "test_date": point["date"],
+                        "value": point["value"],
+                        "unit": point.get("unit"),
+                    }
+                    for point in collapsed
+                ],
                 "latest_date": only["date"],
                 "current_status": only.get("status"),
                 "current_status_group": only.get("status_group"),
@@ -339,6 +358,14 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
             "comparison_status": comparison_status,
             "comparison_reason": comparison_reason,
             "canonical_unit": canonical_unit,
+            "history": [
+                {
+                    "test_date": point["date"],
+                    "value": point["value"],
+                    "unit": point.get("unit"),
+                }
+                for point in collapsed
+            ],
         }
         if direction == "stable":
             stable_markers_all.append(item)
