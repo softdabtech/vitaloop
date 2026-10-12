@@ -29,9 +29,9 @@ from app.services.analysis_candidates import _unit_recognized
 logger = logging.getLogger("uvicorn.error")
 
 _COLUMN_MAJOR_HEADER_PATTERNS = {
-    "value": re.compile(r"\b(result|value|значенн|результат)\b", re.IGNORECASE),
-    "unit": re.compile(r"\b(unit|одиниц|единиц)\b", re.IGNORECASE),
-    "reference": re.compile(r"\b(reference|референт|норм)\b", re.IGNORECASE),
+    "value": re.compile(r"(result|value|значенн|результат)", re.IGNORECASE),
+    "unit": re.compile(r"(unit|одиниц|единиц)", re.IGNORECASE),
+    "reference": re.compile(r"(reference|референт|норм)", re.IGNORECASE),
 }
 _COLUMN_MAJOR_NUMBER_RE = re.compile(r"^[<>]?\s*[-+]?\d+(?:[.,]\d+)?$")
 _COLUMN_MAJOR_RANGE_RE = re.compile(
