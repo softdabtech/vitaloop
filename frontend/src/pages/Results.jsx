@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import { addLabPlanItem, listLabPlanItems } from '../api/labPlan.js'
+import { labPlanItemLabel } from '../lib/labPlanStatus.js'
 import FeatureGate from '../components/FeatureGate.jsx'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -1388,7 +1389,12 @@ function TestingPlanSection({
       )}
       {visiblePlan.length ? (
         <div className="space-y-2">
-          {visiblePlan.map((item, index) => (
+          {visiblePlan.map((item, index) => {
+            const savedItem = labPlanItems.find((saved) => (
+              saved.source_report_version_id === sourceReportVersionId
+              && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
+            ))
+            return (
             <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
               <div className="min-w-0">
                 <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: item.marker }, isUk)}</span>
@@ -1402,19 +1408,13 @@ function TestingPlanSection({
                   <button
                     type="button"
                     className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={savingPlanTest === normalizePlanTestName(item.marker) || labPlanItems.some((saved) => (
-                      saved.source_report_version_id === sourceReportVersionId
-                      && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
-                    ))}
+                    disabled={savingPlanTest === normalizePlanTestName(item.marker) || !!savedItem}
                     onClick={() => onAddToLabPlan(item)}
                   >
                     {savingPlanTest === normalizePlanTestName(item.marker)
                       ? copy.savingToLabPlan
-                      : labPlanItems.some((saved) => (
-                        saved.source_report_version_id === sourceReportVersionId
-                        && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
-                      ))
-                        ? copy.inLabPlan
+                      : savedItem
+                        ? labPlanItemLabel(savedItem.status, copy.inLabPlan)
                         : copy.addToLabPlan}
                   </button>
                 )}
@@ -1423,7 +1423,8 @@ function TestingPlanSection({
                 {copy.testingPlanPriority[item.priority] || copy.testingPlanPriority.medium}
               </span>
             </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <p className="text-sm leading-6 text-slate-600">{copy.testingPlanEmpty}</p>
