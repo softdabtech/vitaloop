@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Tuple
 
+from app.services.biomarker_reference import convert_unit
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
 
 PROGRESS_OVERVIEW_VERSION = "progress_overview_v1"
@@ -44,6 +45,58 @@ def _canonical_key(name: Any) -> str:
     if not raw:
         return ""
     return to_canonical_name(raw)
+
+
+def _unit_key(unit: Any) -> str:
+    return "".join(str(unit or "").split()).casefold()
+
+
+def _unit_safe_points(
+    marker_key: str,
+    points: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], str | None, str | None, str | None]:
+    """Return points that can be compared in one known unit.
+
+    The first dated point with a unit establishes the comparison unit. Source
+    values in other units use the existing biomarker conversion table; missing
+    or unsupported units are excluded and surfaced to the response.
+    """
+    ordered_points = sorted(points, key=lambda item: item["date"])
+    target = next(
+        (point.get("unit") for point in reversed(ordered_points) if _unit_key(point.get("unit"))),
+        None,
+    )
+    if not target:
+        return [], None, "insufficient_comparable_history", "unverified_unit_conversion"
+
+    target_key = _unit_key(target)
+    comparable: List[Dict[str, Any]] = []
+    unsafe_reason: str | None = None
+    biomarker_id = marker_key.removeprefix("canonical_")
+
+    for point in ordered_points:
+        source = point.get("unit")
+        source_key = _unit_key(source)
+        if not source_key:
+            unsafe_reason = unsafe_reason or "unverified_unit_conversion"
+            continue
+        if source_key == target_key:
+            comparable.append({**point, "unit": target})
+            continue
+        try:
+            converted = convert_unit(float(point["value"]), biomarker_id, str(source), str(target))
+        except (KeyError, TypeError, ValueError):
+            converted = None
+        if converted is None:
+            unsafe_reason = unsafe_reason or "incompatible_units"
+            continue
+        comparable.append({**point, "value": round(float(converted), 4), "unit": target})
+
+    if unsafe_reason and len(comparable) < 2:
+        return comparable, target, "insufficient_comparable_history", unsafe_reason
+    if unsafe_reason:
+        return comparable, target, "comparable_with_exclusions", unsafe_reason
+    return comparable, target, "comparable", None
 
 
 def _marker_label(rows: Iterable[Dict[str, Any]], fallback: str) -> str:
@@ -194,7 +247,7 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
 
         for marker in biomarkers:
             value = _num(marker.get("value"))
-            key = _canonical_key(marker.get("name"))
+            key = _canonical_key(marker.get("canonical_name") or marker.get("name"))
             if not key or value is None:
                 continue
             group = _status_group(marker.get("status"))
@@ -234,22 +287,27 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
     # the exact same `_same_day_average()` collapse already computed below.
     insufficient_history_markers: List[Dict[str, Any]] = []
     for key, marker_points in points_by_marker.items():
-        collapsed = _same_day_average(marker_points)
+        comparable_points, canonical_unit, comparison_status, comparison_reason = _unit_safe_points(
+            key, marker_points
+        )
+        collapsed = _same_day_average(comparable_points)
         if len(collapsed) < 2:
-            if len(collapsed) == 1:
-                only = collapsed[0]
-                insufficient_history_markers.append(
-                    {
-                        "canonical_name": key,
-                        "name": _marker_label(marker_points, key),
-                        "unit": only.get("unit"),
-                        "latest_value": only["value"],
-                        "latest_date": only["date"],
-                        "current_status": only.get("status"),
-                        "current_status_group": only.get("status_group"),
-                        "status": "insufficient_history",
-                    }
-                )
+            only = collapsed[0] if collapsed else sorted(marker_points, key=lambda item: item["date"])[-1]
+            insufficient = {
+                "canonical_name": key,
+                "name": _marker_label(marker_points, key),
+                "unit": only.get("unit") if collapsed else canonical_unit,
+                "latest_date": only["date"],
+                "current_status": only.get("status"),
+                "current_status_group": only.get("status_group"),
+                "status": "insufficient_history",
+                "comparison_status": comparison_status,
+                "comparison_reason": comparison_reason,
+                "canonical_unit": canonical_unit,
+            }
+            if collapsed:
+                insufficient["latest_value"] = only["value"]
+            insufficient_history_markers.append(insufficient)
             continue
         comparable_markers += 1
         first = collapsed[0]
@@ -278,6 +336,9 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
             "previous_status": previous.get("status"),
             "points": len(collapsed),
             "reliability": "high" if len(collapsed) >= 3 and (span_days or 0) >= 21 else "medium",
+            "comparison_status": comparison_status,
+            "comparison_reason": comparison_reason,
+            "canonical_unit": canonical_unit,
         }
         if direction == "stable":
             stable_markers_all.append(item)

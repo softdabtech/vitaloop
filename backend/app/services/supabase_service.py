@@ -1505,7 +1505,7 @@ async def get_user_progress(user_id: str) -> List[Dict]:
     upload_ids = [row["id"] for row in rows]
     biomarker_rows_resp = await _run_supabase_read(
         lambda: supabase.table("biomarkers")
-        .select("upload_id, name, value, unit, status, ref_low, ref_high")
+        .select("upload_id, name, canonical_name, value, unit, status, ref_low, ref_high")
         .in_("upload_id", upload_ids)
         .eq("user_id", user_id)
         .execute(),
@@ -1520,6 +1520,7 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         grouped.setdefault(upload_id, []).append(
             {
                 "name": biomarker.get("name"),
+                "canonical_name": biomarker.get("canonical_name"),
                 "value": biomarker.get("value"),
                 "unit": biomarker.get("unit"),
                 "status": biomarker.get("status"),

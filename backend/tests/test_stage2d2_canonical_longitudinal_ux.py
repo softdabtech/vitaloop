@@ -149,6 +149,57 @@ def test_d2_6_marker_with_zero_or_one_point_never_appears_in_changes():
     assert "absolute_change" not in overview["insufficient_history_markers"][0]
 
 
+def test_unit_safe_progress_converts_supported_units_before_comparison():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Hemoglobin", "value": 130, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    change = (overview["top_changes"] or overview["stable_markers"])[0]
+    assert change["previous_value"] == 13.0
+    assert change["latest_value"] == 13.5
+    assert change["comparison_status"] == "comparable"
+    assert change["canonical_unit"] == "g/dL"
+
+
+def test_unit_safe_progress_rejects_unsupported_mixed_units_without_trend():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Ferritin", "value": 20, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Ferritin", "value": 2, "unit": "unsupported-unit", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["top_changes"] == []
+    assert overview["stable_markers"] == []
+    item = overview["insufficient_history_markers"][0]
+    assert item["comparison_status"] == "insufficient_comparable_history"
+    assert item["comparison_reason"] == "incompatible_units"
+    assert item["status"] == "insufficient_history"
+
+
+def test_unit_safe_progress_does_not_use_unverified_point_for_history():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Ferritin", "value": 20, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Ferritin", "value": 25, "unit": None, "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["top_changes"] == []
+    assert overview["stable_markers"] == []
+    item = overview["insufficient_history_markers"][0]
+    assert item["comparison_reason"] == "unverified_unit_conversion"
+
+
 # --- D2-3 / D2-8: chronology + upload-history/clinical-progress separation ------
 
 
