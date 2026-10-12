@@ -3,6 +3,7 @@ import base64
 import json
 import logging
 import time
+import re
 import tempfile
 import mimetypes
 from io import BytesIO
@@ -23,8 +24,113 @@ except ImportError:  # pragma: no cover - production dependency, fallback remain
 
 from app.config import settings
 from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
+from app.services.analysis_candidates import _unit_recognized
 
 logger = logging.getLogger("uvicorn.error")
+
+_COLUMN_MAJOR_HEADER_PATTERNS = {
+    "value": re.compile(r"\b(result|value|значенн|результат)\b", re.IGNORECASE),
+    "unit": re.compile(r"\b(unit|одиниц|единиц)\b", re.IGNORECASE),
+    "reference": re.compile(r"\b(reference|референт|норм)\b", re.IGNORECASE),
+}
+_COLUMN_MAJOR_NUMBER_RE = re.compile(r"^[<>]?\s*[-+]?\d+(?:[.,]\d+)?$")
+_COLUMN_MAJOR_RANGE_RE = re.compile(
+    r"^[<>]?\s*[-+]?\d+(?:[.,]\d+)?\s*[-–—]\s*[-+]?\d+(?:[.,]\d+)?$"
+)
+
+
+def _column_major_marker_key(value: str) -> str:
+    from app.services.analysis_candidates import _known_names, _normalize_text
+    from app.services.clinical_engine.biomarker_translator import translate_biomarker_name
+    from app.services.lab_normalization.biomarker_mapping import to_canonical_name
+
+    known_names = _known_names()
+    variants = [re.sub(r"\([^)]*\)", "", value).strip()]
+    variants.extend(re.findall(r"\(([^)]*)\)", value))
+    for variant in variants:
+        translated = translate_biomarker_name(variant)
+        canonical = to_canonical_name(translated)
+        normalized_translated = _normalize_text(translated)
+        if canonical in known_names or normalized_translated in known_names:
+            return canonical or normalized_translated
+    return ""
+
+
+def reconstruct_column_major_biomarkers(document_text: str) -> list[dict[str, Any]]:
+    """Safely reconstruct a column-major lab table emitted by MarkItDown.
+
+    The fallback requires a contiguous known-marker block and three explicitly
+    labelled, cardinality-matched columns. It never pairs values by proximity.
+    """
+    lines = [line.strip() for line in document_text.splitlines() if line.strip()]
+    marker_runs: list[tuple[int, list[str]]] = []
+    current: list[str] = []
+    current_start = 0
+    for index, line in enumerate(lines):
+        key = _column_major_marker_key(line)
+        if key and key not in {"unknown", line.casefold()} and not re.search(r"\d", line):
+            if not current:
+                current_start = index
+            current.append(line)
+        else:
+            if len(current) >= 2:
+                marker_runs.append((current_start, current))
+            current = []
+    if len(current) >= 2:
+        marker_runs.append((current_start, current))
+    if not marker_runs:
+        return []
+
+    marker_start, markers = max(marker_runs, key=lambda item: len(item[1]))
+    if not any(_column_major_marker_key(marker) for marker in markers):
+        return []
+
+    headers: dict[str, int] = {}
+    for index in range(marker_start + len(markers), len(lines)):
+        for kind, pattern in _COLUMN_MAJOR_HEADER_PATTERNS.items():
+            if kind not in headers and pattern.search(lines[index]):
+                headers[kind] = index
+    if set(headers) != {"value", "unit", "reference"}:
+        return []
+    if len(set(headers.values())) != 3:
+        return []
+
+    ordered_headers = sorted(headers.items(), key=lambda item: item[1])
+    columns: dict[str, list[str]] = {}
+    for position, (kind, header_index) in enumerate(ordered_headers):
+        end = ordered_headers[position + 1][1] if position + 1 < len(ordered_headers) else len(lines)
+        values = lines[header_index + 1:end]
+        columns[kind] = values
+
+    values = [value for value in columns["value"] if _COLUMN_MAJOR_NUMBER_RE.fullmatch(value)]
+    units = [unit for unit in columns["unit"] if _unit_recognized(unit)]
+    references = [
+        reference for reference in columns["reference"]
+        if _COLUMN_MAJOR_RANGE_RE.fullmatch(reference)
+    ]
+    if not (
+        len(markers) == len(values)
+        and len(values) == len(units)
+        and len(units) == len(references)
+        and len(markers) > 1
+    ):
+        return []
+
+    reconstructed: list[dict[str, Any]] = []
+    for marker, value, unit, reference in zip(markers, values, units, references):
+        low, high = re.split(r"[-–—]", reference, maxsplit=1)
+        reconstructed.append({
+            "source_name": marker,
+            "name": marker,
+            "value": float(value.replace(",", ".").lstrip("<> ")),
+            "unit": unit,
+            "ref_low": float(low.replace(",", ".").strip("<> ")),
+            "ref_high": float(high.replace(",", ".").strip("<> ")),
+            "reference_range": reference,
+            "_extraction_source": "deterministic_parser_column_major",
+            "_extraction_note": "column-major table reconstructed by marker/value/unit/reference order",
+        })
+    return reconstructed
 
 
 def _is_retryable_api_error(exc: BaseException) -> bool:
@@ -516,6 +622,15 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
                     raise ValueError(f"API returned invalid JSON: {str(e)}")
 
             payload = self._merge_extraction_payloads(payloads)
+            column_major_fallback = False
+            if not payload["biomarkers"]:
+                reconstructed = reconstruct_column_major_biomarkers(extracted_text)
+                if reconstructed:
+                    payload["biomarkers"] = reconstructed
+                    payload["extraction_notes"].append(
+                        "column-major table reconstructed by deterministic marker/value/unit/reference order"
+                    )
+                    column_major_fallback = True
 
             # Validate required fields
             required_fields = ["biomarkers"]
@@ -538,6 +653,8 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
                 if document_parser == "markitdown"
                 else "openai_pdf_text"
             )
+            if column_major_fallback:
+                analysis_method += "_column_major"
             result = self._normalize_response(payload, analysis_method)
             result["analysis_time"] = analysis_time
             result["biomarker_count"] = len(biomarkers)
