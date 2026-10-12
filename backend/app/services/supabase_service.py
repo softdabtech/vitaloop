@@ -2666,6 +2666,88 @@ async def get_report_version_for_user(user_id: str, report_version_id: str) -> O
     return response.data[0] if response.data else None
 
 
+def _normalize_lab_plan_test_name(value: Any) -> str:
+    return " ".join(str(value or "").strip().casefold().split())
+
+
+async def get_lab_plan_items(user_id: str) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return response.data or []
+
+
+async def create_lab_plan_item(
+    *,
+    user_id: str,
+    report_version_id: str,
+    test_name: str,
+) -> Dict[str, Any]:
+    report_version = await get_report_version_for_user(user_id, report_version_id)
+    if not report_version:
+        raise ValueError("Report version not found")
+
+    requested_name = str(test_name or "").strip()
+    requested_key = _normalize_lab_plan_test_name(requested_name)
+    if not requested_key:
+        raise ValueError("Test not found in report")
+
+    input_snapshot = report_version.get("input_snapshot") or {}
+    knowledge_report = report_version.get("knowledge_report") or {}
+    retest_plan = knowledge_report.get("retest_plan") or []
+    next_best_tests = input_snapshot.get("next_best_tests") or {}
+    evidence_gaps = input_snapshot.get("evidence_gaps") or {}
+
+    def matching_item(items: Any, *keys: str) -> Optional[Dict[str, Any]]:
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            candidate = next((item.get(key) for key in keys if item.get(key)), None)
+            if _normalize_lab_plan_test_name(candidate) == requested_key:
+                return item
+        return None
+
+    retest = matching_item(retest_plan, "marker", "test_name", "name")
+    source_item = retest or matching_item(
+        next_best_tests.get("recommended_tests"),
+        "marker",
+        "test_name",
+        "name",
+    )
+    if source_item is None:
+        source_item = matching_item(evidence_gaps.get("gaps"), "missing_marker", "marker", "test_name", "name")
+    if source_item is None:
+        raise ValueError("Test not found in report")
+
+    test_type = "retest" if retest else "new_test"
+    payload = {
+        "user_id": user_id,
+        "source_report_version_id": report_version_id,
+        "test_name": str(source_item.get("marker") or source_item.get("missing_marker") or requested_name).strip(),
+        "normalized_test_name": requested_key,
+        "test_type": test_type,
+        "reason": str(source_item.get("reason") or source_item.get("description") or "Recommended to reduce uncertainty.").strip(),
+        "priority": str(source_item.get("priority") or "medium").strip().lower(),
+        "timing_text": source_item.get("timing"),
+        "status": "planned",
+    }
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .upsert(
+            payload,
+            on_conflict="user_id,source_report_version_id,normalized_test_name,test_type",
+        )
+        .execute()
+    )
+    return (response.data or [payload])[0]
+
+
 async def complete_protocol_action(
     user_id: str,
     action_id: str,
