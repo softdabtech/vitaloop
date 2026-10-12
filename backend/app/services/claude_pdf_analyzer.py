@@ -56,6 +56,11 @@ def _column_major_marker_key(value: str) -> str:
     return ""
 
 
+def _column_major_unit_recognized(value: str) -> bool:
+    normalized = str(value or "").strip().casefold().replace("μ", "µ")
+    return _unit_recognized(value) or normalized == "мкмоль/л"
+
+
 def reconstruct_column_major_biomarkers(document_text: str) -> list[dict[str, Any]]:
     """Safely reconstruct a column-major lab table emitted by MarkItDown.
 
@@ -103,7 +108,7 @@ def reconstruct_column_major_biomarkers(document_text: str) -> list[dict[str, An
         columns[kind] = values
 
     values = [value for value in columns["value"] if _COLUMN_MAJOR_NUMBER_RE.fullmatch(value)]
-    units = [unit for unit in columns["unit"] if _unit_recognized(unit)]
+    units = [unit for unit in columns["unit"] if _column_major_unit_recognized(unit)]
     references = [
         reference for reference in columns["reference"]
         if _COLUMN_MAJOR_RANGE_RE.fullmatch(reference)
