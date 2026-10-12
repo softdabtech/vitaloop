@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 import logging
+from uuid import uuid4
 
 from app.config import settings
 from app.services.affiliate import build_iherb_url
@@ -14,7 +15,7 @@ from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
 from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
-from app.services.next_best_test_engine import build_next_best_tests
+from app.services.next_best_test_engine import attach_report_provenance, build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
 from app.services.hypothesis_engine import build_clinical_hypotheses
 from app.services.clinical_contradictions import build_clinical_contradictions
@@ -887,6 +888,11 @@ async def run_lab_analysis_pipeline(
     generate_ai_protocol: bool = True,
     generate_ai_narrative: bool = True,
 ) -> Dict[str, Any]:
+    report_version_id = (
+        str(uuid4())
+        if persist_report_version and user_id and analysis_id
+        else None
+    )
     # Capture the newest completed interview at analysis-generation time. The
     # detached value below is persisted into this report version and is never
     # reloaded when the frozen report is read later.
@@ -1375,6 +1381,8 @@ async def run_lab_analysis_pipeline(
         evidence_gaps=evidence_gaps,
         patterns=interpreted_report.get("patterns"),
     )
+    if report_version_id:
+        next_best_tests = attach_report_provenance(next_best_tests, report_version_id)
     clinical_story = build_clinical_story(
         interpreted_report=interpreted_report,
         safety_result=safety_result,
@@ -1904,6 +1912,7 @@ async def run_lab_analysis_pipeline(
             report_version = await supabase.save_report_version(
                 user_id=user_id,
                 upload_id=analysis_id,
+                report_version_id=report_version_id,
                 version="report_v1",
                 locale=locale,
                 input_snapshot={
