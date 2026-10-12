@@ -42,7 +42,10 @@ _COLUMN_MAJOR_RANGE_RE = re.compile(
 def _column_major_marker_key(value: str) -> str:
     from app.services.analysis_candidates import _known_names, _normalize_text
     from app.services.clinical_engine.biomarker_translator import translate_biomarker_name
-    from app.services.lab_normalization.biomarker_mapping import to_canonical_name
+    from app.services.lab_normalization.biomarker_mapping import (
+        _CANONICAL_MAP,
+        to_canonical_name,
+    )
 
     known_names = _known_names()
     variants = [re.sub(r"\([^)]*\)", "", value).strip()]
@@ -51,7 +54,11 @@ def _column_major_marker_key(value: str) -> str:
         translated = translate_biomarker_name(variant)
         canonical = to_canonical_name(translated)
         normalized_translated = _normalize_text(translated)
-        if canonical in known_names or normalized_translated in known_names:
+        if (
+            canonical in known_names
+            or normalized_translated in known_names
+            or canonical in _CANONICAL_MAP.values()
+        ):
             return canonical or normalized_translated
     return ""
 
