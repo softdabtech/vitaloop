@@ -56,7 +56,12 @@ from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, reso
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.nutrition_algorithms import NUTRITION_ALGORITHMS_VERSION
 from app.services.knowledge.report import build_knowledge_report
-from app.services.lab_normalization.biomarker_mapping import infer_category, is_metadata_field, to_canonical_name
+from app.services.lab_normalization.biomarker_mapping import (
+    infer_category,
+    is_metadata_field,
+    to_canonical_name,
+    to_known_canonical_name,
+)
 # Clinical engine — единая точка для normalize/prioritize/risk_flags
 from app.services.clinical_engine.normalizer import normalize_biomarkers as _engine_normalize_biomarkers
 from app.services.clinical_engine import prioritize_biomarkers as _engine_prioritize_biomarkers
@@ -1039,6 +1044,21 @@ async def run_lab_analysis_pipeline(
         user_profile=user_profile,
     )
     knowledge_report = _strip_placeholder_source_urls(knowledge_report)
+    knowledge_report = {
+        **knowledge_report,
+        "retest_plan": [
+            {
+                **item,
+                **(
+                    {"canonical_marker": to_known_canonical_name(item.get("marker") or "")}
+                    if isinstance(item, dict) and to_known_canonical_name(item.get("marker") or "")
+                    else {}
+                ),
+            }
+            for item in knowledge_report.get("retest_plan") or []
+            if isinstance(item, dict)
+        ],
+    }
     knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
     historical_biomarkers = await _load_historical_biomarkers(user_id)

@@ -11,7 +11,10 @@ import httpx
 from supabase import create_client, Client
 from app.config import settings
 from app.services.lab_date_extraction import choose_measurement_date
-from app.services.lab_normalization.biomarker_mapping import is_metadata_field
+from app.services.lab_normalization.biomarker_mapping import (
+    is_metadata_field,
+    to_known_canonical_name,
+)
 from app.services.safety.symptom_report_contract import normalize_report_level
 from app.utils.retry import (
     with_retry,
@@ -2772,6 +2775,11 @@ def _normalize_lab_plan_test_name(value: Any) -> str:
     return " ".join(str(value or "").strip().casefold().split())
 
 
+def _canonical_lab_plan_test_name(value: Any) -> str:
+    normalized = _normalize_lab_plan_test_name(value)
+    return to_known_canonical_name(normalized) or normalized
+
+
 async def get_lab_plan_items(user_id: str) -> List[Dict[str, Any]]:
     supabase = _get_supabase()
     response = await _run(
@@ -2781,7 +2789,36 @@ async def get_lab_plan_items(user_id: str) -> List[Dict[str, Any]]:
         .order("created_at", desc=True)
         .execute()
     )
-    return response.data or []
+    return [
+        {
+            **item,
+            "canonical_normalized_test_name": _canonical_lab_plan_test_name(
+                item.get("normalized_test_name") or item.get("test_name")
+            ),
+        }
+        for item in response.data or []
+    ]
+
+
+async def _find_existing_lab_plan_item(
+    *,
+    user_id: str,
+    report_version_id: str,
+    canonical_test_name: str,
+) -> Optional[Dict[str, Any]]:
+    response = await _run(
+        lambda: _get_supabase()
+        .table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("source_report_version_id", report_version_id)
+        .execute()
+    )
+    for item in response.data or []:
+        existing_name = item.get("normalized_test_name") or item.get("test_name")
+        if _canonical_lab_plan_test_name(existing_name) == canonical_test_name:
+            return item
+    return None
 
 
 async def create_lab_plan_item(
@@ -2796,7 +2833,7 @@ async def create_lab_plan_item(
         raise ValueError("Report version not found")
 
     requested_name = str(test_name or "").strip()
-    requested_key = _normalize_lab_plan_test_name(requested_name)
+    requested_key = _canonical_lab_plan_test_name(requested_name)
     if not requested_key:
         raise ValueError("Test not found in report")
 
@@ -2811,7 +2848,7 @@ async def create_lab_plan_item(
             if not isinstance(item, dict):
                 continue
             candidate = next((item.get(key) for key in keys if item.get(key)), None)
-            if _normalize_lab_plan_test_name(candidate) == requested_key:
+            if _canonical_lab_plan_test_name(candidate) == requested_key:
                 return item
         return None
 
@@ -2832,7 +2869,7 @@ async def create_lab_plan_item(
         if source_item.get("source_report_version_id") != report_version_id:
             raise ValueError("Recommendation does not belong to report")
         source_marker = source_item.get("marker") or source_item.get("test_name") or ""
-        if _normalize_lab_plan_test_name(source_marker) != requested_key:
+        if _canonical_lab_plan_test_name(source_marker) != requested_key:
             raise ValueError("Recommendation does not match test")
 
     retest = matching_item(retest_plan, "marker", "test_name", "name")
@@ -2848,7 +2885,11 @@ async def create_lab_plan_item(
     if source_item is None:
         raise ValueError("Test not found in report")
 
-    test_type = "retest" if retest else "new_test"
+    test_type = (
+        "retest"
+        if (source_item.get("source") == "pattern_retest_plan" or (source_item is retest))
+        else "new_test"
+    )
     payload = {
         "user_id": user_id,
         "source_report_version_id": report_version_id,
@@ -2862,6 +2903,22 @@ async def create_lab_plan_item(
         "status": "planned",
     }
     supabase = _get_supabase()
+    existing = await _find_existing_lab_plan_item(
+        user_id=user_id,
+        report_version_id=report_version_id,
+        canonical_test_name=requested_key,
+    )
+    if existing:
+        if source_recommendation_id and not existing.get("source_recommendation_id"):
+            linked = await _run(
+                lambda: supabase.table("lab_plan_items")
+                .update({"source_recommendation_id": source_recommendation_id})
+                .eq("id", existing["id"])
+                .execute()
+            )
+            return (linked.data or [existing])[0]
+        return existing
+
     response = await _run(
         lambda: supabase.table("lab_plan_items")
         .upsert(

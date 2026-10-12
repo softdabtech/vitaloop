@@ -1,4 +1,5 @@
 from app.services.action_identity import assign_action_ids
+from app.services.lab_normalization.biomarker_mapping import to_known_canonical_name
 from app.services.next_best_test_engine import attach_report_provenance, build_next_best_tests
 from app.services import supabase_service
 
@@ -41,6 +42,7 @@ def test_next_test_recommendation_identity_is_deterministic_and_report_scoped():
         "v1:next-test:evidence_gaps:hemoglobin:"
     )
     assert "action_id" not in first_item
+    assert first_item["canonical_marker"] == "hemoglobin"
 
     report_one = attach_report_provenance(first, "report-1")
     report_two = attach_report_provenance(first, "report-2")
@@ -50,6 +52,13 @@ def test_next_test_recommendation_identity_is_deterministic_and_report_scoped():
         report_one["recommended_tests"][0]["recommendation_id"]
         == report_two["recommended_tests"][0]["recommendation_id"]
     )
+
+
+def test_existing_biomarker_mapping_resolves_mch_aliases_without_collapsing_unknowns():
+    assert to_known_canonical_name("mch") == "mch"
+    assert to_known_canonical_name("Mean Corpuscular Hemoglobin") == "mch"
+    assert to_known_canonical_name("unknown marker one") is None
+    assert to_known_canonical_name("unknown marker two") is None
 
 
 class _CompletionQuery:
