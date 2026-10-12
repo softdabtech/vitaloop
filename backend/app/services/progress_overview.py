@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any, Dict, Iterable, List, Tuple
 
 from app.services.biomarker_reference import BIOMARKER_DATABASE, convert_unit
+from app.services.clinical_engine.units import normalize_unit, unit_matches
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
 
 PROGRESS_OVERVIEW_VERSION = "progress_overview_v1"
@@ -44,7 +45,15 @@ def _canonical_key(name: Any) -> str:
     raw = str(name or "").strip()
     if not raw:
         return ""
-    return to_canonical_name(raw)
+    canonical = to_canonical_name(raw).removeprefix("canonical_")
+    if canonical in BIOMARKER_DATABASE:
+        return canonical
+    matches = [
+        marker_id
+        for marker_id, data in BIOMARKER_DATABASE.items()
+        if to_canonical_name(str(data.get("display_name") or "")) == canonical
+    ]
+    return matches[0] if len(matches) == 1 else canonical
 
 
 def _unit_key(unit: Any) -> str:
@@ -53,8 +62,11 @@ def _unit_key(unit: Any) -> str:
 
 def _known_unit(marker_id: str, unit: Any) -> str | None:
     units = (BIOMARKER_DATABASE.get(marker_id) or {}).get("units") or {}
-    key = _unit_key(unit)
-    return next((name for name in units if _unit_key(name) == key), None)
+    normalized = normalize_unit(str(unit or ""))
+    return next(
+        (name for name in units if unit_matches(normalized, name)),
+        None,
+    )
 
 
 def _unit_safe_points(
@@ -68,7 +80,7 @@ def _unit_safe_points(
     missing or unsupported units are excluded and surfaced to the response.
     """
     ordered_points = sorted(points, key=lambda item: item["date"])
-    biomarker_id = marker_key.removeprefix("canonical_")
+    biomarker_id = _canonical_key(marker_key)
     target = next(
         (
             _known_unit(biomarker_id, point.get("unit"))
