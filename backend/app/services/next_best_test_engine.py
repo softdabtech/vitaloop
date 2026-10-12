@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from app.services.action_identity import assign_action_ids
+from app.services.lab_normalization.biomarker_mapping import to_known_canonical_name
 
 
 NEXT_BEST_TEST_ENGINE_VERSION = "next_best_test_engine_v1"
@@ -120,6 +121,9 @@ def build_next_best_tests(
         recommendation = dict(item)
         recommendation["recommendation_id"] = recommendation.pop("action_id")
         recommendation.pop("key", None)
+        canonical_marker = to_known_canonical_name(recommendation.get("marker") or "")
+        if canonical_marker:
+            recommendation["canonical_marker"] = canonical_marker
         ranked_with_ids.append(recommendation)
 
     return {
@@ -143,6 +147,11 @@ def attach_report_provenance(
             {
                 **item,
                 "source_report_version_id": report_version_id,
+                **(
+                    {"canonical_marker": to_known_canonical_name(item.get("marker") or "")}
+                    if to_known_canonical_name(item.get("marker") or "")
+                    else {}
+                ),
             }
             for item in next_best_tests.get("recommended_tests") or []
             if isinstance(item, dict)

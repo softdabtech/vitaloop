@@ -229,7 +229,7 @@ _NEUTRAL_NAME_QUALIFIERS = {
 }
 
 
-def to_canonical_name(display_name: str) -> str:
+def to_known_canonical_name(display_name: str) -> Optional[str]:
     key = (display_name or "").strip().lower()
     if key in _CANONICAL_MAP:
         return _CANONICAL_MAP[key]
@@ -250,6 +250,15 @@ def to_canonical_name(display_name: str) -> str:
         if stem in _CANONICAL_MAP and all(item in _NEUTRAL_NAME_QUALIFIERS for item in qualifiers):
             return _CANONICAL_MAP[stem]
 
+    return None
+
+
+def to_canonical_name(display_name: str) -> str:
+    known = to_known_canonical_name(display_name)
+    if known:
+        return known
+
+    key = (display_name or "").strip().lower()
     normalized = key.replace("%", "pct").replace("/", "_")
     normalized = "_".join(part for part in normalized.replace("-", " ").split() if part)
     return normalized or "unknown_biomarker"

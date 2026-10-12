@@ -1244,13 +1244,18 @@ function normalizePlanTestName(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+function canonicalPlanTestName(item) {
+  return normalizePlanTestName(item?.canonical_marker || item?.marker)
+}
+
 function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
   const byMarker = new Map()
   for (const item of Array.isArray(nextBestTests?.recommended_tests) ? nextBestTests.recommended_tests : []) {
     const marker = String(item?.marker || '').trim()
     if (!marker) continue
-    byMarker.set(marker.toLowerCase(), {
+    byMarker.set(canonicalPlanTestName(item), {
       marker,
+      canonical_marker: item?.canonical_marker,
       domain: item?.domain,
       priority: String(item?.priority || 'medium').toLowerCase(),
       reason: item?.reason,
@@ -1262,7 +1267,7 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
   for (const item of Array.isArray(retestPlan) ? retestPlan : []) {
     const marker = String(item?.marker || '').trim()
     if (!marker) continue
-    const key = marker.toLowerCase()
+    const key = canonicalPlanTestName(item)
     const existing = byMarker.get(key)
     if (existing) {
       existing.timing = item?.timing || existing.timing
@@ -1270,6 +1275,7 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
     } else {
       byMarker.set(key, {
         marker,
+        canonical_marker: item?.canonical_marker,
         domain: null,
         priority: String(item?.priority || 'medium').toLowerCase(),
         reason: item?.reason,
@@ -1282,10 +1288,11 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
   for (const item of Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []) {
     const marker = String(item?.missing_marker || item?.marker || item?.test_name || '').trim()
     if (!marker) continue
-    const key = marker.toLowerCase()
+    const key = canonicalPlanTestName(item)
     if (!byMarker.has(key)) {
       byMarker.set(key, {
         marker,
+        canonical_marker: item?.canonical_marker,
         domain: item?.domain,
         priority: String(item?.priority || 'medium').toLowerCase(),
         reason: item?.reason || item?.suggested_next_step,
@@ -1398,7 +1405,10 @@ function TestingPlanSection({
           {visiblePlan.map((item, index) => {
             const savedItem = labPlanItems.find((saved) => (
               saved.source_report_version_id === sourceReportVersionId
-              && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
+              && canonicalPlanTestName({
+                canonical_marker: saved.canonical_normalized_test_name || saved.normalized_test_name,
+                marker: item.marker,
+              }) === canonicalPlanTestName(item)
             ))
             return (
             <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
