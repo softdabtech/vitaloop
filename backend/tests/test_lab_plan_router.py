@@ -44,6 +44,7 @@ async def test_create_lab_plan_item_derives_fields_server_side(monkeypatch):
         "user_id": "user-1",
         "report_version_id": "11111111-1111-1111-1111-111111111111",
         "test_name": "Ferritin",
+        "source_recommendation_id": None,
     }
     assert result["test_type"] == "retest"
 

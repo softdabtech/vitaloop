@@ -1255,6 +1255,8 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
       priority: String(item?.priority || 'medium').toLowerCase(),
       reason: item?.reason,
       timing: null,
+      recommendation_id: item?.recommendation_id,
+      source_report_version_id: item?.source_report_version_id,
     })
   }
   for (const item of Array.isArray(retestPlan) ? retestPlan : []) {
@@ -1272,6 +1274,8 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
         priority: String(item?.priority || 'medium').toLowerCase(),
         reason: item?.reason,
         timing: item?.timing,
+        recommendation_id: item?.recommendation_id,
+        source_report_version_id: item?.source_report_version_id,
       })
     }
   }
@@ -1286,6 +1290,8 @@ function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
         priority: String(item?.priority || 'medium').toLowerCase(),
         reason: item?.reason || item?.suggested_next_step,
         timing: null,
+        recommendation_id: item?.recommendation_id,
+        source_report_version_id: item?.source_report_version_id,
       })
     }
   }
@@ -1928,10 +1934,14 @@ export default function Results() {
     if (!reportVersionId || !key || savingPlanTest) return
     setSavingPlanTest(key)
     try {
-      const saved = await addLabPlanItem({
+      const payload = {
         source_report_version_id: reportVersionId,
         test_name: testName,
-      })
+      }
+      if (item?.recommendation_id) {
+        payload.source_recommendation_id = item.recommendation_id
+      }
+      const saved = await addLabPlanItem(payload)
       setLabPlanItems((current) => [
         saved,
         ...current.filter((existing) => existing.id !== saved.id),

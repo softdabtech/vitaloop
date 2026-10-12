@@ -464,6 +464,7 @@ async def save_report_version(
     *,
     user_id: str,
     upload_id: str,
+    report_version_id: Optional[str] = None,
     version: str,
     locale: str,
     input_snapshot: Dict[str, Any],
@@ -493,6 +494,8 @@ async def save_report_version(
         "explainability": explainability or {},
         "status": status,
     }
+    if report_version_id:
+        payload["id"] = report_version_id
     resp = await _run(lambda: supabase.table("report_versions").insert(payload).execute())
     return (resp.data or [{}])[0]
 
@@ -2786,6 +2789,7 @@ async def create_lab_plan_item(
     user_id: str,
     report_version_id: str,
     test_name: str,
+    source_recommendation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     report_version = await get_report_version_for_user(user_id, report_version_id)
     if not report_version:
@@ -2811,13 +2815,34 @@ async def create_lab_plan_item(
                 return item
         return None
 
+    recommended_tests = next_best_tests.get("recommended_tests")
+    source_item = None
+    if source_recommendation_id:
+        source_item = next(
+            (
+                item
+                for item in recommended_tests or []
+                if isinstance(item, dict)
+                and item.get("recommendation_id") == source_recommendation_id
+            ),
+            None,
+        )
+        if source_item is None:
+            raise ValueError("Recommendation not found in report")
+        if source_item.get("source_report_version_id") != report_version_id:
+            raise ValueError("Recommendation does not belong to report")
+        source_marker = source_item.get("marker") or source_item.get("test_name") or ""
+        if _normalize_lab_plan_test_name(source_marker) != requested_key:
+            raise ValueError("Recommendation does not match test")
+
     retest = matching_item(retest_plan, "marker", "test_name", "name")
-    source_item = retest or matching_item(
-        next_best_tests.get("recommended_tests"),
-        "marker",
-        "test_name",
-        "name",
-    )
+    if source_item is None:
+        source_item = retest or matching_item(
+            recommended_tests,
+            "marker",
+            "test_name",
+            "name",
+        )
     if source_item is None:
         source_item = matching_item(evidence_gaps.get("gaps"), "missing_marker", "marker", "test_name", "name")
     if source_item is None:
@@ -2827,6 +2852,7 @@ async def create_lab_plan_item(
     payload = {
         "user_id": user_id,
         "source_report_version_id": report_version_id,
+        "source_recommendation_id": source_item.get("recommendation_id"),
         "test_name": str(source_item.get("marker") or source_item.get("missing_marker") or requested_name).strip(),
         "normalized_test_name": requested_key,
         "test_type": test_type,

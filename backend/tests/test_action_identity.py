@@ -1,4 +1,5 @@
 from app.services.action_identity import assign_action_ids
+from app.services.next_best_test_engine import attach_report_provenance, build_next_best_tests
 from app.services import supabase_service
 
 
@@ -15,6 +16,40 @@ def test_action_ids_are_deterministic_unique_and_reload_safe():
     assert all(first_ids)
     assert len(first_ids) == len(set(first_ids))
     assert first_ids == [item["action_id"] for item in reloaded]
+
+
+def test_next_test_recommendation_identity_is_deterministic_and_report_scoped():
+    kwargs = {
+        "evidence_gaps": {
+            "gaps": [{
+                "missing_marker": "hemoglobin",
+                "domain": "iron",
+                "priority": "high",
+                "reason": "domain_expected_marker",
+            }]
+        },
+        "patterns": [],
+    }
+
+    first = build_next_best_tests(**kwargs)
+    reloaded = build_next_best_tests(**kwargs)
+    first_item = first["recommended_tests"][0]
+    reloaded_item = reloaded["recommended_tests"][0]
+
+    assert first_item["recommendation_id"] == reloaded_item["recommendation_id"]
+    assert first_item["recommendation_id"].startswith(
+        "v1:next-test:evidence_gaps:hemoglobin:"
+    )
+    assert "action_id" not in first_item
+
+    report_one = attach_report_provenance(first, "report-1")
+    report_two = attach_report_provenance(first, "report-2")
+    assert report_one["recommended_tests"][0]["source_report_version_id"] == "report-1"
+    assert report_two["recommended_tests"][0]["source_report_version_id"] == "report-2"
+    assert (
+        report_one["recommended_tests"][0]["recommendation_id"]
+        == report_two["recommended_tests"][0]["recommendation_id"]
+    )
 
 
 class _CompletionQuery:

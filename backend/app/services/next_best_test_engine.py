@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from app.services.action_identity import assign_action_ids
+
 
 NEXT_BEST_TEST_ENGINE_VERSION = "next_best_test_engine_v1"
 
@@ -104,12 +106,45 @@ def build_next_best_tests(
 
     candidates.sort(key=lambda item: _priority_rank(item.get("priority")))
     ranked = candidates[:limit]
+    ranked_with_ids = []
+    for item in assign_action_ids(
+        [
+            {
+                **candidate,
+                "key": f"{candidate.get('source')}:{_dedup_key(str(candidate.get('marker') or ''))}",
+            }
+            for candidate in ranked
+        ],
+        "next-test",
+    ):
+        recommendation = dict(item)
+        recommendation["recommendation_id"] = recommendation.pop("action_id")
+        recommendation.pop("key", None)
+        ranked_with_ids.append(recommendation)
 
     return {
         "version": NEXT_BEST_TEST_ENGINE_VERSION,
-        "recommended_tests": ranked,
+        "recommended_tests": ranked_with_ids,
         "summary": {
-            "count": len(ranked),
-            "high_priority_count": len([item for item in ranked if item.get("priority") == "high"]),
+            "count": len(ranked_with_ids),
+            "high_priority_count": len([item for item in ranked_with_ids if item.get("priority") == "high"]),
         },
+    }
+
+
+def attach_report_provenance(
+    next_best_tests: Dict[str, Any],
+    report_version_id: str,
+) -> Dict[str, Any]:
+    """Attach immutable ownership to recommendations in a persisted snapshot."""
+    return {
+        **next_best_tests,
+        "recommended_tests": [
+            {
+                **item,
+                "source_report_version_id": report_version_id,
+            }
+            for item in next_best_tests.get("recommended_tests") or []
+            if isinstance(item, dict)
+        ],
     }
