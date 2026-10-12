@@ -58,8 +58,8 @@ jobs:
 
       - name: Unit tests
         env:
-          SUPABASE_URL: "https://your-supabase-url.supabase.co"
-          SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.test"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: "placeholder"
         run: pytest tests -q --tb=short
 
   crm-test:
