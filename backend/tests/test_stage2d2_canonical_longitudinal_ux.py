@@ -180,7 +180,7 @@ def test_unit_safe_progress_rejects_unsupported_mixed_units_without_trend():
     assert overview["stable_markers"] == []
     item = overview["insufficient_history_markers"][0]
     assert item["comparison_status"] == "insufficient_comparable_history"
-    assert item["comparison_reason"] == "incompatible_units"
+    assert item["comparison_reason"] == "unverified_unit_conversion"
     assert item["status"] == "insufficient_history"
 
 
@@ -198,6 +198,42 @@ def test_unit_safe_progress_does_not_use_unverified_point_for_history():
     assert overview["stable_markers"] == []
     item = overview["insufficient_history_markers"][0]
     assert item["comparison_reason"] == "unverified_unit_conversion"
+
+
+def test_progress_exposes_safe_history_in_test_date_order():
+    rows = [
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [{"name": "Ferritin", "value": 28, "unit": "ng/mL", "status": "OPTIMAL"}]},
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [{"name": "Ferritin", "value": 18, "unit": "ng/mL", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    marker = overview["all_comparable_markers"][0]
+    assert marker["history"] == [
+        {"test_date": "2026-01-01", "value": 18.0, "unit": "ng/mL"},
+        {"test_date": "2026-02-01", "value": 28.0, "unit": "ng/mL"},
+    ]
+    assert marker["first_value"] == 18.0
+    assert marker["previous_value"] == 18.0
+    assert marker["latest_value"] == 28.0
+
+
+def test_progress_does_not_expose_unsafe_points_as_numeric_history():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [{"name": "Ferritin", "value": 18, "unit": "ng/mL", "status": "OPTIMAL"}]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [{"name": "Ferritin", "value": 28, "unit": "unsupported-unit", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    marker = overview["insufficient_history_markers"][0]
+    assert marker["history"] == [{"test_date": "2026-01-01", "value": 18.0, "unit": "ng/mL"}]
+    assert marker["comparison_reason"] == "unverified_unit_conversion"
+
+
+def test_progress_frontend_renders_full_history_points_without_recomputing_them():
+    source = LAB_RESULTS_LIST_JSX
+    assert "all_comparable_markers" in source
+    assert "marker.history" in source
+    assert "point.test_date" in source
+    assert "point.value" in source
+    assert "Trend unavailable due to incompatible units." in source
 
 
 # --- D2-3 / D2-8: chronology + upload-history/clinical-progress separation ------

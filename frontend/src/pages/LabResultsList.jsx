@@ -197,6 +197,11 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
   const topChanges = Array.isArray(overview?.top_changes) ? overview.top_changes : []
   const stableMarkers = Array.isArray(overview?.stable_markers) ? overview.stable_markers : []
   const newMarkers = Array.isArray(overview?.insufficient_history_markers) ? overview.insufficient_history_markers : []
+  const comparableMarkers = Array.isArray(overview?.all_comparable_markers) ? overview.all_comparable_markers : []
+  const historyMarkers = [...comparableMarkers, ...newMarkers].filter((marker, index, markers) => (
+    (Array.isArray(marker?.history) && marker.history.length > 0 || marker?.comparison_reason) &&
+    markers.findIndex((candidate) => candidate.canonical_name === marker.canonical_name) === index
+  ))
   const timelineEligible = overview?.timeline_eligible === true
 
   let helperText = labels.helperEmpty
@@ -234,6 +239,41 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
         <p className="mt-3 text-xs text-slate-400">
           {labels.stable}: {stableMarkers.length}
         </p>
+      )}
+
+      {historyMarkers.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">History</p>
+          {historyMarkers.map((marker) => {
+            const history = marker.history
+            const hasUnsafeComparison = Boolean(marker.comparison_reason)
+            return (
+              <div key={marker.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{marker.name}</p>
+                  {history.length < 2 && (
+                    <span className="vtl-status-pill border border-slate-200 bg-slate-50 text-slate-600">
+                      {labels.insufficientHistory}
+                    </span>
+                  )}
+                </div>
+                {hasUnsafeComparison ? (
+                  <p className="mt-2 text-xs text-amber-700">
+                    Trend unavailable due to incompatible units.
+                  </p>
+                ) : history.length > 0 ? (
+                  <ol className="mt-2 space-y-1 text-xs text-slate-600">
+                    {history.map((point) => (
+                      <li key={`${marker.canonical_name}-${point.test_date}`}>
+                        {point.test_date}: {point.value}{point.unit ? ` ${point.unit}` : ''}
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {newMarkers.length > 0 && (
