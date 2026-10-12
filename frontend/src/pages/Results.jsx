@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
+import { addLabPlanItem, listLabPlanItems } from '../api/labPlan.js'
 import FeatureGate from '../components/FeatureGate.jsx'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -266,6 +267,9 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
     testingPlanCompletedTitle: '✓ Completed since your last report',
+    addToLabPlan: 'Add to lab plan',
+    savingToLabPlan: 'Saving...',
+    inLabPlan: 'In lab plan',
     baselineTitle: 'Your Personal Baseline',
     baselineIntro: 'Not just in-range or out-of-range — is this normal for YOU, based on your own history.',
     baselineEmpty: 'Not enough repeat history yet to establish a personal baseline. This builds up as you upload more reports.',
@@ -482,6 +486,9 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
     testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
+    addToLabPlan: 'Додати до плану аналізів',
+    savingToLabPlan: 'Збереження...',
+    inLabPlan: 'У плані аналізів',
     baselineTitle: 'Ваша особиста базова лінія',
     baselineIntro: 'Не просто в межах чи поза межами референсу — чи це нормально саме для вас, на основі вашої історії.',
     baselineEmpty: 'Поки що недостатньо повторної історії для особистої базової лінії. Вона формується з новими завантаженими звітами.',
@@ -1232,7 +1239,11 @@ const TESTING_PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
 // priority-sorted plan — a single canonical "what to test and when"
 // instead of the same marker potentially appearing in several places
 // with no consistent priority ordering.
-function buildTestingPlan(nextBestTests, retestPlan) {
+function normalizePlanTestName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
   const byMarker = new Map()
   for (const item of Array.isArray(nextBestTests?.recommended_tests) ? nextBestTests.recommended_tests : []) {
     const marker = String(item?.marker || '').trim()
@@ -1260,6 +1271,20 @@ function buildTestingPlan(nextBestTests, retestPlan) {
         priority: String(item?.priority || 'medium').toLowerCase(),
         reason: item?.reason,
         timing: item?.timing,
+      })
+    }
+  }
+  for (const item of Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []) {
+    const marker = String(item?.missing_marker || item?.marker || item?.test_name || '').trim()
+    if (!marker) continue
+    const key = marker.toLowerCase()
+    if (!byMarker.has(key)) {
+      byMarker.set(key, {
+        marker,
+        domain: item?.domain,
+        priority: String(item?.priority || 'medium').toLowerCase(),
+        reason: item?.reason || item?.suggested_next_step,
+        timing: null,
       })
     }
   }
@@ -1324,8 +1349,19 @@ function PersonalBaselineSection({ personalBaseline, copy, isUk }) {
   )
 }
 
-function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, isUk }) {
-  const plan = buildTestingPlan(nextBestTests, retestPlan)
+function TestingPlanSection({
+  nextBestTests,
+  retestPlan,
+  evidenceGaps,
+  nextTestFunnel,
+  labPlanItems,
+  savingPlanTest,
+  onAddToLabPlan,
+  sourceReportVersionId,
+  copy,
+  isUk,
+}) {
+  const plan = buildTestingPlan(nextBestTests, retestPlan, evidenceGaps)
   // P12 Next-Test Funnel: the only genuinely new signal vs the P4 plan
   // above — which previously-suggested tests have since been completed.
   // Shown as a banner on the SAME section rather than a separate card, to
@@ -1361,6 +1397,26 @@ function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, i
                   <p className="mt-1 text-xs text-slate-500">
                     <span className="font-semibold">{copy.testingPlanTiming}:</span> {item.timing}
                   </p>
+                )}
+                {sourceReportVersionId && (
+                  <button
+                    type="button"
+                    className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={savingPlanTest === normalizePlanTestName(item.marker) || labPlanItems.some((saved) => (
+                      saved.source_report_version_id === sourceReportVersionId
+                      && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
+                    ))}
+                    onClick={() => onAddToLabPlan(item)}
+                  >
+                    {savingPlanTest === normalizePlanTestName(item.marker)
+                      ? copy.savingToLabPlan
+                      : labPlanItems.some((saved) => (
+                        saved.source_report_version_id === sourceReportVersionId
+                        && normalizePlanTestName(saved.normalized_test_name || saved.test_name) === normalizePlanTestName(item.marker)
+                      ))
+                        ? copy.inLabPlan
+                        : copy.addToLabPlan}
+                  </button>
                 )}
               </div>
               <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${TESTING_PRIORITY_BADGE[item.priority] || TESTING_PRIORITY_BADGE.medium}`}>
@@ -1743,6 +1799,9 @@ export default function Results() {
   const [actionPlanByRole, setActionPlanByRole] = useState(null)
   const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
   const [nextTestFunnel, setNextTestFunnel] = useState(null)
+  const [reportVersionId, setReportVersionId] = useState(null)
+  const [labPlanItems, setLabPlanItems] = useState([])
+  const [savingPlanTest, setSavingPlanTest] = useState(null)
   const [clinicalHypotheses, setClinicalHypotheses] = useState(null)
   const [clinicalContradictions, setClinicalContradictions] = useState(null)
   const [negativeEvidence, setNegativeEvidence] = useState(null)
@@ -1792,6 +1851,13 @@ export default function Results() {
         setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
         setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
+        setReportVersionId(data.report_version?.id ?? data.final_analysis?.report_version?.id ?? null)
+        try {
+          setLabPlanItems(await listLabPlanItems())
+        } catch (error) {
+          console.error('[LabPlan] Failed to load saved items', error)
+          setLabPlanItems([])
+        }
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
         setDoctorEscalationPrecision(data.doctor_escalation_precision ?? data.final_analysis?.doctor_escalation_precision ?? null)
@@ -1814,6 +1880,8 @@ export default function Results() {
         setProgressIntelligence(null)
         setEvidenceGaps(null)
         setNextBestTests(null)
+        setReportVersionId(null)
+        setLabPlanItems([])
         setPersonalBaseline(null)
         setActionPlanByRole(null)
         setDoctorEscalationPrecision(null)
@@ -1853,6 +1921,26 @@ export default function Results() {
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
+  const handleAddToLabPlan = async (item) => {
+    const testName = String(item?.marker || '').trim()
+    const key = normalizePlanTestName(testName)
+    if (!reportVersionId || !key || savingPlanTest) return
+    setSavingPlanTest(key)
+    try {
+      const saved = await addLabPlanItem({
+        source_report_version_id: reportVersionId,
+        test_name: testName,
+      })
+      setLabPlanItems((current) => [
+        saved,
+        ...current.filter((existing) => existing.id !== saved.id),
+      ])
+    } catch (error) {
+      console.error('[LabPlan] Failed to save item', error)
+    } finally {
+      setSavingPlanTest(null)
+    }
+  }
   const resultOverview = buildResultOverview({
     groundedNarrative: finalAnalysis?.grounded_ai_narrative,
     caseSynthesis: finalAnalysis?.case_synthesis,
@@ -2079,7 +2167,18 @@ export default function Results() {
           copy={copy}
         />
 
-        <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} nextTestFunnel={nextTestFunnel} copy={copy} isUk={isUk} />
+        <TestingPlanSection
+          nextBestTests={nextBestTests}
+          retestPlan={reportRetest}
+          evidenceGaps={evidenceGaps}
+          nextTestFunnel={nextTestFunnel}
+          labPlanItems={labPlanItems}
+          savingPlanTest={savingPlanTest}
+          onAddToLabPlan={handleAddToLabPlan}
+          sourceReportVersionId={reportVersionId}
+          copy={copy}
+          isUk={isUk}
+        />
 
         <SystemMapSection healthStates={finalAnalysis?.health_states} personalBaseline={personalBaseline} copy={copy} />
 
