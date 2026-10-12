@@ -1,11 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import {
   ActionCard,
   buildProtocolActionCompletionPayload,
   completedProtocolActionIds,
+  selectProtocolRows,
 } from './ProtocolPage.jsx'
+
+afterEach(cleanup)
 
 const copy = {
   basedOn: 'Based on',
@@ -30,6 +33,35 @@ const action = {
 }
 
 describe('ProtocolPage completion seam', () => {
+  it('uses the action plan when it is the completable persisted source', () => {
+    const protocol = [{ title: 'Legacy protocol item', body: 'Legacy body' }]
+    const actionPlan = [{ ...action, title: 'Persisted action' }]
+    const selected = selectProtocolRows({
+      coreProtocol: [],
+      storedProtocol: protocol,
+      actionPlan,
+    })
+
+    expect(selected).toBe(actionPlan)
+    render(<ActionCard item={selected[0]} copy={copy} isUk={false} reportVersionId="report-1" onComplete={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'Persisted action' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Mark complete' })).toBeTruthy()
+  })
+
+  it('preserves legacy protocol rendering when no action identity exists', () => {
+    const protocol = [{ title: 'Legacy protocol item', body: 'Legacy body' }]
+    const selected = selectProtocolRows({
+      coreProtocol: [],
+      storedProtocol: protocol,
+      actionPlan: [{ title: 'Legacy action plan item', body: 'Legacy body' }],
+    })
+
+    expect(selected).toBe(protocol)
+    render(<ActionCard item={selected[0]} copy={copy} isUk={false} reportVersionId="report-1" onComplete={vi.fn()} />)
+    expect(screen.getByRole('heading', { name: 'Legacy protocol item' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+  })
+
   it('shows completion control only when action identity and report version are present', () => {
     const onComplete = vi.fn()
     const { rerender } = render(

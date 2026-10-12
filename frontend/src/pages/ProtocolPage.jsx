@@ -336,6 +336,11 @@ function normalizeProtocolRows(protocol) {
   return rows
 }
 
+export function selectProtocolRows({ coreProtocol, storedProtocol, actionPlan }) {
+  if (actionPlan.some((item) => item?.action_id != null)) return actionPlan
+  return coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan
+}
+
 async function loadProtocolData(uploadId) {
   const [{ data }, interventions] = await Promise.all([
     api.get(`/results/${uploadId}`),
@@ -367,7 +372,7 @@ async function loadProtocolData(uploadId) {
   const completedActionIds = completedProtocolActionIds(interventions, reportVersionId)
   return {
     biomarkers,
-    protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
+    protocol: selectProtocolRows({ coreProtocol, storedProtocol, actionPlan }),
     doctorDiscussion,
     retestPlan,
     safetyAlerts,
