@@ -380,6 +380,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
                 "unit": unit,
                 "ref_low": ref_low,
                 "ref_high": ref_high,
+                "reference_range": raw.get("reference_range"),
                 "status": _normalize_biomarker_status(
                     raw.get("status"),
                     value=numeric_value,
@@ -585,7 +586,11 @@ async def analyze_lab_file(
         try:
             candidates = build_candidate_payloads(
                 biomarkers=biomarkers,
-                source="table" if "table" in str(analysis_method).lower() else ("ai" if analysis_source == "llm" else "regex"),
+                source=(
+                    "deterministic_parser_column_major"
+                    if "column_major" in str(analysis_method).lower()
+                    else ("table" if "table" in str(analysis_method).lower() else ("ai" if analysis_source == "llm" else "regex"))
+                ),
             )
             await save_biomarker_extraction_candidates(upload_id=upload_id, user_id=user_id, candidates=candidates)
         except Exception as exc:
