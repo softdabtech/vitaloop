@@ -14,10 +14,12 @@ class _Query:
         self.payload = None
         self.operation = "select"
         self.filters = []
+        self.conflict_keys = []
 
-    def upsert(self, payload, **_kwargs):
+    def upsert(self, payload, on_conflict=None, **_kwargs):
         self.operation = "upsert"
         self.payload = payload
+        self.conflict_keys = str(on_conflict or "").split(",") if on_conflict else []
         return self
 
     def select(self, *_columns):
@@ -51,7 +53,25 @@ class _Query:
             for row in rows:
                 row.update(self.payload)
             return _Response(rows)
-        return _Response([{"id": "plan-1", **self.payload}])
+        existing = next(
+            (
+                row for row in self.client.rows
+                if self.conflict_keys
+                and all(row.get(key) == self.payload.get(key) for key in self.conflict_keys)
+            ),
+            None,
+        )
+        if existing:
+            existing.update(self.payload)
+            self.client.payload = existing
+            return _Response([existing])
+        row = {
+            "id": f"plan-{len(self.client.rows) + 1}",
+            **self.payload,
+        }
+        self.client.rows.append(row)
+        self.client.payload = row
+        return _Response([row])
 
 
 class _Client:
