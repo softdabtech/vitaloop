@@ -2594,6 +2594,105 @@ async def reconcile_retest_fulfillment(
     return fulfilled
 
 
+async def reconcile_lab_plan_fulfillment(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    biomarkers: List[Dict[str, Any]] | None,
+    fulfilled_retest_obligations: List[Dict[str, Any]] | None = None,
+) -> List[Dict[str, Any]]:
+    report_version_id = str(report_version.get("id") or "")
+    upload_id = str(report_version.get("upload_id") or "")
+    if not report_version_id or not upload_id:
+        return []
+
+    current_report = await get_report_version_for_user(user_id, report_version_id)
+    if not current_report:
+        return []
+    current_created_at = _parse_report_created_at(current_report.get("created_at"))
+    if current_created_at is None:
+        return []
+
+    marker_keys: set[str] = set()
+    for biomarker in biomarkers or []:
+        if not isinstance(biomarker, dict):
+            continue
+        for field in ("name", "canonical_name"):
+            marker_keys.update(_marker_keys(biomarker.get(field)))
+    if not marker_keys:
+        return []
+
+    supabase = _get_supabase()
+    plans_response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("status", "planned")
+        .execute()
+    )
+    plans = plans_response.data or []
+    source_ids = {
+        str(item.get("source_report_version_id"))
+        for item in plans
+        if item.get("source_report_version_id")
+    }
+    if not source_ids:
+        return []
+    source_response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("id,created_at")
+        .eq("user_id", user_id)
+        .in_("id", list(source_ids))
+        .execute()
+    )
+    source_created_at = {
+        str(row.get("id")): _parse_report_created_at(row.get("created_at"))
+        for row in source_response.data or []
+    }
+
+    fulfilled_retest = fulfilled_retest_obligations or []
+    fulfilled: List[Dict[str, Any]] = []
+    for item in plans:
+        source_id = str(item.get("source_report_version_id") or "")
+        source_date = source_created_at.get(source_id)
+        if not source_date or current_created_at <= source_date:
+            continue
+        if not _marker_keys(item.get("normalized_test_name")) & marker_keys:
+            continue
+        if item.get("test_type") == "retest" and not any(
+            source_id == fulfilled_source
+            and _marker_keys(item.get("normalized_test_name")) & _marker_keys(
+                row.get("related_recommendation_id")
+            )
+            for row in fulfilled_retest
+            for fulfilled_source in [str(row.get("source_report_version_id") or "")]
+        ):
+            continue
+        response = await _run(
+            lambda item_id=item.get("id"): supabase.table("lab_plan_items")
+            .update({
+                "status": "fulfilled",
+                "fulfilled_by_upload_id": upload_id,
+                "fulfilled_by_report_version_id": report_version_id,
+                "fulfilled_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", item_id)
+            .eq("user_id", user_id)
+            .eq("status", "planned")
+            .execute()
+        )
+        fulfilled.extend(response.data or [])
+    return fulfilled
+
+
+def _parse_report_created_at(value: Any) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
 # ──────────────────────────────────────────────
 # WEEKLY CHECK-INS
 # ──────────────────────────────────────────────

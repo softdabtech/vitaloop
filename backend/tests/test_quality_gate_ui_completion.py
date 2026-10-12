@@ -60,9 +60,13 @@ def _stub_persistence(monkeypatch):
     async def _fake_save_safety_events(**_kwargs):
         return []
 
+    async def _fake_reconcile_lab_plan_fulfillment(**_kwargs):
+        return []
+
     monkeypatch.setattr(svc, "save_biomarkers", _fake_save_biomarkers)
     monkeypatch.setattr(svc, "save_report_version", _fake_save_report_version)
     monkeypatch.setattr(svc, "save_safety_events", _fake_save_safety_events)
+    monkeypatch.setattr(svc, "reconcile_lab_plan_fulfillment", _fake_reconcile_lab_plan_fulfillment)
 
 
 @pytest.mark.asyncio
