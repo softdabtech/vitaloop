@@ -58,7 +58,7 @@ def _column_major_marker_key(value: str) -> str:
 
 def _column_major_unit_recognized(value: str) -> bool:
     normalized = str(value or "").strip().casefold().replace("μ", "µ")
-    return _unit_recognized(value) or normalized == "мкмоль/л"
+    return _unit_recognized(value) or normalized in {"од/л", "г/л", "мкмоль/л"}
 
 
 def reconstruct_column_major_biomarkers(document_text: str) -> list[dict[str, Any]]:
