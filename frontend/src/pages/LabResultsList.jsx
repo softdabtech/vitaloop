@@ -24,75 +24,87 @@ import '../styles/dashboard2026.css'
 // upgrade. Kept the current, Stage-2D-compliant logic; only added the
 // missing localization this page previously lacked (hardcoded English
 // throughout body copy, badges, and the empty/premium states).
+const LAB_RESULTS_COPY_KEYS = [
+  'uploadResults', 'noResults', 'startSymptom', 'openLabPlan', 'uploads', 'mostRecent',
+  'uploadHistory', 'retestPlan', 'reviewWindow', 'labResults', 'processing', 'processingBody',
+  'failed', 'failedBody', 'queued', 'queuedBody', 'uploadAgain', 'noCompletedReport',
+  'newerUploadProcessing', 'newerUploadFailed', 'optimal', 'warning', 'review', 'viewResults',
+  'premiumTitle', 'premiumBody', 'premiumCta', 'safetyContext', 'safetyBody', 'nextStep', 'nextBody',
+]
+
+function createLabResultsCopy(values) {
+  return Object.fromEntries(LAB_RESULTS_COPY_KEYS.map((key, index) => [key, values[index]]))
+}
+
 const LAB_RESULTS_COPY = {
-  en: {
-    uploadResults: 'Upload Results',
-    noResults: 'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
-    startSymptom: 'Start symptom check',
-    openLabPlan: 'Open lab plan',
-    uploads: 'Uploads',
-    mostRecent: 'Most recent lab',
-    uploadHistory: 'Upload history',
-    retestPlan: 'Retest plan',
-    reviewWindow: 'Use your latest protocol to decide when to repeat',
-    labResults: (index) => `Lab Results #${index}`,
-    processing: 'Processing',
-    processingBody: "We're processing this upload. Your previous completed report remains available.",
-    failed: 'Could not process',
-    failedBody: "We couldn't finish processing this upload. You can upload the file again.",
-    queued: 'Upload received',
-    queuedBody: 'This upload is waiting to be processed.',
-    uploadAgain: 'Upload again',
-    noCompletedReport: 'No completed report yet',
-    newerUploadProcessing: 'A newer upload is still being processed.',
-    newerUploadFailed: 'A newer upload could not be processed.',
-    optimal: 'Optimal',
-    warning: 'Warning',
-    review: 'Review',
-    viewResults: 'View Results',
-    premiumTitle: 'Premium features available',
-    premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
+  en: createLabResultsCopy([
+    'Upload Results',
+    'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
+    'Start symptom check',
+    'Open lab plan',
+    'Uploads',
+    'Most recent lab',
+    'Upload history',
+    'Retest plan',
+    'Use your latest protocol to decide when to repeat',
+    (index) => `Lab Results #${index}`,
+    'Processing',
+    "We're processing this upload. Your previous completed report remains available.",
+    'Could not process',
+    "We couldn't finish processing this upload. You can upload the file again.",
+    'Upload received',
+    'This upload is waiting to be processed.',
+    'Upload again',
+    'No completed report yet',
+    'A newer upload is still being processed.',
+    'A newer upload could not be processed.',
+    'Optimal',
+    'Warning',
+    'Review',
+    'View Results',
+    'Premium features available',
+    'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
     // Was hardcoded '$19.99/month' — stale, drifted from the actual price;
     // sourced from lib/pricing.js now like every other paywall prompt.
-    premiumCta: `Upgrade for ${PREMIUM_PRICE_LABEL}`,
-    safetyContext: 'Safety context',
-    safetyBody: 'Review out-of-range markers with a qualified clinician when appropriate.',
-    nextStep: 'Next step',
-    nextBody: 'Open the action plan and use check-ins to track whether symptoms change.',
-  },
-  uk: {
-    uploadResults: 'Завантажити аналізи',
-    noResults: 'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
-    startSymptom: 'Почати перевірку симптомів',
-    openLabPlan: 'Відкрити план аналізів',
-    uploads: 'Завантаження',
-    mostRecent: 'Останній аналіз',
-    uploadHistory: 'Історія завантажень',
-    retestPlan: 'План повторної перевірки',
-    reviewWindow: 'Терміни повторної перевірки залежать від вашого плану дій',
-    labResults: (index) => `Результати аналізів #${index}`,
-    processing: 'В обробці',
-    processingBody: 'Ми обробляємо це завантаження. Попередній завершений звіт залишається доступним.',
-    failed: 'Не вдалося обробити',
-    failedBody: 'Не вдалося завершити обробку. Ви можете завантажити файл ще раз.',
-    queued: 'Завантаження отримано',
-    queuedBody: 'Це завантаження очікує на обробку.',
-    uploadAgain: 'Завантажити ще раз',
-    noCompletedReport: 'Завершених звітів ще немає',
-    newerUploadProcessing: 'Нове завантаження ще обробляється.',
-    newerUploadFailed: 'Нове завантаження не вдалося обробити.',
-    optimal: 'У нормі',
-    warning: 'Спостерігати',
-    review: 'Перегляд',
-    viewResults: 'Переглянути',
-    premiumTitle: 'Доступні Premium-функції',
-    premiumBody: 'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
-    premiumCta: 'Оновити тариф',
-    safetyContext: 'Контекст безпеки',
-    safetyBody: 'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
-    nextStep: 'Наступний крок',
-    nextBody: 'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
-  },
+    `Upgrade for ${PREMIUM_PRICE_LABEL}`,
+    'Safety context',
+    'Review out-of-range markers with a qualified clinician when appropriate.',
+    'Next step',
+    'Open the action plan and use check-ins to track whether symptoms change.',
+  ]),
+  uk: createLabResultsCopy([
+    'Завантажити аналізи',
+    'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
+    'Почати перевірку симптомів',
+    'Відкрити план аналізів',
+    'Завантаження',
+    'Останній аналіз',
+    'Історія завантажень',
+    'План повторної перевірки',
+    'Терміни повторної перевірки залежать від вашого плану дій',
+    (index) => `Результати аналізів #${index}`,
+    'В обробці',
+    'Ми обробляємо це завантаження. Попередній завершений звіт залишається доступним.',
+    'Не вдалося обробити',
+    'Не вдалося завершити обробку. Ви можете завантажити файл ще раз.',
+    'Завантаження отримано',
+    'Це завантаження очікує на обробку.',
+    'Завантажити ще раз',
+    'Завершених звітів ще немає',
+    'Нове завантаження ще обробляється.',
+    'Нове завантаження не вдалося обробити.',
+    'У нормі',
+    'Спостерігати',
+    'Перегляд',
+    'Переглянути',
+    'Доступні Premium-функції',
+    'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
+    'Оновити тариф',
+    'Контекст безпеки',
+    'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
+    'Наступний крок',
+    'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
+  ]),
 }
 
 function normalizeStatus(status) {
@@ -146,6 +158,25 @@ export function canViewResults(item) {
 
 export function shouldShowBiomarkerCounts(item) {
   return canViewResults(item)
+}
+
+function lifecycleStateCopy(state, copy) {
+  if (state === 'processing') return { label: copy.processing, body: copy.processingBody }
+  if (state === 'failed') return { label: copy.failed, body: copy.failedBody }
+  if (state === 'queued') return { label: copy.queued, body: copy.queuedBody }
+  return null
+}
+
+function latestActivityCopy(state, copy) {
+  if (state === 'processing') return copy.newerUploadProcessing
+  if (state === 'failed') return copy.newerUploadFailed
+  return copy.queued
+}
+
+function lifecycleActionLabel(state, item, copy) {
+  if (canViewResults(item)) return copy.viewResults
+  if (state === 'failed') return copy.uploadAgain
+  return lifecycleStateCopy(state, copy)?.label
 }
 
 async function fetchRecentUploadFallback() {
@@ -473,7 +504,7 @@ export default function LabResultsList() {
                   <p className="mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
                   {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      {latestActivityState === 'processing' ? copy.newerUploadProcessing : latestActivityState === 'failed' ? copy.newerUploadFailed : copy.queued}
+                      {latestActivityCopy(latestActivityState, copy)}
                     </p>
                   )}
                 </div>
@@ -489,13 +520,7 @@ export default function LabResultsList() {
                 const showCounts = shouldShowBiomarkerCounts(item)
                 const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
                 const uploadId = item?.upload_id || item?.id
-                const stateCopy = state === 'processing'
-                  ? { label: copy.processing, body: copy.processingBody }
-                  : state === 'failed'
-                    ? { label: copy.failed, body: copy.failedBody }
-                    : state === 'queued'
-                      ? { label: copy.queued, body: copy.queuedBody }
-                      : null
+                const stateCopy = lifecycleStateCopy(state, copy)
 
                 return (
                   <div
@@ -522,10 +547,10 @@ export default function LabResultsList() {
                           <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
                         </div>
                       ) : (
-                        <div className="min-w-0 flex-1 text-xs text-slate-600" role="status">
+                        <output className="min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
                           <span className="font-semibold">{stateCopy.label}</span>
                           <span className="mt-1 block leading-5">{stateCopy.body}</span>
-                        </div>
+                        </output>
                       )}
 
                       <div className="flex items-center gap-2">
@@ -536,7 +561,7 @@ export default function LabResultsList() {
                           disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
                           className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
-                          {canViewResults(item) ? copy.viewResults : state === 'failed' ? copy.uploadAgain : stateCopy.label}
+                          {lifecycleActionLabel(state, item, copy)}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>

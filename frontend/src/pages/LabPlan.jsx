@@ -35,7 +35,8 @@ function normalizeTestKey(value) {
     .toLowerCase()
     .replace(/^canonical_/, '')
     .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
+    .replace(/^_+/, '')
+    .replace(/_+$/, '')
 }
 
 export function reportTestDisplayName(value) {

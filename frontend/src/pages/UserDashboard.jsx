@@ -1118,12 +1118,14 @@ function UploadLifecycleNotice({ upload, isUk }) {
       queued: 'New upload received and waiting to be processed. Your previous completed report remains active.',
     }
 
+  const message = copy[state]
+
   return (
-    <div role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+    <output aria-live="polite" className="mb-4 block rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
       <span className="font-semibold">
-        {state === 'processing' ? copy.processing : state === 'failed' ? copy.failed : copy.queued}
+        {message}
       </span>
-    </div>
+    </output>
   )
 }
 
