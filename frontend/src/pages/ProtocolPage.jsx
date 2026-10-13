@@ -1058,7 +1058,7 @@ export default function ProtocolPage() {
         delete next[item.action_id]
         return next
       })
-    } catch (_error) {
+    } catch {
       setCompletionErrors((current) => ({
         ...current,
         [item.action_id]: copy.completionFailed,
