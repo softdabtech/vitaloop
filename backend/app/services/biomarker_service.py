@@ -220,6 +220,7 @@ class BiomarkerService:
                 "extracted_text": notes or "",
                 "analyze_prompt_version": "manual_v1",
                 "status": "done",
+                "data_origin": "clinical",
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "date_source": "user_provided" if test_date else "missing",
                 "date_confidence": "high" if test_date else "low",

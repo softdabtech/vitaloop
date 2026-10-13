@@ -392,6 +392,13 @@ export function selectProtocolRows({ coreProtocol, storedProtocol, actionPlan })
   return coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan
 }
 
+export function selectAuthoritativeProtocol(data) {
+  const frozenProtocol = normalizeProtocolRows(data?.report_version?.protocol)
+  return frozenProtocol.length
+    ? frozenProtocol
+    : normalizeProtocolRows(data?.final_analysis?.protocol)
+}
+
 export function selectProtocolRetestPlan({ interventionsAvailable, persistedRetestPlan, reportRetestPlan }) {
   return interventionsAvailable && persistedRetestPlan.length ? persistedRetestPlan : reportRetestPlan
 }
@@ -399,7 +406,7 @@ export function selectProtocolRetestPlan({ interventionsAvailable, persistedRete
 async function loadProtocolData(uploadId) {
   const { data } = await api.get(`/results/${uploadId}`)
   const biomarkers = data?.biomarkers ?? []
-  const coreProtocol = normalizeProtocolRows(data?.final_analysis?.protocol)
+  const coreProtocol = selectAuthoritativeProtocol(data)
   const storedProtocol = normalizeProtocolRows(data?.protocol)
   const actionPlan = Array.isArray(data?.knowledge_report?.action_plan) ? data.knowledge_report.action_plan : []
   const doctorDiscussion = Array.isArray(data?.knowledge_report?.doctor_discussion) ? data.knowledge_report.doctor_discussion : []
