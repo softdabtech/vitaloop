@@ -4,6 +4,7 @@ import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCirc
 import { CoachBadge, CoachButton, CoachCard, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { listLabPlanItems } from '../api/labPlan.js'
 import { useDashboardSummary, useLabResults, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
+import { biomarkerDisplayName } from '../lib/biomarker-display.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -225,7 +226,8 @@ export function normalizeLabPlanItems(items) {
 }
 
 function planItemName(item) {
-  return String(item?.test_name || item?.canonical_marker || item?.normalized_test_name || 'Planned test').trim()
+  const rawName = String(item?.test_name || item?.canonical_marker || item?.normalized_test_name || '').trim()
+  return biomarkerDisplayName(rawName) || 'Planned test'
 }
 
 export function clinicalResultDate(result) {
@@ -257,8 +259,13 @@ export function clinicalResultDate(result) {
   return candidates.find((value) => typeof value === 'string' && value.trim()) || null
 }
 
-function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, isHistorical = false }) {
+function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeReportVersionId = null }) {
   const fulfilled = item?.status === 'fulfilled'
+  const historical = Boolean(
+    item?.source_report_version_id
+    && activeReportVersionId
+    && item.source_report_version_id !== activeReportVersionId,
+  )
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -268,10 +275,14 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, isHistoric
           {fulfilled ? copy.fulfilled : copy.planned}
         </span>
       </div>
-      {!!item?.reason && (
+      {!!(item?.reason || historical) && (
         <div className="mt-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{copy.reason}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-700">{item.reason}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            {historical ? copy.historicalReason : copy.reason}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {historical ? copy.historicalReasonBody : item.reason}
+          </p>
         </div>
       )}
       {!!item?.timing_text && (
@@ -280,7 +291,7 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, isHistoric
         </p>
       )}
       <p className="mt-3 text-xs font-semibold text-slate-500">
-        {isHistorical ? copy.fromEarlierReport : copy.fromReport}
+        {historical ? copy.fromEarlierReport : copy.fromReport}
         {item?.source_recommendation_id ? ' · ' : ''}
         {item?.source_recommendation_id ? (isUk ? 'рекомендація' : 'recommendation') : ''}
       </p>
@@ -319,6 +330,7 @@ function FulfilledLabPlanGroup({ items, uploadId, isUk, copy, activeReportVersio
           copy={copy}
           resultDate={resultDate}
           resultError={isError}
+          activeReportVersionId={activeReportVersionId}
         />
       ))}
     </>
@@ -337,6 +349,8 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeRe
       planned: 'Заплановано',
       fulfilled: 'Виконано',
       reason: 'Чому це у плані',
+      historicalReason: 'Історичний контекст',
+      historicalReasonBody: 'Цей аналіз було додано на основі попереднього звіту.',
       timing: 'Коли',
       fulfilledBody: 'Виконано пізнішим результатом.',
       fulfilledBy: 'Виконано результатом від',
@@ -355,6 +369,8 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeRe
       planned: 'Planned',
       fulfilled: 'Completed',
       reason: 'Why it is in your plan',
+      historicalReason: 'Historical context',
+      historicalReasonBody: 'This test was added from an earlier report.',
       timing: 'Timing',
       fulfilledBody: 'Fulfilled by a later result.',
       fulfilledBy: 'Fulfilled by result from',
@@ -436,11 +452,7 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeRe
                 item={group.items[0]}
                 isUk={isUk}
                 copy={copy}
-                isHistorical={Boolean(
-                  activeReportVersionId
-                  && group.items[0]?.source_report_version_id
-                  && group.items[0].source_report_version_id !== activeReportVersionId,
-                )}
+                activeReportVersionId={activeReportVersionId}
               />
             ))
           })()}
@@ -490,6 +502,9 @@ export default function LabPlan() {
     ? summary?.today_contract?.latest_ready_report?.upload_id
     : null
   const { data: reportDetails } = useReportDetails(readyUploadId)
+  const activeReportVersionId = reportDetails?.report_version?.id
+    ?? reportDetails?.final_analysis?.report_version?.id
+    ?? null
   const activeMarkerNames = useMemo(() => {
     const biomarkers = Array.isArray(reportDetails?.biomarkers) ? reportDetails.biomarkers : []
     return new Set(
@@ -538,7 +553,7 @@ export default function LabPlan() {
         loading={planLoading}
         error={planError}
         onRetry={loadPlan}
-        activeReportVersionId={reportDetails?.report_version?.id || reportDetails?.final_analysis?.report_version?.id || null}
+        activeReportVersionId={activeReportVersionId}
       />
       <section className="coach-hero">
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">

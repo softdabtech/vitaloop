@@ -1,4 +1,5 @@
 const BIOMARKER_LABELS_UK = {
+  mch: 'MCH',
   ferritin: 'Феритин',
   canonical_ferritin: 'Феритин',
   glucose: 'Глюкоза',
@@ -53,6 +54,7 @@ const BIOMARKER_LABELS_UK = {
 }
 
 const BIOMARKER_LABELS_EN = {
+  mch: 'MCH',
   canonical_ferritin: 'Ferritin',
   canonical_glucose: 'Glucose',
   canonical_hba1c: 'HbA1c',

@@ -7,6 +7,9 @@ import { HelmetProvider } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { supabase, hasSupabaseConfig } from './lib/supabase.js'
+import { startServiceWorkerUpdateCheck } from './lib/service-worker-update.js'
+
+startServiceWorkerUpdateCheck()
 
 const queryClient = new QueryClient({
   defaultOptions: {
