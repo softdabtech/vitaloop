@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import {
   ActionCard,
+  actionSourceLabel,
   buildProtocolActionCompletionPayload,
   completedProtocolActionIds,
   RetestObligationCard,
@@ -44,6 +45,56 @@ const action = {
   body: 'Drink water throughout the day.',
   source: 'rule',
 }
+
+describe('Protocol action provenance', () => {
+  it.each([
+    ['protocol', 'Protocol guidance'],
+    ['pattern', 'Pattern insight'],
+    ['next_best_tests', 'Recommended follow-up'],
+    ['evidence_gap', 'Evidence gap'],
+  ])('maps %s to a human-readable label', (source, label) => {
+    expect(actionSourceLabel(source)).toBe(label)
+  })
+
+  it('maps supported sources for Ukrainian copy', () => {
+    expect(actionSourceLabel('protocol', true)).toBe('Рекомендація протоколу')
+    expect(actionSourceLabel('pattern', true)).toBe('Виявлена закономірність')
+    expect(actionSourceLabel('next_best_tests', true)).toBe('Рекомендований наступний крок')
+    expect(actionSourceLabel('evidence_gap', true)).toBe('Брак даних')
+  })
+
+  it('hides unknown and missing sources without exposing internal identifiers', () => {
+    expect(actionSourceLabel('rule')).toBe('')
+    expect(actionSourceLabel()).toBe('')
+    render(
+      <ActionCard
+        item={{ ...action, source: 'internal_source', related_recommendation_id: 'internal-id' }}
+        copy={copy}
+        isUk={false}
+        reportVersionId="report-1"
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('internal_source')).toBeNull()
+    expect(screen.queryByText('internal-id')).toBeNull()
+  })
+
+  it('renders provenance immediately while preserving existing action metadata', () => {
+    render(
+      <ActionCard
+        item={{ ...action, source: 'protocol', category: 'nutrition', priority: 'medium' }}
+        copy={copy}
+        isUk={false}
+        reportVersionId="report-1"
+        onComplete={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Protocol guidance')).toBeTruthy()
+    expect(screen.getByText('Nutrition')).toBeTruthy()
+    expect(screen.getByText('MEDIUM')).toBeTruthy()
+    expect(screen.getByText(action.body)).toBeTruthy()
+  })
+})
 
 describe('ProtocolPage completion seam', () => {
   it('uses the action plan when it is the completable persisted source', () => {
