@@ -1,8 +1,35 @@
 const PENDING_STATES = new Set(['pending', 'planned', 'open'])
 const FULFILLED_STATES = new Set(['fulfilled', 'completed', 'complete'])
 
+export function createRetestCopy(notDue, dueNow, overdue, pending, completed, window, source, completedBy, viewLaterResult) {
+  return {
+    retestNotDue: notDue,
+    retestDueNow: dueNow,
+    retestOverdue: overdue,
+    retestPending: pending,
+    retestCompleted: completed,
+    retestWindow: window,
+    retestSource: source,
+    retestCompletedBy: completedBy,
+    viewLaterResult,
+  }
+}
+
 function normalizeMarker(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+const MARKER_ALIASES = {
+  canonical_hemoglobin: 'hemoglobin',
+  hgb: 'hemoglobin',
+  'mean cell hemoglobin': 'mch',
+  'mean cell hemoglobin (mch)': 'mch',
+  canonical_mch: 'mch',
+}
+
+export function normalizeRetestMarker(value) {
+  const normalized = normalizeMarker(value)
+  return MARKER_ALIASES[normalized] || normalized.replace(/^canonical_/, '')
 }
 
 function parseDate(value) {
@@ -41,7 +68,7 @@ export function selectRetestObligations(interventions, reportVersionId) {
     if (event?.action_type !== 'retest') continue
     if (reportVersionId && event?.source_report_version_id !== reportVersionId) continue
     const marker = retestMarker(event)
-    const key = normalizeMarker(marker)
+    const key = normalizeRetestMarker(marker)
     if (!key) continue
     selected.set(key, {
       id: event.id,

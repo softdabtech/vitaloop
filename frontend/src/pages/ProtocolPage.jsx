@@ -8,7 +8,7 @@ import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, Ins
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
 import { gaProtocolView } from '../lib/analytics.js'
-import { formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { createRetestCopy, formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -71,20 +71,6 @@ const CATEGORY_LABELS_UK = {
   lifestyle: 'Спосіб життя',
   profile: 'Профіль',
   stress: 'Стрес',
-}
-
-function createRetestCopy(notDue, dueNow, overdue, pending, completed, window, source, completedBy, viewLaterResult) {
-  return {
-    retestNotDue: notDue,
-    retestDueNow: dueNow,
-    retestOverdue: overdue,
-    retestPending: pending,
-    retestCompleted: completed,
-    retestWindow: window,
-    retestSource: source,
-    retestCompletedBy: completedBy,
-    viewLaterResult,
-  }
 }
 
 const RETEST_COPY = {
