@@ -26,6 +26,7 @@ const copy = {
   markComplete: 'Mark complete',
   completing: 'Saving...',
   completed: 'Completed',
+  completionFailed: "We couldn't save this update. Try again.",
   retestNotDue: 'Not due yet',
   retestDueNow: 'Due now',
   retestOverdue: 'Overdue',
@@ -106,6 +107,51 @@ describe('ProtocolPage completion seam', () => {
   it('shows completed state after successful completion', () => {
     render(<ActionCard item={action} copy={copy} isUk={false} reportVersionId="report-1" completed onComplete={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Completed' }).disabled).toBe(true)
+  })
+
+  it('shows a safe inline error and keeps the action retryable after a failed save', () => {
+    const onComplete = vi.fn()
+    render(
+      <ActionCard
+        item={action}
+        copy={copy}
+        isUk={false}
+        reportVersionId="report-1"
+        error={copy.completionFailed}
+        onComplete={onComplete}
+      />,
+    )
+
+    expect(screen.getByRole('alert').textContent).toBe(copy.completionFailed)
+    expect(screen.queryByRole('button', { name: 'Completed' })).toBeNull()
+    const button = screen.getByRole('button', { name: 'Mark complete' })
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+    expect(onComplete).toHaveBeenCalledWith(action)
+    expect(screen.queryByText('raw backend error')).toBeNull()
+  })
+
+  it('clears an action error when retry succeeds without affecting another action', () => {
+    const onComplete = vi.fn()
+    const otherAction = { ...action, action_id: 'v1:action-plan:other:0', title: 'Other action' }
+    const { rerender } = render(
+      <>
+        <ActionCard item={action} copy={copy} isUk={false} reportVersionId="report-1" error={copy.completionFailed} onComplete={onComplete} />
+        <ActionCard item={otherAction} copy={copy} isUk={false} reportVersionId="report-1" error={copy.completionFailed} onComplete={onComplete} />
+      </>,
+    )
+
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Mark complete' })[0])
+    rerender(
+      <>
+        <ActionCard item={action} copy={copy} isUk={false} reportVersionId="report-1" completed onComplete={onComplete} />
+        <ActionCard item={otherAction} copy={copy} isUk={false} reportVersionId="report-1" error={copy.completionFailed} onComplete={onComplete} />
+      </>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Completed' }).disabled).toBe(true)
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
   })
 
   it('builds the backend completion payload', () => {
