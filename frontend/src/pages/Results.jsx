@@ -34,7 +34,7 @@ import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
 import { buildResultOverview } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
-import { formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -115,6 +115,31 @@ const RESULTS_HINTS = [
   'Use the doctor discussion list when you want a concise way to talk about the report with a clinician.',
   'VITALOOP is educational software. It helps organize the next step, but it does not diagnose or prescribe treatment.',
 ]
+
+const RESULTS_RETEST_COPY = {
+  en: createRetestCopy(
+    'Not due yet',
+    'Due now',
+    'Overdue',
+    'Pending',
+    'Completed',
+    (start, end) => `Retest window: ${start} – ${end}`,
+    'Based on this report',
+    'Completed by a later result.',
+    'View later result',
+  ),
+  uk: createRetestCopy(
+    'Ще не час',
+    'Час повторити',
+    'Прострочено',
+    'Очікується',
+    'Завершено',
+    (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    'На основі цього звіту',
+    'Завершено наступним результатом.',
+    'Переглянути наступний результат',
+  ),
+}
 
 const RESULTS_COPY = {
   en: {
@@ -271,15 +296,8 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
     testingPlanCompletedTitle: '✓ Completed since your last report',
-    retestNotDue: 'Not due yet',
-    retestDueNow: 'Due now',
-    retestOverdue: 'Overdue',
-    retestPending: 'Pending',
-    retestCompleted: 'Completed',
-    retestWindow: (start, end) => `Retest window: ${start} – ${end}`,
+    ...RESULTS_RETEST_COPY.en,
     retestNext: 'Next retest',
-    retestCompletedBy: 'Completed by a later result.',
-    viewLaterResult: 'View later result',
     addToLabPlan: 'Add to lab plan',
     savingToLabPlan: 'Saving...',
     inLabPlan: 'In lab plan',
@@ -499,15 +517,8 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
     testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
-    retestNotDue: 'Ще не час',
-    retestDueNow: 'Час повторити',
-    retestOverdue: 'Прострочено',
-    retestPending: 'Очікується',
-    retestCompleted: 'Завершено',
-    retestWindow: (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    ...RESULTS_RETEST_COPY.uk,
     retestNext: 'Наступний тест',
-    retestCompletedBy: 'Завершено наступним результатом.',
-    viewLaterResult: 'Переглянути наступний результат',
     addToLabPlan: 'Додати до плану аналізів',
     savingToLabPlan: 'Збереження...',
     inLabPlan: 'У плані аналізів',

@@ -1,6 +1,20 @@
 const PENDING_STATES = new Set(['pending', 'planned', 'open'])
 const FULFILLED_STATES = new Set(['fulfilled', 'completed', 'complete'])
 
+export function createRetestCopy(notDue, dueNow, overdue, pending, completed, window, source, completedBy, viewLaterResult) {
+  return {
+    retestNotDue: notDue,
+    retestDueNow: dueNow,
+    retestOverdue: overdue,
+    retestPending: pending,
+    retestCompleted: completed,
+    retestWindow: window,
+    retestSource: source,
+    retestCompletedBy: completedBy,
+    viewLaterResult,
+  }
+}
+
 function normalizeMarker(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
