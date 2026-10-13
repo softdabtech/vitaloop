@@ -32,6 +32,7 @@ import { isUkrainianLocale } from '../lib/locale.js'
 import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
 import { buildResultOverview } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
+import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -997,17 +998,12 @@ function DoctorEscalationSection({ doctorEscalationPrecision, copy }) {
               <div className={`mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
                 <Icon className="h-3.5 w-3.5" /> {levelLabel}
               </div>
-              {!!item.human_readable_reason && (
-                <p className="text-sm leading-6 text-slate-700">{item.human_readable_reason}</p>
-              )}
-              {!!markers.length && (
-                <p className="mt-2 text-sm leading-5 text-slate-600">
-                  <span className="font-semibold text-slate-800">{copy.doctorEscalationMarkersLabel}:</span> {markers.join(', ')}
-                </p>
-              )}
-              {!!timingLabel && (
-                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{timingLabel}</p>
-              )}
+              <DoctorEscalationDetails
+                reason={item.human_readable_reason}
+                markers={markers}
+                timingLabel={timingLabel}
+                copy={copy}
+              />
             </div>
           )
         })}

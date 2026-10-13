@@ -9,6 +9,7 @@ import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
 import { gaProtocolView } from '../lib/analytics.js'
 import { formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
 // so each page using CoachUI must import it directly or it renders as
@@ -771,17 +772,12 @@ function DoctorEscalationCard({ doctorEscalationPrecision, copy }) {
               <CoachBadge tone={DOCTOR_ESCALATION_LEVEL_TONE[item.level]} className="mb-2">
                 {copy.doctorEscalationLevelLabels?.[item.level]}
               </CoachBadge>
-              {!!item.human_readable_reason && (
-                <p className="text-sm leading-6 text-slate-700">{item.human_readable_reason}</p>
-              )}
-              {!!markers.length && (
-                <p className="mt-2 text-sm leading-5 text-slate-600">
-                  <span className="font-semibold text-slate-800">{copy.doctorEscalationMarkersLabel}:</span> {markers.join(', ')}
-                </p>
-              )}
-              {!!timingLabel && (
-                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{timingLabel}</p>
-              )}
+              <DoctorEscalationDetails
+                reason={item.human_readable_reason}
+                markers={markers}
+                timingLabel={timingLabel}
+                copy={copy}
+              />
             </div>
           )
         })}
