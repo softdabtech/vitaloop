@@ -35,6 +35,7 @@ import { buildResultOverview } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -143,8 +144,38 @@ const RESULTS_RETEST_COPY = {
   ),
 }
 
+const RESULTS_ADDED_COPY = [
+  ['narrativeTitle', 'Your personal interpretation', 'Ваша персональна інтерпретація'],
+  ['narrativeHeadline', 'What this report means for you', 'Що цей звіт означає саме для вас'],
+  ['narrativeFound', 'What we found', 'Що ми виявили'],
+  ['narrativeConnections', 'How it connects to you', 'Як це пов’язано з вами'],
+  ['narrativeChanged', 'What changed over time', 'Що змінилося з часом'],
+  ['narrativeUncertainty', 'What we are not sure about', 'Що ми поки не можемо визначити'],
+  ['narrativePriority', 'Why this is a priority', 'Чому це важливо'],
+  ['narrativeNext', 'What to do next', 'Що робити далі'],
+  ['narrativeNoChange', 'No verified change over time was available for this report.', 'Перевірених змін у часі для цього звіту не знайдено.'],
+  ['progressPatternFallback', 'Pattern insight', 'Виявлена закономірність'],
+  ['noRange', 'Reference range could not be verified', 'Референсний діапазон не вдалося перевірити'],
+]
+
+const SAFETY_STATUS_COPY = {
+  blocked: ['Safety review required', 'Потрібен перегляд безпеки'],
+  approved_with_warnings: ['Reviewed with cautions', 'Перевірено із застереженнями'],
+  educational: ['Educational information', 'Освітня інформація'],
+}
+
+function buildResultsAddedCopy(isUk) {
+  return {
+    ...Object.fromEntries(RESULTS_ADDED_COPY.map(([key, en, uk]) => [key, isUk ? uk : en])),
+    safetyStatus: Object.fromEntries(
+      Object.entries(SAFETY_STATUS_COPY).map(([key, [en, uk]]) => [key, isUk ? uk : en])
+    ),
+  }
+}
+
 const RESULTS_COPY = {
   en: {
+    ...buildResultsAddedCopy(false),
     hints: RESULTS_HINTS,
     loading: 'Loading your report…',
     back: 'Back to Lab Results',
@@ -195,7 +226,6 @@ const RESULTS_COPY = {
     premiumTeaser: 'Want to track changes over time? Premium adds personal baseline, progress trends, and deeper follow-up across reports.',
     premiumTeaserCta: 'See what Premium adds',
     disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
-    noRange: 'Reference range could not be verified',
     emptyTitle: 'Results & Interpretation',
     emptySubtitle: 'No processed biomarkers yet.',
     loadFailedTitle: 'Report unavailable',
@@ -348,21 +378,6 @@ const RESULTS_COPY = {
     overviewActionsEmpty: 'No report-specific priority action is available yet.',
     overviewMissingEmpty: 'No specific missing information was identified for this report.',
     overviewConsultationEmpty: 'No prompt medical-review signal was identified. Discuss new, severe, or worsening symptoms with a qualified clinician.',
-    narrativeTitle: 'Your personal interpretation',
-    narrativeHeadline: 'What this report means for you',
-    narrativeFound: 'What we found',
-    narrativeConnections: 'How it connects to you',
-    narrativeChanged: 'What changed over time',
-    narrativeUncertainty: 'What we are not sure about',
-    narrativePriority: 'Why this is a priority',
-    narrativeNext: 'What to do next',
-    narrativeNoChange: 'No verified change over time was available for this report.',
-    progressPatternFallback: 'Pattern insight',
-    safetyStatus: {
-      blocked: 'Safety review required',
-      approved_with_warnings: 'Reviewed with cautions',
-      educational: 'Educational information',
-    },
     overviewEvidence: 'Based on',
     overviewMissingEvidence: 'Missing',
     technicalDisclosureTitle: 'Why the system reached this conclusion',
@@ -377,6 +392,7 @@ const RESULTS_COPY = {
     fallbackBody: 'AI selection was unavailable, so this summary was assembled only from verified statements and evidence in this report.',
   },
   uk: {
+    ...buildResultsAddedCopy(true),
     hints: [
       'Починайте з пріоритетних показників, а не з усієї таблиці одразу.',
       'Використовуйте список питань до лікаря, щоб коротко обговорити результат.',
@@ -431,7 +447,6 @@ const RESULTS_COPY = {
     premiumTeaser: 'Хочете відстежувати зміни з часом? Premium додає особисту динаміку, графіки прогресу та глибший супровід між звітами.',
     premiumTeaserCta: 'Дізнатись, що дає Premium',
     disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
-    noRange: 'Референсний діапазон не вдалося перевірити',
     emptyTitle: 'Результати й інтерпретація',
     emptySubtitle: 'Оброблених показників ще немає.',
     loadFailedTitle: 'Не вдалося завантажити звіт',
@@ -584,21 +599,6 @@ const RESULTS_COPY = {
     overviewActionsEmpty: 'Для цього звіту поки немає конкретної пріоритетної дії.',
     overviewMissingEmpty: 'Для цього звіту не виявлено конкретних відсутніх даних.',
     overviewConsultationEmpty: 'Сигналу для швидкого медичного перегляду не виявлено. Нові, виражені або наростаючі симптоми обговоріть із лікарем.',
-    narrativeTitle: 'Ваша персональна інтерпретація',
-    narrativeHeadline: 'Що цей звіт означає саме для вас',
-    narrativeFound: 'Що ми виявили',
-    narrativeConnections: 'Як це пов’язано з вами',
-    narrativeChanged: 'Що змінилося з часом',
-    narrativeUncertainty: 'Що ми поки не можемо визначити',
-    narrativePriority: 'Чому це важливо',
-    narrativeNext: 'Що робити далі',
-    narrativeNoChange: 'Перевірених змін у часі для цього звіту не знайдено.',
-    progressPatternFallback: 'Виявлена закономірність',
-    safetyStatus: {
-      blocked: 'Потрібен перегляд безпеки',
-      approved_with_warnings: 'Перевірено із застереженнями',
-      educational: 'Освітня інформація',
-    },
     overviewEvidence: 'На основі',
     overviewMissingEvidence: 'Відсутнє',
     technicalDisclosureTitle: 'Чому система зробила такий висновок',
@@ -1055,17 +1055,6 @@ const ACTION_PLAN_BUCKET_STYLE = {
   success: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
 }
 const ACTION_PLAN_BUCKET_ORDER = ['urgent', 'doctor', 'practitioner', 'self']
-const ACTION_SOURCE_LABELS = {
-  protocol: ['Protocol guidance', 'Рекомендація протоколу'],
-  pattern: ['Pattern insight', 'Виявлена закономірність'],
-  next_best_tests: ['Recommended follow-up', 'Рекомендований наступний крок'],
-  evidence_gap: ['Evidence gap', 'Брак даних'],
-}
-
-export function recommendationSourceLabel(source, isUk) {
-  const labels = ACTION_SOURCE_LABELS[String(source || '').trim()]
-  return labels ? labels[isUk ? 1 : 0] : ''
-}
 
 // P9 Action Plan by Role: renders action_plan_by_role
 // (backend/app/services/action_plan_by_role.py) as four always-visible

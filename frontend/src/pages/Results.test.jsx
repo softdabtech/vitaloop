@@ -6,9 +6,9 @@ import {
   filterRepeatedActions,
   formatRange,
   normalizeBiomarkerStatus,
-  recommendationSourceLabel,
   safetyStatusLabel,
 } from './Results.jsx'
+import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
 import { reliableClinicalDate } from '../lib/retest.js'
 
 afterEach(cleanup)
