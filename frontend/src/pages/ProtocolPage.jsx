@@ -8,6 +8,7 @@ import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, Ins
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
 import { gaProtocolView } from '../lib/analytics.js'
+import { formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
 // so each page using CoachUI must import it directly or it renders as
@@ -109,6 +110,15 @@ const PROTOCOL_COPY = {
     marker: 'Marker',
     discussTiming: 'Discuss timing with a clinician.',
     retestFallback: 'No specific retest dates yet — timing depends on symptoms and clinician guidance.',
+    retestNotDue: 'Not due yet',
+    retestDueNow: 'Due now',
+    retestOverdue: 'Overdue',
+    retestPending: 'Pending',
+    retestCompleted: 'Completed',
+    retestWindow: (start, end) => `Retest window: ${start} – ${end}`,
+    retestSource: 'Based on this report',
+    retestCompletedBy: (date) => date ? `Completed by a later result on ${date}.` : 'Completed by a later result.',
+    viewLaterResult: 'View later result',
     uploadWhenRepeated: 'Upload your next report when you repeat these tests',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
@@ -216,6 +226,15 @@ const PROTOCOL_COPY = {
     marker: 'Показник',
     discussTiming: 'Обговоріть терміни з фахівцем.',
     retestFallback: 'Конкретних дат повторної перевірки поки немає — терміни залежать від симптомів і рекомендацій фахівця.',
+    retestNotDue: 'Ще не час',
+    retestDueNow: 'Час повторити',
+    retestOverdue: 'Прострочено',
+    retestPending: 'Очікується',
+    retestCompleted: 'Завершено',
+    retestWindow: (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    retestSource: 'На основі цього звіту',
+    retestCompletedBy: (date) => date ? `Завершено наступним результатом ${date}.` : 'Завершено наступним результатом.',
+    viewLaterResult: 'Переглянути наступний результат',
     uploadWhenRepeated: 'Завантажте новий звіт, коли повторите ці аналізи',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
@@ -341,11 +360,12 @@ export function selectProtocolRows({ coreProtocol, storedProtocol, actionPlan })
   return coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan
 }
 
+export function selectProtocolRetestPlan({ interventionsAvailable, persistedRetestPlan, reportRetestPlan }) {
+  return interventionsAvailable && persistedRetestPlan.length ? persistedRetestPlan : reportRetestPlan
+}
+
 async function loadProtocolData(uploadId) {
-  const [{ data }, interventions] = await Promise.all([
-    api.get(`/results/${uploadId}`),
-    listInterventions(),
-  ])
+  const { data } = await api.get(`/results/${uploadId}`)
   const biomarkers = data?.biomarkers ?? []
   const coreProtocol = normalizeProtocolRows(data?.final_analysis?.protocol)
   const storedProtocol = normalizeProtocolRows(data?.protocol)
@@ -369,12 +389,24 @@ async function loadProtocolData(uploadId) {
   // for why both the top-level and final_analysis fallbacks are checked.
   const doctorEscalationPrecision = data?.doctor_escalation_precision ?? data?.final_analysis?.doctor_escalation_precision ?? null
   const reportVersionId = data?.report_version?.id ?? data?.final_analysis?.report_version?.id ?? null
+  let interventions = []
+  let interventionsAvailable = true
+  try {
+    interventions = await listInterventions()
+  } catch {
+    interventionsAvailable = false
+  }
+  const retestObligations = selectRetestObligations(interventions, reportVersionId)
+  const retestResultDates = await loadRetestResultDates(retestObligations)
   const completedActionIds = completedProtocolActionIds(interventions, reportVersionId)
   return {
     biomarkers,
     protocol: selectProtocolRows({ coreProtocol, storedProtocol, actionPlan }),
     doctorDiscussion,
     retestPlan,
+    retestObligations,
+    retestResultDates,
+    interventionsAvailable,
     safetyAlerts,
     shoppingLinks,
     knowledgeReport: data?.knowledge_report ?? null,
@@ -384,6 +416,23 @@ async function loadProtocolData(uploadId) {
     reportVersionId,
     completedActionIds,
   }
+}
+
+async function loadRetestResultDates(obligations) {
+  const uploadIds = [...new Set(
+    obligations
+      .map((item) => item.fulfilled_by_upload_id)
+      .filter(Boolean),
+  )]
+  const entries = await Promise.all(uploadIds.map(async (uploadId) => {
+    try {
+      const { data } = await api.get(`/results/${uploadId}`)
+      return [uploadId, reliableClinicalDate(data)]
+    } catch {
+      return [uploadId, null]
+    }
+  }))
+  return Object.fromEntries(entries)
 }
 
 export function buildProtocolActionCompletionPayload(item, reportVersionId) {
@@ -416,6 +465,50 @@ function protocolTiming(item, isUk = false) {
   const raw = String(item?.timing || item?.schedule || '').trim()
   const labels = isUk ? TIMING_LABELS_UK : TIMING_LABELS
   return labels[raw] || raw.replaceAll('_', ' ') || ''
+}
+
+function retestStateLabel(state, copy) {
+  return {
+    pending_not_open: copy.retestNotDue,
+    due_now: copy.retestDueNow,
+    overdue: copy.retestOverdue,
+    fulfilled: copy.retestCompleted,
+    pending_no_window: copy.retestPending,
+  }[state] || copy.retestPending
+}
+
+export function RetestObligationCard({ item, resultDate, copy, isUk, today }) {
+  const state = retestState(item, today)
+  const marker = item.marker || retestMarker(item)
+  const timing = item.timing || item.metadata?.timing
+  const start = formatRetestDate(item.retest_window_start, isUk ? 'uk-UA' : 'en-US')
+  const end = formatRetestDate(item.retest_window_end, isUk ? 'uk-UA' : 'en-US')
+  const resultHref = item.fulfilled_by_upload_id ? `/results/${item.fulfilled_by_upload_id}` : null
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="font-bold text-slate-950">{displayBiomarker(marker, isUk) || copy.marker}</p>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-700">{retestStateLabel(state, copy)}</span>
+      </div>
+      {start && end && <p className="mt-2 text-sm text-slate-700">{copy.retestWindow(start, end)}</p>}
+      {timing && <p className="mt-1 text-xs text-slate-500">{timing}</p>}
+      <p className="mt-1 text-xs text-slate-500">{copy.retestSource}</p>
+      {state === 'fulfilled' && (
+        <p className="mt-2 text-sm text-emerald-700">
+          {copy.retestCompletedBy(resultDate ? formatRetestDate(resultDate, isUk ? 'uk-UA' : 'en-US') : null)}
+        </p>
+      )}
+      {resultHref && (
+        <a
+          href={resultHref}
+          className="mt-2 inline-flex max-w-full flex-wrap items-center gap-1 text-sm font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+        >
+          {copy.viewLaterResult}
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+        </a>
+      )}
+    </div>
+  )
 }
 
 function protocolCategory(item, isUk = false) {
@@ -867,6 +960,9 @@ export default function ProtocolPage() {
   const [protocol, setProtocol] = useState([])
   const [doctorDiscussion, setDoctorDiscussion] = useState([])
   const [retestPlan, setRetestPlan] = useState([])
+  const [retestObligations, setRetestObligations] = useState([])
+  const [retestResultDates, setRetestResultDates] = useState({})
+  const [interventionsAvailable, setInterventionsAvailable] = useState(true)
   const [safetyAlerts, setSafetyAlerts] = useState([])
   const [shoppingLinks, setShoppingLinks] = useState([])
   const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
@@ -891,6 +987,9 @@ export default function ProtocolPage() {
         setProtocol(data.protocol)
         setDoctorDiscussion(data.doctorDiscussion)
         setRetestPlan(data.retestPlan)
+        setRetestObligations(data.retestObligations)
+        setRetestResultDates(data.retestResultDates)
+        setInterventionsAvailable(data.interventionsAvailable)
         setSafetyAlerts(data.safetyAlerts)
         setShoppingLinks(data.shoppingLinks)
         setClinicalReasoningTraces(data.clinicalReasoningTraces)
@@ -921,6 +1020,12 @@ export default function ProtocolPage() {
     { key: 'month', title: copy.sections.month[0], body: copy.sections.month[1], rows: grouped.month },
     { key: 'longTerm', title: copy.sections.longTerm[0], body: copy.sections.longTerm[1], rows: grouped.longTerm },
   ].filter((section) => section.rows.length > 0)
+  const persistedRetestPlan = interventionsAvailable ? retestObligations : []
+  const visibleRetestPlan = selectProtocolRetestPlan({
+    interventionsAvailable,
+    persistedRetestPlan,
+    reportRetestPlan: retestPlan,
+  })
 
   async function handleComplete(item) {
     if (!reportVersionId || !item?.action_id || savingActionId || completedActionIds.has(item.action_id)) return
@@ -937,7 +1042,7 @@ export default function ProtocolPage() {
     if (!canExport || exporting || sortedProtocol.length === 0) return
     try {
       setExporting(true)
-      await exportProtocolPdf({ protocolRows: sortedProtocol, retestPlan, doctorDiscussion, uploadId, copy, isUk })
+      await exportProtocolPdf({ protocolRows: sortedProtocol, retestPlan: visibleRetestPlan, doctorDiscussion, uploadId, copy, isUk })
     } finally {
       setExporting(false)
     }
@@ -993,7 +1098,7 @@ export default function ProtocolPage() {
             <div className="grid gap-3">
               <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.actions}</span><strong>{sortedProtocol.length}</strong></div>
               <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.biomarkers}</span><strong>{biomarkers.length}</strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.retestItems}</span><strong>{retestPlan.length}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.retestItems}</span><strong>{visibleRetestPlan.length}</strong></div>
             </div>
           </CoachCard>
         </div>
@@ -1079,18 +1184,28 @@ export default function ProtocolPage() {
             <RefreshCw className="h-5 w-5 text-teal-600" />
             <h2 className="text-lg font-extrabold text-slate-950">{copy.retestPlan}</h2>
           </div>
-          {!!retestPlan.length && <p className="mb-3 text-sm leading-6 text-slate-500">{copy.retestPlanIntro}</p>}
-          {retestPlan.length ? (
+          {!!visibleRetestPlan.length && <p className="mb-3 text-sm leading-6 text-slate-500">{copy.retestPlanIntro}</p>}
+          {visibleRetestPlan.length ? (
             <div className="space-y-3">
-              {retestPlan.slice(0, 6).map((item, index) => (
-                <div key={index} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="font-bold text-slate-950">{displayBiomarker(item.marker, isUk) || copy.marker}</p>
-                  <p className="mt-1 text-sm text-slate-600">{item.timing || item.reason || copy.discussTiming}</p>
-                </div>
-              ))}
+              {persistedRetestPlan.length
+                ? persistedRetestPlan.slice(0, 6).map((item) => (
+                    <RetestObligationCard
+                      key={item.id || item.marker}
+                      item={item}
+                      resultDate={retestResultDates[item.fulfilled_by_upload_id]}
+                      copy={copy}
+                      isUk={isUk}
+                    />
+                  ))
+                : retestPlan.slice(0, 6).map((item, index) => (
+                    <div key={index} className="rounded-2xl bg-slate-50 p-3">
+                      <p className="font-bold text-slate-950">{displayBiomarker(item.marker, isUk) || copy.marker}</p>
+                      <p className="mt-1 text-sm text-slate-600">{item.timing || item.reason || copy.discussTiming}</p>
+                    </div>
+                  ))}
             </div>
           ) : <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>}
-          {!!retestPlan.length && (
+          {!!visibleRetestPlan.length && (
             <button
               type="button"
               onClick={() => navigate('/upload')}
