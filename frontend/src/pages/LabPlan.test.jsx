@@ -68,6 +68,14 @@ describe('PersonalLabPlan', () => {
     expect(screen.getByText('Based on your report · recommendation')).toBeTruthy()
   })
 
+  it('normalizes persisted biomarker names without changing the source item', () => {
+    const item = { ...plannedItem, test_name: 'mch', canonical_normalized_test_name: 'mch' }
+    render(<PersonalLabPlan items={[item]} isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
+
+    expect(screen.getByRole('heading', { name: 'MCH' })).toBeTruthy()
+    expect(item.test_name).toBe('mch')
+  })
+
   it('marks an item from an earlier report as historical without changing its status', () => {
     render(
       <PersonalLabPlan
@@ -81,7 +89,57 @@ describe('PersonalLabPlan', () => {
     )
 
     expect(screen.getByText(/From an earlier report/)).toBeTruthy()
+    expect(screen.getByText('This test was added from an earlier report.')).toBeTruthy()
     expect(screen.getByText('Planned')).toBeTruthy()
+  })
+
+  it('shows neutral historical context instead of an earlier clinical reason', () => {
+    const item = {
+      ...plannedItem,
+      test_name: 'Vitamin D',
+      reason: 'Vitamin D is deficient and should be trended after intervention or clinical review.',
+      source_report_version_id: 'earlier-report',
+    }
+    render(
+      <PersonalLabPlan
+        items={[item]}
+        isUk={false}
+        loading={false}
+        error={false}
+        onRetry={vi.fn()}
+        activeReportVersionId="current-report"
+      />,
+    )
+
+    expect(screen.getByText('Historical context')).toBeTruthy()
+    expect(screen.getByText('This test was added from an earlier report.')).toBeTruthy()
+    expect(screen.queryByText(item.reason)).toBeNull()
+    expect(screen.getByText((_, element) => (
+      element?.tagName === 'P' && element.textContent.includes('From an earlier report')
+    ))).toBeTruthy()
+  })
+
+  it('preserves current report rationale and fulfilled state', () => {
+    const item = {
+      ...plannedItem,
+      status: 'fulfilled',
+      source_report_version_id: 'current-report',
+      fulfilled_by_upload_id: 'upload-2',
+    }
+    useLabResultsMock.mockReturnValue({ data: { test_date: '2026-10-12' }, isError: false })
+    render(
+      <PersonalLabPlan
+        items={[item]}
+        isUk={false}
+        loading={false}
+        error={false}
+        onRetry={vi.fn()}
+        activeReportVersionId="current-report"
+      />,
+    )
+
+    expect(screen.getByText(item.reason)).toBeTruthy()
+    expect(screen.getByText('Completed')).toBeTruthy()
   })
 
   it('renders a fulfilled item as completed and links to the later result', () => {

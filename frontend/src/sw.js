@@ -5,6 +5,7 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
+import { NAVIGATION_CACHE_NAME, obsoleteServiceWorkerCaches } from './lib/service-worker-cache.js'
 
 self.skipWaiting()
 clientsClaim()
@@ -12,7 +13,7 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST || [])
 
 const navigationHandler = new NetworkFirst({
-  cacheName: 'navigation-shell',
+  cacheName: NAVIGATION_CACHE_NAME,
   networkTimeoutSeconds: 3,
   plugins: [
     new CacheableResponsePlugin({ statuses: [0, 200] }),
@@ -22,6 +23,15 @@ const navigationRoute = new NavigationRoute(navigationHandler, {
   denylist: [/^\/api\//, /^\/auth\//, /^\/admin/, /^\/__/],
 })
 registerRoute(navigationRoute)
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    self.caches.keys().then((cacheNames) => Promise.all(
+      obsoleteServiceWorkerCaches(cacheNames)
+        .map((cacheName) => self.caches.delete(cacheName)),
+    )),
+  )
+})
 
 registerRoute(
   ({ url }) => /^https:\/\/fonts\.googleapis\.com\/.*/i.test(url.href),
