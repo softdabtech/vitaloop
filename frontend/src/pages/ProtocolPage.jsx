@@ -336,6 +336,26 @@ const HEALTH_DOMAIN_LABELS_UK = {
   'recovery and energy': 'Відновлення й енергія',
 }
 
+const ACTION_SOURCE_LABELS = {
+  en: {
+    protocol: 'Protocol guidance',
+    pattern: 'Pattern insight',
+    next_best_tests: 'Recommended follow-up',
+    evidence_gap: 'Evidence gap',
+  },
+  uk: {
+    protocol: 'Рекомендація протоколу',
+    pattern: 'Виявлена закономірність',
+    next_best_tests: 'Рекомендований наступний крок',
+    evidence_gap: 'Брак даних',
+  },
+}
+
+export function actionSourceLabel(source, isUk = false) {
+  const key = String(source || '').trim().toLowerCase()
+  return ACTION_SOURCE_LABELS[isUk ? 'uk' : 'en'][key] || ''
+}
+
 function formatPriority(priority, isUk = false) {
   return String(priority || 'LOW').toUpperCase()
     .replace('HIGH', isUk ? 'ВИСОКИЙ' : 'HIGH')
@@ -853,6 +873,7 @@ export function ActionCard({ item, copy, isUk, reportVersionId, completed, savin
   const safetyNotes = safetyNotesList(item)
   const retestMarkers = retestMarkersList(item)
   const expectedTimeline = item?.expected_timeline || item?.timeline || item?.expected_timeframe || null
+  const provenance = actionSourceLabel(item?.source, isUk)
   const canComplete = Boolean(item?.action_id && reportVersionId)
   return (
     <CoachCard className="p-4" interactive>
@@ -860,6 +881,7 @@ export function ActionCard({ item, copy, isUk, reportVersionId, completed, savin
         <div>
           <h3 className="text-lg font-extrabold text-slate-950">{title}</h3>
           {category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{category}</p>}
+          {provenance && <p className="mt-1 text-xs font-medium text-slate-500">{provenance}</p>}
         </div>
         <CoachBadge tone={priorityTone(item?.priority)}>{formatPriority(item?.priority, isUk)}</CoachBadge>
       </div>
