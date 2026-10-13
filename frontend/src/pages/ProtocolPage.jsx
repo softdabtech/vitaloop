@@ -116,6 +116,7 @@ const PROTOCOL_COPY = {
     markComplete: 'Mark complete',
     completing: 'Saving...',
     completed: 'Completed',
+    completionFailed: "We couldn't save this update. Try again.",
     planContext: 'Plan Context',
     actions: 'Actions',
     biomarkers: 'Biomarkers reviewed',
@@ -224,6 +225,7 @@ const PROTOCOL_COPY = {
     markComplete: 'Позначити виконаним',
     completing: 'Зберігаємо...',
     completed: 'Виконано',
+    completionFailed: 'Не вдалося зберегти оновлення. Спробуйте ще раз.',
     planContext: 'Контекст плану',
     actions: 'Дій',
     biomarkers: 'Показників переглянуто',
@@ -837,7 +839,7 @@ function ProgressActionSection({ progress, copy }) {
   )
 }
 
-export function ActionCard({ item, copy, isUk, reportVersionId, completed, saving, onComplete }) {
+export function ActionCard({ item, copy, isUk, reportVersionId, completed, saving, error, onComplete }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
   const timing = protocolTiming(item, isUk)
@@ -893,14 +895,17 @@ export function ActionCard({ item, copy, isUk, reportVersionId, completed, savin
         </div>
       )}
       {canComplete && (
-        <button
-          type="button"
-          className="mt-4 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving || completed}
-          onClick={() => onComplete(item)}
-        >
-          {completed ? copy.completed : saving ? copy.completing : copy.markComplete}
-        </button>
+        <>
+          <button
+            type="button"
+            className="mt-4 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={saving || completed}
+            onClick={() => onComplete(item)}
+          >
+            {completed ? copy.completed : saving ? copy.completing : copy.markComplete}
+          </button>
+          {error && <p role="alert" className="mt-2 break-words text-sm leading-5 text-rose-700">{error}</p>}
+        </>
       )}
     </CoachCard>
   )
@@ -978,6 +983,7 @@ export default function ProtocolPage() {
   const [reportVersionId, setReportVersionId] = useState(null)
   const [completedActionIds, setCompletedActionIds] = useState(() => new Set())
   const [savingActionId, setSavingActionId] = useState(null)
+  const [completionErrors, setCompletionErrors] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -1036,10 +1042,27 @@ export default function ProtocolPage() {
 
   async function handleComplete(item) {
     if (!reportVersionId || !item?.action_id || savingActionId || completedActionIds.has(item.action_id)) return
+    setCompletionErrors((current) => {
+      if (!current[item.action_id]) return current
+      const next = { ...current }
+      delete next[item.action_id]
+      return next
+    })
     setSavingActionId(item.action_id)
     try {
       await completeProtocolAction(buildProtocolActionCompletionPayload(item, reportVersionId))
       setCompletedActionIds((current) => new Set(current).add(item.action_id))
+      setCompletionErrors((current) => {
+        if (!current[item.action_id]) return current
+        const next = { ...current }
+        delete next[item.action_id]
+        return next
+      })
+    } catch {
+      setCompletionErrors((current) => ({
+        ...current,
+        [item.action_id]: copy.completionFailed,
+      }))
     } finally {
       setSavingActionId(null)
     }
@@ -1141,6 +1164,7 @@ export default function ProtocolPage() {
                 reportVersionId={reportVersionId}
                 completed={completedActionIds.has(item.action_id)}
                 saving={savingActionId === item.action_id}
+                error={completionErrors[item.action_id]}
                 onComplete={handleComplete}
               />
             ))}
