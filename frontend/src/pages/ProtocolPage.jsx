@@ -73,6 +73,45 @@ const CATEGORY_LABELS_UK = {
   stress: 'Стрес',
 }
 
+function createRetestCopy(notDue, dueNow, overdue, pending, completed, window, source, completedBy, viewLaterResult) {
+  return {
+    retestNotDue: notDue,
+    retestDueNow: dueNow,
+    retestOverdue: overdue,
+    retestPending: pending,
+    retestCompleted: completed,
+    retestWindow: window,
+    retestSource: source,
+    retestCompletedBy: completedBy,
+    viewLaterResult,
+  }
+}
+
+const RETEST_COPY = {
+  en: createRetestCopy(
+    'Not due yet',
+    'Due now',
+    'Overdue',
+    'Pending',
+    'Completed',
+    (start, end) => `Retest window: ${start} – ${end}`,
+    'Based on this report',
+    (date) => date ? `Completed by a later result on ${date}.` : 'Completed by a later result.',
+    'View later result',
+  ),
+  uk: createRetestCopy(
+    'Ще не час',
+    'Час повторити',
+    'Прострочено',
+    'Очікується',
+    'Завершено',
+    (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    'На основі цього звіту',
+    (date) => date ? `Завершено наступним результатом ${date}.` : 'Завершено наступним результатом.',
+    'Переглянути наступний результат',
+  ),
+}
+
 const PROTOCOL_COPY = {
   en: {
     errorTitle: 'Protocol is not available',
@@ -111,15 +150,7 @@ const PROTOCOL_COPY = {
     marker: 'Marker',
     discussTiming: 'Discuss timing with a clinician.',
     retestFallback: 'No specific retest dates yet — timing depends on symptoms and clinician guidance.',
-    retestNotDue: 'Not due yet',
-    retestDueNow: 'Due now',
-    retestOverdue: 'Overdue',
-    retestPending: 'Pending',
-    retestCompleted: 'Completed',
-    retestWindow: (start, end) => `Retest window: ${start} – ${end}`,
-    retestSource: 'Based on this report',
-    retestCompletedBy: (date) => date ? `Completed by a later result on ${date}.` : 'Completed by a later result.',
-    viewLaterResult: 'View later result',
+    ...RETEST_COPY.en,
     uploadWhenRepeated: 'Upload your next report when you repeat these tests',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
@@ -227,15 +258,7 @@ const PROTOCOL_COPY = {
     marker: 'Показник',
     discussTiming: 'Обговоріть терміни з фахівцем.',
     retestFallback: 'Конкретних дат повторної перевірки поки немає — терміни залежать від симптомів і рекомендацій фахівця.',
-    retestNotDue: 'Ще не час',
-    retestDueNow: 'Час повторити',
-    retestOverdue: 'Прострочено',
-    retestPending: 'Очікується',
-    retestCompleted: 'Завершено',
-    retestWindow: (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
-    retestSource: 'На основі цього звіту',
-    retestCompletedBy: (date) => date ? `Завершено наступним результатом ${date}.` : 'Завершено наступним результатом.',
-    viewLaterResult: 'Переглянути наступний результат',
+    ...RETEST_COPY.uk,
     uploadWhenRepeated: 'Завантажте новий звіт, коли повторите ці аналізи',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
