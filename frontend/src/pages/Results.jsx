@@ -67,6 +67,8 @@ const STATUS_ALIAS_MAP = {
   H: 'ELEVATED',
   ELEVATED: 'ELEVATED',
   CRITICAL: 'ELEVATED',
+  UNKNOWN: 'UNKNOWN',
+  UNEVALUATED: 'UNKNOWN',
 }
 
 const BIOMARKER_NAME_TRANSLATIONS = [
@@ -193,7 +195,7 @@ const RESULTS_COPY = {
     premiumTeaser: 'Want to track changes over time? Premium adds personal baseline, progress trends, and deeper follow-up across reports.',
     premiumTeaserCta: 'See what Premium adds',
     disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
-    noRange: 'No reference range',
+    noRange: 'Reference range could not be verified',
     emptyTitle: 'Results & Interpretation',
     emptySubtitle: 'No processed biomarkers yet.',
     loadFailedTitle: 'Report unavailable',
@@ -313,8 +315,8 @@ const RESULTS_COPY = {
     systemMapIntro: 'Every system we checked — not just the ones flagged. Stable systems are reassurance, not an absence of data.',
     systemMapPersonalDrift: 'Personal baseline shift detected here',
     systemMapNoData: 'No markers for this system yet',
-    actionPlanTitle: 'Your Action Plan, By Who',
-    actionPlanIntro: 'The simplest version of this report: what you can do yourself, what to bring to a specialist, what needs a doctor, and what’s urgent.',
+    actionPlanTitle: 'Your next actions',
+    actionPlanIntro: 'Your primary next-action list: what you can do yourself, what to bring to a specialist, what needs a doctor, and what’s urgent.',
     actionPlanBuckets: {
       urgent: { label: 'Urgent — discuss promptly', tone: 'critical' },
       doctor: { label: 'Discuss with a doctor', tone: 'warning' },
@@ -346,6 +348,21 @@ const RESULTS_COPY = {
     overviewActionsEmpty: 'No report-specific priority action is available yet.',
     overviewMissingEmpty: 'No specific missing information was identified for this report.',
     overviewConsultationEmpty: 'No prompt medical-review signal was identified. Discuss new, severe, or worsening symptoms with a qualified clinician.',
+    narrativeTitle: 'Your personal interpretation',
+    narrativeHeadline: 'What this report means for you',
+    narrativeFound: 'What we found',
+    narrativeConnections: 'How it connects to you',
+    narrativeChanged: 'What changed over time',
+    narrativeUncertainty: 'What we are not sure about',
+    narrativePriority: 'Why this is a priority',
+    narrativeNext: 'What to do next',
+    narrativeNoChange: 'No verified change over time was available for this report.',
+    progressPatternFallback: 'Pattern insight',
+    safetyStatus: {
+      blocked: 'Safety review required',
+      approved_with_warnings: 'Reviewed with cautions',
+      educational: 'Educational information',
+    },
     overviewEvidence: 'Based on',
     overviewMissingEvidence: 'Missing',
     technicalDisclosureTitle: 'Why the system reached this conclusion',
@@ -414,7 +431,7 @@ const RESULTS_COPY = {
     premiumTeaser: 'Хочете відстежувати зміни з часом? Premium додає особисту динаміку, графіки прогресу та глибший супровід між звітами.',
     premiumTeaserCta: 'Дізнатись, що дає Premium',
     disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
-    noRange: 'Референс не вказано',
+    noRange: 'Референсний діапазон не вдалося перевірити',
     emptyTitle: 'Результати й інтерпретація',
     emptySubtitle: 'Оброблених показників ще немає.',
     loadFailedTitle: 'Не вдалося завантажити звіт',
@@ -534,8 +551,8 @@ const RESULTS_COPY = {
     systemMapIntro: 'Кожна система, яку ми перевірили — не тільки позначені. Стабільні системи — це підтвердження, а не брак даних.',
     systemMapPersonalDrift: 'Тут виявлено зміну відносно вашої базової лінії',
     systemMapNoData: 'Поки немає показників для цієї системи',
-    actionPlanTitle: 'Ваш план дій, за виконавцем',
-    actionPlanIntro: 'Найпростіша версія цього звіту: що можна зробити самостійно, що обговорити з фахівцем, що потребує лікаря, і що термінове.',
+    actionPlanTitle: 'Ваші наступні дії',
+    actionPlanIntro: 'Ваш основний список наступних дій: що можна зробити самостійно, що обговорити з фахівцем, що потребує лікаря, і що термінове.',
     actionPlanBuckets: {
       urgent: { label: 'Терміново — обговоріть якнайшвидше', tone: 'critical' },
       doctor: { label: 'Обговорити з лікарем', tone: 'warning' },
@@ -567,6 +584,21 @@ const RESULTS_COPY = {
     overviewActionsEmpty: 'Для цього звіту поки немає конкретної пріоритетної дії.',
     overviewMissingEmpty: 'Для цього звіту не виявлено конкретних відсутніх даних.',
     overviewConsultationEmpty: 'Сигналу для швидкого медичного перегляду не виявлено. Нові, виражені або наростаючі симптоми обговоріть із лікарем.',
+    narrativeTitle: 'Ваша персональна інтерпретація',
+    narrativeHeadline: 'Що цей звіт означає саме для вас',
+    narrativeFound: 'Що ми виявили',
+    narrativeConnections: 'Як це пов’язано з вами',
+    narrativeChanged: 'Що змінилося з часом',
+    narrativeUncertainty: 'Що ми поки не можемо визначити',
+    narrativePriority: 'Чому це важливо',
+    narrativeNext: 'Що робити далі',
+    narrativeNoChange: 'Перевірених змін у часі для цього звіту не знайдено.',
+    progressPatternFallback: 'Виявлена закономірність',
+    safetyStatus: {
+      blocked: 'Потрібен перегляд безпеки',
+      approved_with_warnings: 'Перевірено із застереженнями',
+      educational: 'Освітня інформація',
+    },
     overviewEvidence: 'На основі',
     overviewMissingEvidence: 'Відсутнє',
     technicalDisclosureTitle: 'Чому система зробила такий висновок',
@@ -623,7 +655,7 @@ function inferStatusFromRange(biomarker) {
   return 'OPTIMAL'
 }
 
-function normalizeBiomarkerStatus(biomarker) {
+export function normalizeBiomarkerStatus(biomarker) {
   if (biomarker?.ref_low == null || biomarker?.ref_high == null) return 'UNKNOWN'
   const raw = String(biomarker?.status || '').trim().toUpperCase()
   return STATUS_ALIAS_MAP[raw] || inferStatusFromRange(biomarker)
@@ -639,9 +671,14 @@ function formatMetric(biomarker) {
   return `${biomarker.value ?? '—'}${unit}`
 }
 
-function formatRange(biomarker, copy = RESULTS_COPY.en) {
+export function formatRange(biomarker, copy = RESULTS_COPY.en) {
   if (biomarker?.ref_low == null || biomarker?.ref_high == null) return copy.noRange
   return `${biomarker.ref_low} - ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+}
+
+export function safetyStatusLabel(status, copy) {
+  const key = String(status || '').trim().toLowerCase()
+  return copy.safetyStatus?.[key] || copy.safetyStatus?.educational
 }
 
 function displayBiomarkerName(biomarker, isUk) {
@@ -756,6 +793,75 @@ function OverviewList({ items, emptyText, copy, numbered = false }) {
         </li>
       ))}
     </ListTag>
+  )
+}
+
+function narrativeTextItems(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => typeof item === 'string' ? item.trim() : item?.text?.trim())
+    .filter(Boolean)
+}
+
+function normalizedCopy(value) {
+  return String(value || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ')
+}
+
+export function filterRepeatedActions(items, authoritativeItems) {
+  const authoritativeIds = new Set(
+    authoritativeItems
+      .map((item) => item?.action_id || item?.source_id || item?.id)
+      .filter(Boolean)
+      .map(String)
+  )
+  const authoritative = new Set(
+    authoritativeItems
+      .flatMap((item) => [item?.title, item?.text, item?.reason])
+      .map(normalizedCopy)
+      .filter(Boolean)
+  )
+  return items.filter((item) => {
+    const itemId = item?.action_id || item?.source_id || item?.id
+    if (itemId && authoritativeIds.has(String(itemId))) return false
+    return !authoritative.has(normalizedCopy(item.text))
+  })
+}
+
+function actionPlanItems(actionPlan) {
+  return ['urgent', 'doctor', 'practitioner', 'self'].flatMap((bucket) =>
+    Array.isArray(actionPlan?.buckets?.[bucket]) ? actionPlan.buckets[bucket] : []
+  )
+}
+
+export function UnifiedNarrativeSection({ narrative, copy, authoritativeActions }) {
+  if (!narrative || typeof narrative !== 'object') return null
+  const sections = [
+    [copy.narrativeFound, narrativeTextItems(narrative.what_we_found)],
+    [copy.narrativeConnections, narrativeTextItems(narrative.how_it_connects_to_you)],
+    [copy.narrativeChanged, narrativeTextItems(narrative.what_changed_over_time)],
+    [copy.narrativeUncertainty, narrativeTextItems(narrative.what_we_are_not_sure_about)],
+    [copy.narrativePriority, narrativeTextItems(narrative.why_this_is_priority)],
+    [copy.narrativeNext, filterRepeatedActions(
+      narrativeTextItems(narrative.what_to_do_next).map((text) => ({ text })),
+      authoritativeActions,
+    ).map((item) => item.text)],
+  ].filter(([, items]) => items.length)
+  if (!sections.length) return null
+
+  return (
+    <SectionCard icon={ClipboardList} title={copy.narrativeTitle} className="mb-6" >
+      <p className="mb-4 text-base font-semibold leading-6 text-slate-900">{copy.narrativeHeadline}</p>
+      <div className="space-y-4">
+        {sections.map(([title, items]) => (
+          <div key={title}>
+            <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+            <ul className="mt-1 space-y-1 text-sm leading-6 text-slate-600">
+              {items.map((item, index) => <li key={`${title}-${index}`}>{item}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
   )
 }
 
@@ -949,6 +1055,17 @@ const ACTION_PLAN_BUCKET_STYLE = {
   success: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
 }
 const ACTION_PLAN_BUCKET_ORDER = ['urgent', 'doctor', 'practitioner', 'self']
+const ACTION_SOURCE_LABELS = {
+  protocol: ['Protocol guidance', 'Рекомендація протоколу'],
+  pattern: ['Pattern insight', 'Виявлена закономірність'],
+  next_best_tests: ['Recommended follow-up', 'Рекомендований наступний крок'],
+  evidence_gap: ['Evidence gap', 'Брак даних'],
+}
+
+export function recommendationSourceLabel(source, isUk) {
+  const labels = ACTION_SOURCE_LABELS[String(source || '').trim()]
+  return labels ? labels[isUk ? 1 : 0] : ''
+}
 
 // P9 Action Plan by Role: renders action_plan_by_role
 // (backend/app/services/action_plan_by_role.py) as four always-visible
@@ -956,7 +1073,7 @@ const ACTION_PLAN_BUCKET_ORDER = ['urgent', 'doctor', 'practitioner', 'self']
 // page: what to do yourself, what to bring to a specialist, what needs a
 // doctor, what's urgent. Pure display over data already bucketed
 // server-side; this component does no classification of its own.
-function ActionPlanByRoleSection({ actionPlan, copy }) {
+function ActionPlanByRoleSection({ actionPlan, copy, isUk }) {
   if (!actionPlan?.buckets) return null
   return (
     <SectionCard icon={CheckCircle2} title={copy.actionPlanTitle} className="mb-6">
@@ -977,6 +1094,9 @@ function ActionPlanByRoleSection({ actionPlan, copy }) {
                 {items.slice(0, 8).map((item, index) => (
                   <div key={`${item.source_id || item.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
                     <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                    {!!recommendationSourceLabel(item.source, isUk) && (
+                      <p className="mt-1 text-xs font-medium text-slate-500">{recommendationSourceLabel(item.source, isUk)}</p>
+                    )}
                     {!!item.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
                   </div>
                 ))}
@@ -1073,7 +1193,7 @@ function ReasoningTraceCard({ trace, copy }) {
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h3 className="font-semibold text-slate-950">
-          {trace?.user_explanation?.headline || trace?.pattern_name || trace?.pattern_id}
+          {trace?.user_explanation?.headline || trace?.pattern_name || copy.reasoningTitle}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           {confidence && (
@@ -1162,7 +1282,7 @@ function ProgressIntelligenceSection({ progress, copy }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-semibold text-slate-950">{change.pattern_name || change.pattern_id}</h3>
+                    <h3 className="font-semibold text-slate-950">{change.pattern_name || copy.progressPatternFallback}</h3>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{copy[meta.labelKey]}</span>
                   </div>
                   {(currentPct || previousPct) && (
@@ -1789,7 +1909,6 @@ function TechnicalContractSummary({ evidenceDebt, confidenceCalibration, copy })
                 <li key={item.domain || index}>
                   <span className="font-semibold">{item.domain || 'domain'}:</span>{' '}
                   {item.debt_level || '—'}{Number.isFinite(Number(item.debt_score)) ? ` (${formatPercent(item.debt_score)})` : ''}
-                  {!!item.reason_codes?.length && <span className="text-slate-400"> · {item.reason_codes.join(', ')}</span>}
                 </li>
               ))}
             </ul>
@@ -1808,10 +1927,9 @@ function TechnicalContractSummary({ evidenceDebt, confidenceCalibration, copy })
             <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
               {calibratedItems.slice(0, 6).map((item, index) => (
                 <li key={item.target_id || index}>
-                  <span className="font-semibold">{item.domain || item.target_id || 'item'}:</span>{' '}
+                  <span className="font-semibold">{localizeDomainLabel(item.domain, copy) || 'Item'}:</span>{' '}
                   {item.calibrated_confidence || '—'}
                   {Number.isFinite(Number(item.calibrated_score)) ? ` (${formatPercent(item.calibrated_score)})` : ''}
-                  {!!item.reason_codes?.length && <span className="text-slate-400"> · {item.reason_codes.join(', ')}</span>}
                 </li>
               ))}
             </ul>
@@ -2060,6 +2178,11 @@ export default function Results() {
     protocol,
     priorityMarkers,
   })
+  const authoritativeActions = actionPlanItems(actionPlanByRole)
+  const presentationOverview = {
+    ...resultOverview,
+    actions: filterRepeatedActions(resultOverview.actions, authoritativeActions),
+  }
   const explanations = Array.isArray(explainability?.recommendations)
     ? explainability.recommendations
     : Array.isArray(explainability?.marker_explanations)
@@ -2248,8 +2371,14 @@ export default function Results() {
           </div>
         </motion.header>
 
+        <UnifiedNarrativeSection
+          narrative={finalAnalysis?.unified_personal_narrative}
+          copy={copy}
+          authoritativeActions={authoritativeActions}
+        />
+
         <ResultOverviewPanel
-          overview={resultOverview}
+          overview={presentationOverview}
           finalAnalysis={finalAnalysis}
           copy={copy}
           isUk={isUk}
@@ -2257,7 +2386,7 @@ export default function Results() {
 
         <DoctorEscalationSection doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
 
-        <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} />
+        <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} isUk={isUk} />
 
         <TechnicalReasoningDisclosure
           finalAnalysis={finalAnalysis}
@@ -2358,7 +2487,7 @@ export default function Results() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-950">{copy.evidence}</h2>
               <CoachBadge tone={safetyResult?.status === 'blocked' ? 'critical' : safetyResult?.status === 'approved_with_warnings' ? 'warning' : 'success'}>
-                {safetyResult?.status || 'educational'}
+                {safetyStatusLabel(safetyResult?.status, copy)}
               </CoachBadge>
             </div>
             <p className="text-sm leading-6 text-slate-600">

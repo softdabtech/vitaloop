@@ -1,6 +1,14 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { TestingPlanSection } from './Results.jsx'
+import {
+  TestingPlanSection,
+  UnifiedNarrativeSection,
+  filterRepeatedActions,
+  formatRange,
+  normalizeBiomarkerStatus,
+  recommendationSourceLabel,
+  safetyStatusLabel,
+} from './Results.jsx'
 import { reliableClinicalDate } from '../lib/retest.js'
 
 afterEach(cleanup)
@@ -24,6 +32,20 @@ const copy = {
   addToLabPlan: 'Add to lab plan',
   savingToLabPlan: 'Saving...',
   inLabPlan: 'In lab plan',
+  narrativeTitle: 'Your personal interpretation',
+  narrativeHeadline: 'What this report means for you',
+  narrativeFound: 'What we found',
+  narrativeConnections: 'How it connects to you',
+  narrativeChanged: 'What changed over time',
+  narrativeUncertainty: 'What we are not sure about',
+  narrativePriority: 'Why this is a priority',
+  narrativeNext: 'What to do next',
+  narrativeNoChange: 'No verified change over time was available for this report.',
+  safetyStatus: {
+    blocked: 'Safety review required',
+    approved_with_warnings: 'Reviewed with cautions',
+    educational: 'Educational information',
+  },
 }
 
 const baseProps = {
@@ -65,6 +87,48 @@ describe('Results persisted retest presentation', () => {
     expect(screen.getByText('Not due yet')).toBeTruthy()
     expect(screen.getByText('Retest window: Nov 21, 2026 – Jan 2, 2027')).toBeTruthy()
     expect(screen.getByText('6-12 weeks')).toBeTruthy()
+  })
+
+  describe('Results uncertainty and narrative presentation', () => {
+    it('keeps missing or unevaluated biomarkers fail-closed with clear wording', () => {
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'UNEVALUATED', ref_low: null, ref_high: null })).toBe('UNKNOWN')
+      expect(formatRange({ ref_low: null, ref_high: null })).toBe('Reference range could not be verified')
+    })
+
+    it('translates safety states instead of exposing internal enum values', () => {
+      expect(safetyStatusLabel('approved_with_warnings', copy)).toBe('Reviewed with cautions')
+      expect(safetyStatusLabel('unexpected_internal_state', copy)).toBe('Educational information')
+    })
+
+    it('shows supported recommendation provenance without raw source fallbacks', () => {
+      expect(recommendationSourceLabel('pattern', false)).toBe('Pattern insight')
+      expect(recommendationSourceLabel('evidence_gap', true)).toBe('Брак даних')
+      expect(recommendationSourceLabel('internal_source', false)).toBe('')
+    })
+
+    it('removes only exact duplicate action copy from secondary surfaces', () => {
+      const items = [{ text: 'Improve hydration' }, { text: 'Discuss ferritin with a clinician' }]
+      const authoritative = [{ title: 'Improve hydration' }]
+      expect(filterRepeatedActions(items, authoritative)).toEqual([{ text: 'Discuss ferritin with a clinician' }])
+    })
+
+    it('shows the explicit changed-over-time narrative section when content exists', () => {
+      render(
+        <UnifiedNarrativeSection
+          narrative={{
+            what_we_found: [{ text: 'Ferritin is below the report range.' }],
+            what_changed_over_time: [{ text: 'Ferritin improved since your previous report.' }],
+            what_to_do_next: [{ text: 'Improve hydration' }],
+          }}
+          copy={copy}
+          authoritativeActions={[{ title: 'Improve hydration' }]}
+        />,
+      )
+
+      expect(screen.getByText('What changed over time')).toBeTruthy()
+      expect(screen.getByText('Ferritin improved since your previous report.')).toBeTruthy()
+      expect(screen.queryByText('Improve hydration')).toBeNull()
+    })
   })
 
   it.each([
