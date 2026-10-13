@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Upload } from 'lucide-react'
+import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Loader2, RefreshCw, Upload } from 'lucide-react'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
-import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
+import { listLabPlanItems } from '../api/labPlan.js'
+import { useDashboardSummary, useLabResults, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -145,13 +146,266 @@ function inLatestReport(item, activeMarkerNames) {
   })
 }
 
+function labPlanItemKey(item) {
+  return String(
+    item?.canonical_normalized_test_name
+      || item?.normalized_test_name
+      || item?.canonical_marker
+      || item?.test_name
+      || ''
+  ).trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function normalizeLabPlanItems(items) {
+  const byKey = new Map()
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = labPlanItemKey(item)
+    if (!key || byKey.has(key)) continue
+    byKey.set(key, item)
+  }
+  return [...byKey.values()]
+}
+
+function planItemName(item) {
+  return String(item?.test_name || item?.canonical_marker || item?.normalized_test_name || 'Planned test').trim()
+}
+
+export function clinicalResultDate(result) {
+  const candidates = [
+    result?.test_date,
+    result?.measurement_date,
+    result?.collected_at,
+    result?.reported_at,
+    result?.upload?.test_date,
+    result?.upload?.measurement_date,
+    result?.upload?.collected_at,
+    result?.upload?.reported_at,
+    result?.lab_upload?.test_date,
+    result?.lab_upload?.measurement_date,
+    result?.lab_upload?.collected_at,
+    result?.lab_upload?.reported_at,
+    result?.report?.test_date,
+    result?.report?.measurement_date,
+    result?.metadata?.test_date,
+    result?.metadata?.collected_at,
+    result?.metadata?.reported_at,
+    ...(Array.isArray(result?.biomarkers) ? result.biomarkers.flatMap((item) => [
+      item?.test_date,
+      item?.measurement_date,
+      item?.collected_at,
+      item?.reported_at,
+    ]) : []),
+  ]
+  return candidates.find((value) => typeof value === 'string' && value.trim()) || null
+}
+
+function LabPlanItemCard({ item, isUk, copy, resultDate, resultError }) {
+  const fulfilled = item?.status === 'fulfilled'
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="min-w-0 break-words text-lg font-extrabold text-slate-950">{planItemName(item)}</h3>
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${fulfilled ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+          {fulfilled ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+          {fulfilled ? copy.fulfilled : copy.planned}
+        </span>
+      </div>
+      {!!item?.reason && (
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{copy.reason}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{item.reason}</p>
+        </div>
+      )}
+      {!!item?.timing_text && (
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          <span className="font-bold text-slate-700">{copy.timing}:</span> {item.timing_text}
+        </p>
+      )}
+      <p className="mt-3 text-xs font-semibold text-slate-500">
+        {copy.fromReport}
+        {item?.source_recommendation_id ? ' · ' : ''}
+        {item?.source_recommendation_id ? (isUk ? 'рекомендація' : 'recommendation') : ''}
+      </p>
+      {fulfilled && (
+        <div className="mt-4 rounded-xl bg-green-50 p-3 text-sm leading-6 text-green-800">
+          <p>
+            {resultDate
+              ? `${copy.fulfilledBy} ${resultDate}`
+              : copy.fulfilledBody}
+          </p>
+          {resultError && <p className="mt-1 text-xs text-green-700">{copy.resultUnavailable}</p>}
+          {item?.fulfilled_by_upload_id && (
+            <a
+              href={`/results/${item.fulfilled_by_upload_id}`}
+              className="mt-2 inline-block font-bold underline underline-offset-2"
+            >
+              {copy.viewResult}
+            </a>
+          )}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function FulfilledLabPlanGroup({ items, uploadId, isUk, copy }) {
+  const { data: result, isError } = useLabResults(uploadId)
+  const resultDate = clinicalResultDate(result)
+  return (
+    <>
+      {items.map((item) => (
+        <LabPlanItemCard
+          key={labPlanItemKey(item)}
+          item={item}
+          isUk={isUk}
+          copy={copy}
+          resultDate={resultDate}
+          resultError={isError}
+        />
+      ))}
+    </>
+  )
+}
+
+export function PersonalLabPlan({ items, isUk, loading, error, onRetry }) {
+  const copy = isUk
+    ? {
+      title: 'Ваш особистий план аналізів',
+      intro: 'Збережені аналізи та їхній актуальний статус.',
+      emptyTitle: 'У вашому плані аналізів ще немає тестів',
+      emptyBody: 'Коли ви додасте рекомендований аналіз, він зʼявиться тут.',
+      retry: 'Спробувати ще раз',
+      loadError: 'Не вдалося завантажити ваш план аналізів.',
+      planned: 'Заплановано',
+      fulfilled: 'Виконано',
+      reason: 'Чому це у плані',
+      timing: 'Коли',
+      fulfilledBody: 'Виконано пізнішим результатом.',
+      fulfilledBy: 'Виконано результатом від',
+      resultUnavailable: 'Деталі результату зараз недоступні.',
+      viewResult: 'Переглянути результат',
+      fromReport: 'На основі вашого звіту',
+    }
+    : {
+      title: 'Your saved Lab Plan',
+      intro: 'Tests saved for you and their current status.',
+      emptyTitle: 'No tests in your Lab Plan yet',
+      emptyBody: 'When you add a recommended test, it will appear here.',
+      retry: 'Try again',
+      loadError: 'We could not load your saved Lab Plan.',
+      planned: 'Planned',
+      fulfilled: 'Completed',
+      reason: 'Why it is in your plan',
+      timing: 'Timing',
+      fulfilledBody: 'Fulfilled by a later result.',
+      fulfilledBy: 'Fulfilled by result from',
+      resultUnavailable: 'Result details are temporarily unavailable.',
+      viewResult: 'View later result',
+      fromReport: 'Based on your report',
+    }
+
+  if (loading) {
+    return (
+      <CoachCard className="p-5 sm:p-6" aria-busy="true">
+        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+          <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+          {isUk ? 'Завантаження вашого плану аналізів…' : 'Loading your saved Lab Plan…'}
+        </div>
+      </CoachCard>
+    )
+  }
+
+  if (error) {
+    return (
+      <CoachCard className="p-5 sm:p-6">
+        <div role="alert" className="flex flex-col items-start gap-3">
+          <p className="text-sm leading-6 text-amber-900">{copy.loadError}</p>
+          <button type="button" onClick={onRetry} className="coach-button coach-button--secondary coach-button--md">
+            <RefreshCw className="h-4 w-4" />
+            {copy.retry}
+          </button>
+        </div>
+      </CoachCard>
+    )
+  }
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-5">
+        <p className="coach-eyebrow">{copy.title}</p>
+        <h2 className="coach-title-lg">{copy.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{copy.intro}</p>
+      </div>
+      {!items.length ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+          <h3 className="text-base font-extrabold text-slate-950">{copy.emptyTitle}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{copy.emptyBody}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {(() => {
+            const groups = []
+            const fulfilledGroups = new Map()
+            for (const item of items) {
+              const uploadId = item?.status === 'fulfilled' ? item?.fulfilled_by_upload_id : null
+              if (!uploadId) {
+                groups.push({ items: [item], uploadId: null })
+                continue
+              }
+              const existing = fulfilledGroups.get(uploadId)
+              if (existing) {
+                existing.items.push(item)
+              } else {
+                const group = { items: [item], uploadId }
+                fulfilledGroups.set(uploadId, group)
+                groups.push(group)
+              }
+            }
+            return groups.map((group) => group.uploadId ? (
+              <FulfilledLabPlanGroup
+                key={`fulfilled-${group.uploadId}`}
+                items={group.items}
+                uploadId={group.uploadId}
+                isUk={isUk}
+                copy={copy}
+              />
+            ) : (
+              <LabPlanItemCard key={labPlanItemKey(group.items[0])} item={group.items[0]} isUk={isUk} copy={copy} />
+            ))
+          })()}
+        </div>
+      )}
+    </CoachCard>
+  )
+}
+
 export default function LabPlan() {
   const navigate = useNavigate()
   const isUk = isUkrainianLocale()
+  const [planItems, setPlanItems] = useState([])
+  const [planLoading, setPlanLoading] = useState(true)
+  const [planError, setPlanError] = useState(false)
   const { data: questionnaireSession } = useQuestionnaireSession()
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
   const concernSummary = sessionContext?.summary || null
+
+  const loadPlan = useCallback(async () => {
+    setPlanLoading(true)
+    setPlanError(false)
+    try {
+      const data = await listLabPlanItems()
+      setPlanItems(normalizeLabPlanItems(data))
+    } catch {
+      setPlanError(true)
+    } finally {
+      setPlanLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPlan()
+  }, [loadPlan])
 
   const readiness = useMemo(() => {
     const base = Number(concernSummary?.readiness || 42)
@@ -203,6 +457,7 @@ export default function LabPlan() {
 
   return (
     <div className="coach-shell coach-grid">
+      <PersonalLabPlan items={planItems} isUk={isUk} loading={planLoading} error={planError} onRetry={loadPlan} />
       <section className="coach-hero">
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
@@ -235,7 +490,7 @@ export default function LabPlan() {
 
       <CoachCard className="p-5 sm:p-6">
         <div className="mb-5">
-          <p className="coach-eyebrow">{isUk ? 'Базові аналізи' : 'Core Tests'}</p>
+          <p className="coach-eyebrow">{isUk ? 'Каталог аналізів' : 'Explore tests to add'}</p>
           <h2 className="coach-title-lg">{isUk ? 'Найкращий перший крок' : 'Best first pass'}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
