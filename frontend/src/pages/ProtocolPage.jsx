@@ -481,6 +481,8 @@ export function RetestObligationCard({ item, resultDate, copy, isUk, today }) {
   const state = retestState(item, today)
   const marker = item.marker || retestMarker(item)
   const timing = item.timing || item.metadata?.timing
+  const resultLocale = isUk ? 'uk-UA' : 'en-US'
+  const formattedResultDate = resultDate ? formatRetestDate(resultDate, resultLocale) : null
   const start = formatRetestDate(item.retest_window_start, isUk ? 'uk-UA' : 'en-US')
   const end = formatRetestDate(item.retest_window_end, isUk ? 'uk-UA' : 'en-US')
   const resultHref = item.fulfilled_by_upload_id ? `/results/${item.fulfilled_by_upload_id}` : null
@@ -495,7 +497,7 @@ export function RetestObligationCard({ item, resultDate, copy, isUk, today }) {
       <p className="mt-1 text-xs text-slate-500">{copy.retestSource}</p>
       {state === 'fulfilled' && (
         <p className="mt-2 text-sm text-emerald-700">
-          {copy.retestCompletedBy(resultDate ? formatRetestDate(resultDate, isUk ? 'uk-UA' : 'en-US') : null)}
+          {copy.retestCompletedBy(formattedResultDate)}
         </p>
       )}
       {resultHref && (
