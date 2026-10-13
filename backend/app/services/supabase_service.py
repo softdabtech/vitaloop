@@ -1474,15 +1474,15 @@ async def get_user_subscription_history(user_id: str) -> List[Dict]:
 
 
 async def get_user_upload_count(user_id: str) -> int:
-    """Return the total number of lab uploads for a user (used for freemium gating)."""
+    """Return the visible patient-history upload count for a user."""
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("id", count="exact")
+        .select("id, data_origin")
         .eq("user_id", user_id)
         .execute()
     )
-    return resp.count if resp.count is not None else len(resp.data or [])
+    return sum(1 for row in (resp.data or []) if _is_clinical_upload_origin(row.get("data_origin")))
 
 
 async def get_user_progress(user_id: str) -> List[Dict]:
@@ -1506,7 +1506,11 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         label="get_user_progress_uploads",
     )
 
-    rows = uploads.data or []
+    rows = [
+        row
+        for row in (uploads.data or [])
+        if _is_clinical_upload_origin(row.get("data_origin"))
+    ]
     if not rows:
         await _audit_medical_read(
             user_id=user_id,
@@ -1544,7 +1548,7 @@ async def get_user_progress(user_id: str) -> List[Dict]:
 
     result = [
         {
-            **upload,
+            **{key: value for key, value in upload.items() if key != "data_origin"},
             "biomarkers": grouped.get(upload["id"], []),
             # Resolved via the same test_date -> collected_at -> reported_at
             # priority the extraction pipeline uses; None means genuinely undated.

@@ -36,6 +36,16 @@ const LAB_RESULTS_COPY = {
     retestPlan: 'Retest plan',
     reviewWindow: 'Use your latest protocol to decide when to repeat',
     labResults: (index) => `Lab Results #${index}`,
+    processing: 'Processing',
+    processingBody: "We're processing this upload. Your previous completed report remains available.",
+    failed: 'Could not process',
+    failedBody: "We couldn't finish processing this upload. You can upload the file again.",
+    queued: 'Upload received',
+    queuedBody: 'This upload is waiting to be processed.',
+    uploadAgain: 'Upload again',
+    noCompletedReport: 'No completed report yet',
+    newerUploadProcessing: 'A newer upload is still being processed.',
+    newerUploadFailed: 'A newer upload could not be processed.',
     optimal: 'Optimal',
     warning: 'Warning',
     review: 'Review',
@@ -61,6 +71,16 @@ const LAB_RESULTS_COPY = {
     retestPlan: 'План повторної перевірки',
     reviewWindow: 'Терміни повторної перевірки залежать від вашого плану дій',
     labResults: (index) => `Результати аналізів #${index}`,
+    processing: 'В обробці',
+    processingBody: 'Ми обробляємо це завантаження. Попередній завершений звіт залишається доступним.',
+    failed: 'Не вдалося обробити',
+    failedBody: 'Не вдалося завершити обробку. Ви можете завантажити файл ще раз.',
+    queued: 'Завантаження отримано',
+    queuedBody: 'Це завантаження очікує на обробку.',
+    uploadAgain: 'Завантажити ще раз',
+    noCompletedReport: 'Завершених звітів ще немає',
+    newerUploadProcessing: 'Нове завантаження ще обробляється.',
+    newerUploadFailed: 'Нове завантаження не вдалося обробити.',
     optimal: 'У нормі',
     warning: 'Спостерігати',
     review: 'Перегляд',
@@ -111,6 +131,23 @@ function getBiomarkerCounts(item) {
   }
 }
 
+export function lifecycleState(item) {
+  const status = String(item?.status || '').trim().toLowerCase()
+  if (!status || ['done', 'completed', 'ready'].includes(status)) return 'ready'
+  if (['processing', 'analyzing'].includes(status)) return 'processing'
+  if (['failed', 'error'].includes(status)) return 'failed'
+  if (['uploaded', 'queued', 'pending'].includes(status)) return 'queued'
+  return 'queued'
+}
+
+export function canViewResults(item) {
+  return lifecycleState(item) === 'ready'
+}
+
+export function shouldShowBiomarkerCounts(item) {
+  return canViewResults(item)
+}
+
 async function fetchRecentUploadFallback() {
   try {
     const fallbackRes = await api.get('/uploads/recent')
@@ -120,13 +157,11 @@ async function fetchRecentUploadFallback() {
   }
 }
 
-function buildFetchResultsError(err) {
-  const statusCode = err.response?.status || 'unknown'
-  const message = err.response?.data?.message || err.message || 'Could not load lab results.'
+export function buildFetchResultsError(_err) {
   return {
     items: [],
-    error: `Error loading results (${statusCode}): ${message}`,
-    originalError: err,
+    error: 'We could not load your lab results right now. Please try again.',
+    originalError: _err,
   }
 }
 
@@ -367,6 +402,9 @@ export default function LabResultsList() {
       return new Date(db).getTime() - new Date(da).getTime()
     })
   }, [items])
+  const latestReadyItem = sortedItems.find((item) => canViewResults(item))
+  const latestActivity = sortedItems[0]
+  const latestActivityState = lifecycleState(latestActivity)
 
   const t = ct()
 
@@ -432,7 +470,12 @@ export default function LabResultsList() {
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
+                  {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {latestActivityState === 'processing' ? copy.newerUploadProcessing : latestActivityState === 'failed' ? copy.newerUploadFailed : copy.queued}
+                    </p>
+                  )}
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
@@ -442,8 +485,17 @@ export default function LabResultsList() {
 
               {sortedItems.map((item, index) => {
                 const date = getItemDate(item, isUk)
-                const { optimal, warning, critical } = getBiomarkerCounts(item)
+                const state = lifecycleState(item)
+                const showCounts = shouldShowBiomarkerCounts(item)
+                const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
                 const uploadId = item?.upload_id || item?.id
+                const stateCopy = state === 'processing'
+                  ? { label: copy.processing, body: copy.processingBody }
+                  : state === 'failed'
+                    ? { label: copy.failed, body: copy.failedBody }
+                    : state === 'queued'
+                      ? { label: copy.queued, body: copy.queuedBody }
+                      : null
 
                 return (
                   <div
@@ -452,8 +504,8 @@ export default function LabResultsList() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
                       <button
-                        onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                        disabled={!uploadId}
+                        onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                        disabled={!canViewResults(item) || !uploadId}
                         className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
@@ -463,19 +515,28 @@ export default function LabResultsList() {
                         </p>
                       </button>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
-                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
-                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
-                      </div>
+                      {showCounts ? (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
+                          <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
+                          <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
+                        </div>
+                      ) : (
+                        <div className="min-w-0 flex-1 text-xs text-slate-600" role="status">
+                          <span className="font-semibold">{stateCopy.label}</span>
+                          <span className="mt-1 block leading-5">{stateCopy.body}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                          disabled={!uploadId}
+                          onClick={() => state === 'failed'
+                            ? navigate('/upload')
+                            : canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                          disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
                           className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
-                          {copy.viewResults}
+                          {canViewResults(item) ? copy.viewResults : state === 'failed' ? copy.uploadAgain : stateCopy.label}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
