@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
+import { listInterventions } from '../api/interventions.js'
 import { addLabPlanItem, listLabPlanItems } from '../api/labPlan.js'
 import { labPlanItemLabel } from '../lib/labPlanStatus.js'
 import FeatureGate from '../components/FeatureGate.jsx'
@@ -33,6 +34,7 @@ import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
 import { buildResultOverview } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
+import { formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -269,6 +271,15 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
     testingPlanCompletedTitle: '✓ Completed since your last report',
+    retestNotDue: 'Not due yet',
+    retestDueNow: 'Due now',
+    retestOverdue: 'Overdue',
+    retestPending: 'Pending',
+    retestCompleted: 'Completed',
+    retestWindow: (start, end) => `Retest window: ${start} – ${end}`,
+    retestNext: 'Next retest',
+    retestCompletedBy: 'Completed by a later result.',
+    viewLaterResult: 'View later result',
     addToLabPlan: 'Add to lab plan',
     savingToLabPlan: 'Saving...',
     inLabPlan: 'In lab plan',
@@ -488,6 +499,15 @@ const RESULTS_COPY = {
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
     testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
+    retestNotDue: 'Ще не час',
+    retestDueNow: 'Час повторити',
+    retestOverdue: 'Прострочено',
+    retestPending: 'Очікується',
+    retestCompleted: 'Завершено',
+    retestWindow: (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    retestNext: 'Наступний тест',
+    retestCompletedBy: 'Завершено наступним результатом.',
+    viewLaterResult: 'Переглянути наступний результат',
     addToLabPlan: 'Додати до плану аналізів',
     savingToLabPlan: 'Збереження...',
     inLabPlan: 'У плані аналізів',
@@ -1359,9 +1379,10 @@ function PersonalBaselineSection({ personalBaseline, copy, isUk }) {
   )
 }
 
-function TestingPlanSection({
+export function TestingPlanSection({
   nextBestTests,
   retestPlan,
+  persistedRetestPlan = [],
   evidenceGaps,
   nextTestFunnel,
   labPlanItems,
@@ -1370,6 +1391,7 @@ function TestingPlanSection({
   sourceReportVersionId,
   copy,
   isUk,
+  today = new Date(),
 }) {
   const plan = buildTestingPlan(nextBestTests, retestPlan, evidenceGaps)
   // P12 Next-Test Funnel: the only genuinely new signal vs the P4 plan
@@ -1399,6 +1421,22 @@ function TestingPlanSection({
       {visiblePlan.length ? (
         <div className="space-y-2">
           {visiblePlan.map((item, index) => {
+            const persistedRetest = persistedRetestPlan.find((obligation) => (
+              normalizeRetestMarker(obligation.marker) === normalizeRetestMarker(item.marker)
+            ))
+            const persistedState = persistedRetest ? retestState(persistedRetest, today) : null
+            const completedSinceLastReport = completed.some((completedItem) => (
+              normalizeRetestMarker(completedItem?.marker) === normalizeRetestMarker(item.marker)
+            ))
+            const stateLabel = {
+              pending_not_open: copy.retestNotDue,
+              due_now: copy.retestDueNow,
+              overdue: copy.retestOverdue,
+              pending_no_window: copy.retestPending,
+              fulfilled: copy.retestCompleted,
+            }[persistedState]
+            const windowStart = persistedRetest && formatRetestDate(persistedRetest.retest_window_start, isUk ? 'uk-UA' : 'en-US')
+            const windowEnd = persistedRetest && formatRetestDate(persistedRetest.retest_window_end, isUk ? 'uk-UA' : 'en-US')
             const savedItem = labPlanItems.find((saved) => (
               saved.source_report_version_id === sourceReportVersionId
               && canonicalPlanTestName({
@@ -1410,13 +1448,35 @@ function TestingPlanSection({
             <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
               <div className="min-w-0">
                 <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: item.marker }, isUk)}</span>
+                {persistedRetest && completedSinceLastReport && persistedState !== 'fulfilled' && (
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.retestNext}</p>
+                )}
                 {!!item.reason && !reasonsRepeat && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
-                {!!item.timing && (
+                {stateLabel && (
+                  <span className="mt-2 inline-flex max-w-full flex-wrap rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                    {stateLabel}
+                  </span>
+                )}
+                {!!windowStart && !!windowEnd && (
+                  <p className="mt-1 break-words text-xs text-slate-500">{copy.retestWindow(windowStart, windowEnd)}</p>
+                )}
+                {!!item.timing && persistedState !== 'fulfilled' && (
                   <p className="mt-1 text-xs text-slate-500">
                     <span className="font-semibold">{copy.testingPlanTiming}:</span> {item.timing}
                   </p>
                 )}
-                {sourceReportVersionId && (
+                {persistedState === 'fulfilled' && (
+                  <p className="mt-1 text-xs text-slate-500">{copy.retestCompletedBy}</p>
+                )}
+                {persistedState === 'fulfilled' && persistedRetest.fulfilled_by_upload_id && (
+                  <a
+                    href={`/results/${persistedRetest.fulfilled_by_upload_id}`}
+                    className="mt-2 inline-flex max-w-full break-words text-xs font-semibold text-blue-700 underline"
+                  >
+                    {copy.viewLaterResult}
+                  </a>
+                )}
+                {sourceReportVersionId && persistedState !== 'fulfilled' && (
                   <button
                     type="button"
                     className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1813,6 +1873,8 @@ export default function Results() {
   const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
   const [nextTestFunnel, setNextTestFunnel] = useState(null)
   const [reportVersionId, setReportVersionId] = useState(null)
+  const [persistedRetestPlan, setPersistedRetestPlan] = useState([])
+  const [retestInterventionsAvailable, setRetestInterventionsAvailable] = useState(false)
   const [labPlanItems, setLabPlanItems] = useState([])
   const [savingPlanTest, setSavingPlanTest] = useState(null)
   const [clinicalHypotheses, setClinicalHypotheses] = useState(null)
@@ -1829,6 +1891,8 @@ export default function Results() {
     async function load() {
       setLoading(true)
       setLoadError(false)
+      setRetestInterventionsAvailable(false)
+      setPersistedRetestPlan([])
       try {
         // Cabinet reconciliation: a single call to /results/{uploadId} is
         // sufficient — no second /analyze/{uploadId} fetch. Verified against
@@ -1864,12 +1928,21 @@ export default function Results() {
         setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
         setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
-        setReportVersionId(data.report_version?.id ?? data.final_analysis?.report_version?.id ?? null)
+        const currentReportVersionId = data.report_version?.id ?? data.final_analysis?.report_version?.id ?? null
+        setReportVersionId(currentReportVersionId)
         try {
           setLabPlanItems(await listLabPlanItems())
         } catch (error) {
           console.error('[LabPlan] Failed to load saved items', error)
           setLabPlanItems([])
+        }
+        try {
+          const interventions = await listInterventions()
+          setPersistedRetestPlan(selectRetestObligations(interventions, currentReportVersionId))
+          setRetestInterventionsAvailable(true)
+        } catch (error) {
+          console.error('[Retest] Failed to load persisted obligations', error)
+          setPersistedRetestPlan([])
         }
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
@@ -1894,6 +1967,8 @@ export default function Results() {
         setEvidenceGaps(null)
         setNextBestTests(null)
         setReportVersionId(null)
+        setPersistedRetestPlan([])
+        setRetestInterventionsAvailable(false)
         setLabPlanItems([])
         setPersonalBaseline(null)
         setActionPlanByRole(null)
@@ -2187,6 +2262,7 @@ export default function Results() {
         <TestingPlanSection
           nextBestTests={nextBestTests}
           retestPlan={reportRetest}
+          persistedRetestPlan={retestInterventionsAvailable ? persistedRetestPlan : []}
           evidenceGaps={evidenceGaps}
           nextTestFunnel={nextTestFunnel}
           labPlanItems={labPlanItems}

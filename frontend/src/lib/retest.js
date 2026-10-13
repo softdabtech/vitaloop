@@ -5,6 +5,19 @@ function normalizeMarker(value) {
   return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+const MARKER_ALIASES = {
+  canonical_hemoglobin: 'hemoglobin',
+  hgb: 'hemoglobin',
+  'mean cell hemoglobin': 'mch',
+  'mean cell hemoglobin (mch)': 'mch',
+  canonical_mch: 'mch',
+}
+
+export function normalizeRetestMarker(value) {
+  const normalized = normalizeMarker(value)
+  return MARKER_ALIASES[normalized] || normalized.replace(/^canonical_/, '')
+}
+
 function parseDate(value) {
   if (!value) return null
   const date = new Date(`${String(value).slice(0, 10)}T00:00:00Z`)
@@ -41,7 +54,7 @@ export function selectRetestObligations(interventions, reportVersionId) {
     if (event?.action_type !== 'retest') continue
     if (reportVersionId && event?.source_report_version_id !== reportVersionId) continue
     const marker = retestMarker(event)
-    const key = normalizeMarker(marker)
+    const key = normalizeRetestMarker(marker)
     if (!key) continue
     selected.set(key, {
       id: event.id,
