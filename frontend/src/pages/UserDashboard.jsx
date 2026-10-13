@@ -1094,6 +1094,41 @@ function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch, 
   )
 }
 
+export function uploadLifecycleState(upload) {
+  const status = String(upload?.status || '').trim().toLowerCase()
+  if (!status || ['done', 'completed', 'ready'].includes(status)) return 'ready'
+  if (['processing', 'analyzing'].includes(status)) return 'processing'
+  if (['failed', 'error'].includes(status)) return 'failed'
+  return 'queued'
+}
+
+function UploadLifecycleNotice({ upload, isUk }) {
+  const state = uploadLifecycleState(upload)
+  if (!upload || state === 'ready') return null
+
+  const copy = isUk
+    ? {
+      processing: 'Нове завантаження ще обробляється. Попередній завершений звіт залишається активним.',
+      failed: 'Не вдалося завершити нове завантаження. Попередній завершений звіт залишається активним.',
+      queued: 'Нове завантаження отримано й очікує обробки. Попередній завершений звіт залишається активним.',
+    }
+    : {
+      processing: 'New upload is being processed. Your previous completed report remains active.',
+      failed: 'We could not finish the new upload. Your previous completed report remains active.',
+      queued: 'New upload received and waiting to be processed. Your previous completed report remains active.',
+    }
+
+  const message = copy[state]
+
+  return (
+    <output aria-live="polite" className="mb-4 block rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+      <span className="font-semibold">
+        {message}
+      </span>
+    </output>
+  )
+}
+
 export default function UserDashboard() {
   const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useDashboardSummary()
@@ -1197,6 +1232,7 @@ export default function UserDashboard() {
   return (
     <div className="coach-shell">
       <CabinetPageFrame>
+        <UploadLifecycleNotice upload={summary?.blocks?.latest_upload} isUk={isUk} />
         {viewModel.status === 'contract_error' ? (
           <LimitedDashboard summary={summary} symptomContext={symptomContext} safety={viewModel.safety} navigate={navigate} refetch={refetch} copy={copy} isUk={isUk} />
         ) : cockpit ? (

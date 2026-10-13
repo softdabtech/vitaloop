@@ -20,14 +20,21 @@ async def get_recent_uploads(
 
     uploads = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status, data_origin")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
-        .limit(1)
         .execute()
     )
 
-    return uploads.data or []
+    eligible = [
+        upload
+        for upload in (uploads.data or [])
+        if svc._is_clinical_upload_origin(upload.get("data_origin"))
+    ][:1]
+    return [
+        {key: value for key, value in upload.items() if key != "data_origin"}
+        for upload in eligible
+    ]
 
 
 @router.delete("/uploads/{upload_id}")

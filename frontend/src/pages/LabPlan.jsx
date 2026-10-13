@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Loader2, RefreshCw, Upload } from 'lucide-react'
-import { CoachBadge, CoachButton, CoachCard, CoachProgress, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
+import { CoachBadge, CoachButton, CoachCard, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { listLabPlanItems } from '../api/labPlan.js'
 import { useDashboardSummary, useLabResults, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -17,6 +17,32 @@ const CORE_LABS = [
   { name: 'CRP', why: 'Helps understand whether inflammation may be part of the picture.', related: 'Pain, swelling, persistent symptoms', priority: 'Core' },
   { name: 'Vitamin D', why: 'Supports immunity, mood, muscle function, and recovery.', related: 'Low mood, aches, fatigue', priority: 'Core' },
 ]
+
+const REPORT_TEST_LABELS = {
+  mch: 'MCH',
+  free_t4: 'Free T4',
+  free_t3: 'Free T3',
+  transferrin_saturation: 'Transferrin Saturation',
+  iron: 'Iron',
+  crp: 'C-Reactive Protein (CRP)',
+  vitamin_d: 'Vitamin D',
+  ferritin: 'Ferritin',
+}
+
+function normalizeTestKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^canonical_/, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+/, '')
+    .replace(/_+$/, '')
+}
+
+export function reportTestDisplayName(value) {
+  const key = normalizeTestKey(value)
+  return REPORT_TEST_LABELS[key] || String(value || '').replace(/^canonical_/, '').replaceAll('_', ' ')
+}
 
 const RECOMMENDED_LABS = [
   { name: 'TSH + fT4', why: 'Thyroid context matters when fatigue, cold intolerance, or brain fog persist.', related: 'Energy, focus, temperature sensitivity', priority: 'Recommended' },
@@ -81,6 +107,38 @@ const LAB_COPY_UK = {
   },
 }
 
+function reportRecommendationKey(item) {
+  return normalizeTestKey(item?.canonical_marker || item?.marker || item?.name)
+}
+
+function reportRecommendationMatchesActiveReport(item, activeMarkerNames) {
+  const recommendationKey = reportRecommendationKey(item)
+  if (!recommendationKey) return false
+  return [...activeMarkerNames].some((markerKey) => markerKey === recommendationKey || markerKey.includes(recommendationKey) || recommendationKey.includes(markerKey))
+}
+
+function reportRecommendationToCatalogItem(item) {
+  const name = reportTestDisplayName(item?.canonical_marker || item?.marker || item?.name)
+  return {
+    name,
+    why: item?.reason || 'This report identified an evidence gap worth discussing with a clinician.',
+    related: item?.domain || 'Current report evidence',
+    priority: String(item?.priority || 'Recommended').replace(/^./, (value) => value.toUpperCase()),
+    source_recommendation_id: item?.recommendation_id || item?.source_recommendation_id || null,
+  }
+}
+
+export function selectReportSpecificRecommendations(
+  recommendations,
+  activeMarkerNames = new Set(),
+  plannedKeys = new Set(),
+) {
+  return (Array.isArray(recommendations) ? recommendations : [])
+    .filter((item) => item && !reportRecommendationMatchesActiveReport(item, activeMarkerNames))
+    .filter((item) => !plannedKeys.has(reportRecommendationKey(item)))
+    .map(reportRecommendationToCatalogItem)
+}
+
 function LabCard({ item, status, isUk }) {
   const tone = item.priority === 'Core' ? 'primary' : item.priority === 'Recommended' ? 'warning' : 'neutral'
   const localized = isUk ? (LAB_COPY_UK.labs[item.name] || {}) : {}
@@ -136,11 +194,11 @@ function inLatestReport(item, activeMarkerNames) {
   const tokens = item.name
     .toLowerCase()
     .split(/\s*\+\s*/)
-    .map((part) => part.split(' ')[0])
+    .map(normalizeTestKey)
     .filter((part) => part.length > 2)
   return tokens.some((token) => {
     for (const markerName of activeMarkerNames) {
-      if (markerName.includes(token)) return true
+      if (markerName.includes(token) || token.includes(markerName)) return true
     }
     return false
   })
@@ -199,7 +257,7 @@ export function clinicalResultDate(result) {
   return candidates.find((value) => typeof value === 'string' && value.trim()) || null
 }
 
-function LabPlanItemCard({ item, isUk, copy, resultDate, resultError }) {
+function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, isHistorical = false }) {
   const fulfilled = item?.status === 'fulfilled'
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -222,7 +280,7 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError }) {
         </p>
       )}
       <p className="mt-3 text-xs font-semibold text-slate-500">
-        {copy.fromReport}
+        {isHistorical ? copy.fromEarlierReport : copy.fromReport}
         {item?.source_recommendation_id ? ' · ' : ''}
         {item?.source_recommendation_id ? (isUk ? 'рекомендація' : 'recommendation') : ''}
       </p>
@@ -248,7 +306,7 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError }) {
   )
 }
 
-function FulfilledLabPlanGroup({ items, uploadId, isUk, copy }) {
+function FulfilledLabPlanGroup({ items, uploadId, isUk, copy, activeReportVersionId }) {
   const { data: result, isError } = useLabResults(uploadId)
   const resultDate = clinicalResultDate(result)
   return (
@@ -267,7 +325,7 @@ function FulfilledLabPlanGroup({ items, uploadId, isUk, copy }) {
   )
 }
 
-export function PersonalLabPlan({ items, isUk, loading, error, onRetry }) {
+export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeReportVersionId = null }) {
   const copy = isUk
     ? {
       title: 'Ваш особистий план аналізів',
@@ -285,6 +343,7 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry }) {
       resultUnavailable: 'Деталі результату зараз недоступні.',
       viewResult: 'Переглянути результат',
       fromReport: 'На основі вашого звіту',
+      fromEarlierReport: 'На основі попереднього звіту',
     }
     : {
       title: 'Your saved Lab Plan',
@@ -302,6 +361,7 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry }) {
       resultUnavailable: 'Result details are temporarily unavailable.',
       viewResult: 'View later result',
       fromReport: 'Based on your report',
+      fromEarlierReport: 'From an earlier report',
     }
 
   if (loading) {
@@ -368,9 +428,20 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry }) {
                 uploadId={group.uploadId}
                 isUk={isUk}
                 copy={copy}
+                activeReportVersionId={activeReportVersionId}
               />
             ) : (
-              <LabPlanItemCard key={labPlanItemKey(group.items[0])} item={group.items[0]} isUk={isUk} copy={copy} />
+              <LabPlanItemCard
+                key={labPlanItemKey(group.items[0])}
+                item={group.items[0]}
+                isUk={isUk}
+                copy={copy}
+                isHistorical={Boolean(
+                  activeReportVersionId
+                  && group.items[0]?.source_report_version_id
+                  && group.items[0].source_report_version_id !== activeReportVersionId,
+                )}
+              />
             ))
           })()}
         </div>
@@ -407,11 +478,6 @@ export default function LabPlan() {
     loadPlan()
   }, [loadPlan])
 
-  const readiness = useMemo(() => {
-    const base = Number(concernSummary?.readiness || 42)
-    return Math.max(20, Math.min(98, base))
-  }, [concernSummary?.readiness])
-
   const uploaded = useMemo(() => new Set(Array.isArray(concernSummary?.linkedLabs) ? concernSummary.linkedLabs : []), [concernSummary])
   const statusFor = (item) => uploaded.has(item.name.toLowerCase()) ? 'uploaded' : 'suggested'
 
@@ -430,9 +496,18 @@ export default function LabPlan() {
       biomarkers
         .map((b) => b?.name || b?.canonical_name || b?.name_en)
         .filter(Boolean)
-        .map((name) => String(name).toLowerCase())
+        .map(normalizeTestKey)
     )
   }, [reportDetails])
+  const plannedKeys = useMemo(() => new Set(
+    planItems.map((item) => labPlanItemKey(item)).filter(Boolean)
+  ), [planItems])
+  const reportRecommendations = useMemo(() => {
+    const recommendations = reportDetails?.next_best_tests?.recommended_tests
+      || reportDetails?.final_analysis?.next_best_tests?.recommended_tests
+      || []
+    return selectReportSpecificRecommendations(recommendations, activeMarkerNames, plannedKeys)
+  }, [activeMarkerNames, plannedKeys, reportDetails])
   const splitByLatestReport = useCallback((items) => ({
     needed: items.filter((item) => !inLatestReport(item, activeMarkerNames)),
     haveAlready: items.filter((item) => inLatestReport(item, activeMarkerNames)),
@@ -457,7 +532,14 @@ export default function LabPlan() {
 
   return (
     <div className="coach-shell coach-grid">
-      <PersonalLabPlan items={planItems} isUk={isUk} loading={planLoading} error={planError} onRetry={loadPlan} />
+      <PersonalLabPlan
+        items={planItems}
+        isUk={isUk}
+        loading={planLoading}
+        error={planError}
+        onRetry={loadPlan}
+        activeReportVersionId={reportDetails?.report_version?.id || reportDetails?.final_analysis?.report_version?.id || null}
+      />
       <section className="coach-hero">
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
@@ -473,14 +555,35 @@ export default function LabPlan() {
               <CoachButton variant="secondary" icon={HelpCircle} onClick={() => document.getElementById('why-tests')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{isUk ? 'Чому ці аналізи?' : 'Why these tests?'}</CoachButton>
             </div>
           </div>
-          <CoachCard className="p-5" tone="soft">
-            <p className="coach-eyebrow">{isUk ? 'Готовність плану' : 'Plan readiness'}</p>
-            <h2 className="text-2xl font-extrabold text-slate-950">{readiness}%</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{isUk ? 'Більше контексту симптомів і даних профілю роблять план точнішим.' : 'More symptom context and profile data make the plan more specific.'}</p>
-            <div className="mt-5"><CoachProgress value={readiness} label={isUk ? 'Готовність' : 'Readiness'} /></div>
-          </CoachCard>
         </div>
       </section>
+
+      {readyUploadId && reportDetails && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{isUk ? 'На основі останнього звіту' : 'Based on your latest report'}</p>
+            <h2 className="coach-title-lg">{isUk ? 'Аналізи, які можуть уточнити цей звіт' : 'Tests that may clarify this report'}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {isUk
+                ? 'Це рекомендації саме для цього звіту, а не загальний каталог.'
+                : 'These are report-specific recommendations, not a general catalog.'}
+            </p>
+          </div>
+          {reportRecommendations.length ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {reportRecommendations.map((item) => (
+                <LabCard key={item.name} item={item} status="suggested" isUk={isUk} />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm leading-6 text-slate-700">
+              {isUk
+                ? 'Наразі додаткові аналізи саме для цього звіту не запропоновані.'
+                : 'No additional report-specific tests are currently suggested.'}
+            </p>
+          )}
+        </CoachCard>
+      )}
 
       <div className="coach-grid coach-grid--3">
         <InsightCard icon={Beaker} title={isUk ? 'Базові аналізи' : 'Core tests'} body={isUk ? 'Почніть тут, якщо потрібен широкий сигнал без зайвої складності.' : 'Start here when you want the broadest signal with the lowest complexity.'} />
@@ -491,7 +594,12 @@ export default function LabPlan() {
       <CoachCard className="p-5 sm:p-6">
         <div className="mb-5">
           <p className="coach-eyebrow">{isUk ? 'Каталог аналізів' : 'Explore tests to add'}</p>
-          <h2 className="coach-title-lg">{isUk ? 'Найкращий перший крок' : 'Best first pass'}</h2>
+          <h2 className="coach-title-lg">{isUk ? 'Загальний каталог' : 'General catalog'}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {isUk
+              ? 'Довідковий список, а не персональна рекомендація для поточного звіту.'
+              : 'An educational reference list, not a personalized recommendation for the current report.'}
+          </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {coreSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}

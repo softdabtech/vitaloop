@@ -24,55 +24,87 @@ import '../styles/dashboard2026.css'
 // upgrade. Kept the current, Stage-2D-compliant logic; only added the
 // missing localization this page previously lacked (hardcoded English
 // throughout body copy, badges, and the empty/premium states).
+const LAB_RESULTS_COPY_KEYS = [
+  'uploadResults', 'noResults', 'startSymptom', 'openLabPlan', 'uploads', 'mostRecent',
+  'uploadHistory', 'retestPlan', 'reviewWindow', 'labResults', 'processing', 'processingBody',
+  'failed', 'failedBody', 'queued', 'queuedBody', 'uploadAgain', 'noCompletedReport',
+  'newerUploadProcessing', 'newerUploadFailed', 'optimal', 'warning', 'review', 'viewResults',
+  'premiumTitle', 'premiumBody', 'premiumCta', 'safetyContext', 'safetyBody', 'nextStep', 'nextBody',
+]
+
+function createLabResultsCopy(values) {
+  return Object.fromEntries(LAB_RESULTS_COPY_KEYS.map((key, index) => [key, values[index]]))
+}
+
 const LAB_RESULTS_COPY = {
-  en: {
-    uploadResults: 'Upload Results',
-    noResults: 'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
-    startSymptom: 'Start symptom check',
-    openLabPlan: 'Open lab plan',
-    uploads: 'Uploads',
-    mostRecent: 'Most recent lab',
-    uploadHistory: 'Upload history',
-    retestPlan: 'Retest plan',
-    reviewWindow: 'Use your latest protocol to decide when to repeat',
-    labResults: (index) => `Lab Results #${index}`,
-    optimal: 'Optimal',
-    warning: 'Warning',
-    review: 'Review',
-    viewResults: 'View Results',
-    premiumTitle: 'Premium features available',
-    premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
+  en: createLabResultsCopy([
+    'Upload Results',
+    'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
+    'Start symptom check',
+    'Open lab plan',
+    'Uploads',
+    'Most recent lab',
+    'Upload history',
+    'Retest plan',
+    'Use your latest protocol to decide when to repeat',
+    (index) => `Lab Results #${index}`,
+    'Processing',
+    "We're processing this upload. Your previous completed report remains available.",
+    'Could not process',
+    "We couldn't finish processing this upload. You can upload the file again.",
+    'Upload received',
+    'This upload is waiting to be processed.',
+    'Upload again',
+    'No completed report yet',
+    'A newer upload is still being processed.',
+    'A newer upload could not be processed.',
+    'Optimal',
+    'Warning',
+    'Review',
+    'View Results',
+    'Premium features available',
+    'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
     // Was hardcoded '$19.99/month' — stale, drifted from the actual price;
     // sourced from lib/pricing.js now like every other paywall prompt.
-    premiumCta: `Upgrade for ${PREMIUM_PRICE_LABEL}`,
-    safetyContext: 'Safety context',
-    safetyBody: 'Review out-of-range markers with a qualified clinician when appropriate.',
-    nextStep: 'Next step',
-    nextBody: 'Open the action plan and use check-ins to track whether symptoms change.',
-  },
-  uk: {
-    uploadResults: 'Завантажити аналізи',
-    noResults: 'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
-    startSymptom: 'Почати перевірку симптомів',
-    openLabPlan: 'Відкрити план аналізів',
-    uploads: 'Завантаження',
-    mostRecent: 'Останній аналіз',
-    uploadHistory: 'Історія завантажень',
-    retestPlan: 'План повторної перевірки',
-    reviewWindow: 'Терміни повторної перевірки залежать від вашого плану дій',
-    labResults: (index) => `Результати аналізів #${index}`,
-    optimal: 'У нормі',
-    warning: 'Спостерігати',
-    review: 'Перегляд',
-    viewResults: 'Переглянути',
-    premiumTitle: 'Доступні Premium-функції',
-    premiumBody: 'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
-    premiumCta: 'Оновити тариф',
-    safetyContext: 'Контекст безпеки',
-    safetyBody: 'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
-    nextStep: 'Наступний крок',
-    nextBody: 'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
-  },
+    `Upgrade for ${PREMIUM_PRICE_LABEL}`,
+    'Safety context',
+    'Review out-of-range markers with a qualified clinician when appropriate.',
+    'Next step',
+    'Open the action plan and use check-ins to track whether symptoms change.',
+  ]),
+  uk: createLabResultsCopy([
+    'Завантажити аналізи',
+    'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
+    'Почати перевірку симптомів',
+    'Відкрити план аналізів',
+    'Завантаження',
+    'Останній аналіз',
+    'Історія завантажень',
+    'План повторної перевірки',
+    'Терміни повторної перевірки залежать від вашого плану дій',
+    (index) => `Результати аналізів #${index}`,
+    'В обробці',
+    'Ми обробляємо це завантаження. Попередній завершений звіт залишається доступним.',
+    'Не вдалося обробити',
+    'Не вдалося завершити обробку. Ви можете завантажити файл ще раз.',
+    'Завантаження отримано',
+    'Це завантаження очікує на обробку.',
+    'Завантажити ще раз',
+    'Завершених звітів ще немає',
+    'Нове завантаження ще обробляється.',
+    'Нове завантаження не вдалося обробити.',
+    'У нормі',
+    'Спостерігати',
+    'Перегляд',
+    'Переглянути',
+    'Доступні Premium-функції',
+    'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
+    'Оновити тариф',
+    'Контекст безпеки',
+    'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
+    'Наступний крок',
+    'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
+  ]),
 }
 
 function normalizeStatus(status) {
@@ -111,6 +143,42 @@ function getBiomarkerCounts(item) {
   }
 }
 
+export function lifecycleState(item) {
+  const status = String(item?.status || '').trim().toLowerCase()
+  if (!status || ['done', 'completed', 'ready'].includes(status)) return 'ready'
+  if (['processing', 'analyzing'].includes(status)) return 'processing'
+  if (['failed', 'error'].includes(status)) return 'failed'
+  if (['uploaded', 'queued', 'pending'].includes(status)) return 'queued'
+  return 'queued'
+}
+
+export function canViewResults(item) {
+  return lifecycleState(item) === 'ready'
+}
+
+export function shouldShowBiomarkerCounts(item) {
+  return canViewResults(item)
+}
+
+function lifecycleStateCopy(state, copy) {
+  if (state === 'processing') return { label: copy.processing, body: copy.processingBody }
+  if (state === 'failed') return { label: copy.failed, body: copy.failedBody }
+  if (state === 'queued') return { label: copy.queued, body: copy.queuedBody }
+  return null
+}
+
+function latestActivityCopy(state, copy) {
+  if (state === 'processing') return copy.newerUploadProcessing
+  if (state === 'failed') return copy.newerUploadFailed
+  return copy.queued
+}
+
+function lifecycleActionLabel(state, item, copy) {
+  if (canViewResults(item)) return copy.viewResults
+  if (state === 'failed') return copy.uploadAgain
+  return lifecycleStateCopy(state, copy)?.label
+}
+
 async function fetchRecentUploadFallback() {
   try {
     const fallbackRes = await api.get('/uploads/recent')
@@ -120,13 +188,11 @@ async function fetchRecentUploadFallback() {
   }
 }
 
-function buildFetchResultsError(err) {
-  const statusCode = err.response?.status || 'unknown'
-  const message = err.response?.data?.message || err.message || 'Could not load lab results.'
+export function buildFetchResultsError(_err) {
   return {
     items: [],
-    error: `Error loading results (${statusCode}): ${message}`,
-    originalError: err,
+    error: 'We could not load your lab results right now. Please try again.',
+    originalError: _err,
   }
 }
 
@@ -367,6 +433,9 @@ export default function LabResultsList() {
       return new Date(db).getTime() - new Date(da).getTime()
     })
   }, [items])
+  const latestReadyItem = sortedItems.find((item) => canViewResults(item))
+  const latestActivity = sortedItems[0]
+  const latestActivityState = lifecycleState(latestActivity)
 
   const t = ct()
 
@@ -432,7 +501,12 @@ export default function LabResultsList() {
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
+                  {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {latestActivityCopy(latestActivityState, copy)}
+                    </p>
+                  )}
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
@@ -442,8 +516,11 @@ export default function LabResultsList() {
 
               {sortedItems.map((item, index) => {
                 const date = getItemDate(item, isUk)
-                const { optimal, warning, critical } = getBiomarkerCounts(item)
+                const state = lifecycleState(item)
+                const showCounts = shouldShowBiomarkerCounts(item)
+                const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
                 const uploadId = item?.upload_id || item?.id
+                const stateCopy = lifecycleStateCopy(state, copy)
 
                 return (
                   <div
@@ -452,8 +529,8 @@ export default function LabResultsList() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
                       <button
-                        onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                        disabled={!uploadId}
+                        onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                        disabled={!canViewResults(item) || !uploadId}
                         className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
@@ -463,19 +540,28 @@ export default function LabResultsList() {
                         </p>
                       </button>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
-                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
-                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
-                      </div>
+                      {showCounts ? (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
+                          <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
+                          <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
+                        </div>
+                      ) : (
+                        <output className="min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
+                          <span className="font-semibold">{stateCopy.label}</span>
+                          <span className="mt-1 block leading-5">{stateCopy.body}</span>
+                        </output>
+                      )}
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                          disabled={!uploadId}
+                          onClick={() => state === 'failed'
+                            ? navigate('/upload')
+                            : canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                          disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
                           className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
-                          {copy.viewResults}
+                          {lifecycleActionLabel(state, item, copy)}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>

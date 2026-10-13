@@ -12,7 +12,13 @@ vi.mock('../hooks/useQueries.js', () => ({
   useReportDetails: vi.fn(() => ({ data: null })),
 }))
 
-import { PersonalLabPlan, clinicalResultDate, normalizeLabPlanItems } from './LabPlan.jsx'
+import {
+  PersonalLabPlan,
+  clinicalResultDate,
+  normalizeLabPlanItems,
+  reportTestDisplayName,
+  selectReportSpecificRecommendations,
+} from './LabPlan.jsx'
 
 afterEach(() => {
   cleanup()
@@ -31,6 +37,26 @@ const plannedItem = {
 }
 
 describe('PersonalLabPlan', () => {
+  it('keeps report-specific biomarker labels human-readable', () => {
+    expect(reportTestDisplayName('mch')).toBe('MCH')
+    expect(reportTestDisplayName('transferrin_saturation')).toBe('Transferrin Saturation')
+  })
+
+  it('does not show current or fulfilled tests as unresolved report gaps', () => {
+    const recommendations = selectReportSpecificRecommendations(
+      [
+        { marker: 'vitamin_d', reason: 'Older deficiency context.' },
+        { marker: 'crp', reason: 'Inflammation follow-up.' },
+        { marker: 'ferritin', reason: 'Iron storage context.' },
+        { marker: 'transferrin_saturation', reason: 'Clarify iron status.' },
+      ],
+      new Set(['vitamin_d', 'ferritin']),
+      new Set(['crp']),
+    )
+
+    expect(recommendations.map((item) => item.name)).toEqual(['Transferrin Saturation'])
+  })
+
   it('renders a persisted planned item with human-readable context', () => {
     render(<PersonalLabPlan items={[plannedItem]} isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
 
@@ -40,6 +66,22 @@ describe('PersonalLabPlan', () => {
     expect(screen.getByText('Repeat to check whether the change persists.')).toBeTruthy()
     expect(screen.getByText('In 6-12 weeks')).toBeTruthy()
     expect(screen.getByText('Based on your report · recommendation')).toBeTruthy()
+  })
+
+  it('marks an item from an earlier report as historical without changing its status', () => {
+    render(
+      <PersonalLabPlan
+        items={[plannedItem]}
+        activeReportVersionId="report-current"
+        isUk={false}
+        loading={false}
+        error={false}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/From an earlier report/)).toBeTruthy()
+    expect(screen.getByText('Planned')).toBeTruthy()
   })
 
   it('renders a fulfilled item as completed and links to the later result', () => {
