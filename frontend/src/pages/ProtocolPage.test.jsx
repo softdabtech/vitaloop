@@ -6,6 +6,7 @@ import {
   actionSourceLabel,
   buildProtocolActionCompletionPayload,
   completedProtocolActionIds,
+  selectAuthoritativeProtocol,
   RetestObligationCard,
   selectProtocolRetestPlan,
   selectProtocolRows,
@@ -97,6 +98,26 @@ describe('Protocol action provenance', () => {
 })
 
 describe('ProtocolPage completion seam', () => {
+  it('uses the immutable report-version protocol over mutable upload protocol data', () => {
+    const frozen = [{ title: 'Current report action', action_id: 'current-action' }]
+    const mutable = [{ title: 'Stale upload action', action_id: 'stale-action' }]
+
+    expect(selectAuthoritativeProtocol({
+      report_version: { id: 'report-current', protocol: { nutrition: frozen } },
+      final_analysis: { protocol: mutable },
+    })).toEqual([{ section: 'nutrition', ...frozen[0] }])
+  })
+
+  it('preserves explicitly selected historical report protocol context', () => {
+    const historical = [{ title: 'Historical iron action', action_id: 'historical-action' }]
+
+    expect(selectAuthoritativeProtocol({
+      upload_id: 'historical-upload',
+      report_version: { id: 'report-historical', protocol: { supplements: historical } },
+      final_analysis: { protocol: [{ title: 'Mutable replacement' }] },
+    })).toEqual([{ section: 'supplements', ...historical[0] }])
+  })
+
   it('uses the action plan when it is the completable persisted source', () => {
     const protocol = [{ title: 'Legacy protocol item', body: 'Legacy body' }]
     const actionPlan = [{ ...action, title: 'Persisted action' }]

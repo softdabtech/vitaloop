@@ -1031,7 +1031,9 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety, is
 }
 
 function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch, copy, isUk }) {
-  const latestUpload = summary?.blocks?.latest_upload || summary?.blocks?.latest_lab_result || null
+  const latestUpload = summary?.today_contract?.latest_ready_report
+    || summary?.blocks?.latest_lab_result
+    || null
   const biomarkers = Array.isArray(latestUpload?.biomarkers) ? latestUpload.biomarkers.slice(0, 3) : []
   const labDate = latestUpload?.measurement_date || latestUpload?.test_date || latestUpload?.created_at
   const formattedDate = labDate ? new Date(labDate).toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
@@ -1162,7 +1164,9 @@ export default function UserDashboard() {
     // event/date from the report's own measurement_date, already present
     // on the same GET /dashboard/summary payload (no new fetch).
     symptomCheckCompletedAt: summary?.blocks?.latest_questionnaire?.completed_at || null,
-    latestUpload: summary?.blocks?.latest_upload || summary?.blocks?.latest_lab_result || null,
+    latestUpload: summary?.today_contract?.latest_ready_report
+      || summary?.blocks?.latest_lab_result
+      || null,
   })
 
   if (viewModel.status === 'loading') {

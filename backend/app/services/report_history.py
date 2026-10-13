@@ -327,6 +327,7 @@ def assemble_frozen_response(
         "safety_notice": blocked_content_notice(locale) if is_blocked else None,
         "explainability": report_version.get("explainability"),
         "report_version": {**sanitized_report_version, "safety_result": safety_result},
+        "protocol_source_report_version_id": str(report_version.get("id")),
         "report_source": REPORT_SOURCE_FROZEN,
     }
     # Both public results endpoints must expose the same shape. Results.jsx

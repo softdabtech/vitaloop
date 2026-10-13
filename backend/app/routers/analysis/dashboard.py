@@ -626,7 +626,11 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     # concepts and must not share one field (e.g. a user backfilling an old
     # historical report after a recent one uploaded it MOST RECENTLY, but it
     # is NOT the newest clinical result).
-    latest_lab_result = next((row for row in progress if row.get("measurement_date")), None)
+    active_upload_id = latest_ready_report.get("upload_id") if latest_ready_report else None
+    latest_lab_result = next(
+        (row for row in progress if row.get("id") == active_upload_id),
+        None,
+    )
     latest_upload = max(progress, key=lambda row: str(row.get("created_at") or "")) if progress else None
 
     try:

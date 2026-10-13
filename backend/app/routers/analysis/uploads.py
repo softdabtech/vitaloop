@@ -20,7 +20,7 @@ async def get_recent_uploads(
 
     uploads = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(1)

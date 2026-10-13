@@ -21,7 +21,7 @@ from app.utils.retry import (
     SUPABASE_RETRY_CONFIG,
     supabase_circuit_breaker,
 )
-from typing import List, Dict, Any, Optional
+from typing import Iterable, List, Dict, Any, Optional
 
 _supabase: Optional[Client] = None
 _use_rest_auth_context = False
@@ -33,6 +33,15 @@ _RELIABLE_RETEST_DATE_SOURCES = frozenset({
     "extracted_collected_at",
     "extracted_done_date",
     "user_provided",
+})
+
+TRUSTED_DATA_ORIGINS = frozenset({
+    "clinical",
+    "synthetic",
+    "qa",
+    "smoke",
+    "validation",
+    "legacy_unclassified",
 })
 
 SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
@@ -300,12 +309,16 @@ async def save_lab_upload(
     date_raw_text: Optional[str] = None,
     ocr_confidence: Optional[float] = None,
     analyze_prompt_version: Optional[str] = None,
+    data_origin: str = "clinical",
 ) -> Dict:
+    if data_origin not in TRUSTED_DATA_ORIGINS - {"legacy_unclassified"}:
+        raise ValueError("Unsupported trusted upload data origin")
     supabase = _get_supabase()
     payload: Dict[str, Any] = {
         "user_id": user_id,
         "extracted_text": extracted_text,
         "status": "processing",
+        "data_origin": data_origin,
     }
     if lab_name:
         payload["lab_name"] = lab_name
@@ -1487,7 +1500,7 @@ async def get_user_progress(user_id: str) -> List[Dict]:
     supabase = _get_supabase()
     uploads = await _run_supabase_read(
         lambda: supabase.table("lab_uploads")
-        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status, data_origin")
         .eq("user_id", user_id)
         .execute(),
         label="get_user_progress_uploads",
@@ -1602,30 +1615,31 @@ async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
         .in_("status", ["completed", "blocked"])
         .order("created_at", desc=True)
         .order("id", desc=True)
-        .limit(1)
+        .limit(100)
         .execute(),
         label="get_latest_ready_report_version",
     )
     version_rows = version_resp.data or []
     if not version_rows:
         return None
-    version_row = version_rows[0]
-    upload_id = version_row.get("upload_id")
 
     # Ownership re-checked explicitly on the join, exactly like every other
     # per-upload read in this module (assert_upload_belongs_to_user,
     # get_biomarkers_by_upload, etc.) — never trust upload_id alone.
     upload_resp = await _run_supabase_read(
         lambda: supabase.table("lab_uploads")
-        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence")
-        .eq("id", upload_id)
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status, data_origin")
         .eq("user_id", user_id)
-        .limit(1)
         .execute(),
         label="get_latest_ready_report_upload",
     )
-    upload_rows = upload_resp.data or []
-    upload_row = upload_rows[0] if upload_rows else {}
+    upload_rows = {str(row.get("id")): row for row in (upload_resp.data or []) if row.get("id")}
+    selected = select_current_active_report(version_rows, upload_rows.values())
+    if selected is None:
+        return None
+    version_row = selected["report_version"]
+    upload_row = selected["upload"]
+    upload_id = upload_row["id"]
 
     await _audit_medical_read(
         user_id=user_id,
@@ -1637,6 +1651,7 @@ async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
         "upload_id": upload_id,
         "report_version_id": version_row.get("id"),
         "report_status": version_row.get("status"),
+        "upload_status": upload_row.get("status"),
         "report_generated_at": version_row.get("created_at"),
         "safety_result": version_row.get("safety_result"),
         "symptom_snapshot": (version_row.get("input_snapshot") or {}).get("symptom_snapshot")
@@ -1645,7 +1660,71 @@ async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
         "upload_created_at": upload_row.get("created_at"),
         "measurement_date": choose_measurement_date(upload_row) if upload_row else None,
         "lab_name": upload_row.get("lab_name"),
+        "data_origin": upload_row.get("data_origin"),
     }
+
+
+def _is_ready_upload_status(status: Any) -> bool:
+    """Return whether an upload lifecycle value can back a current report.
+
+    Older rows predate the lifecycle field and are admitted when the immutable
+    report version is terminal; explicitly non-ready values are never current.
+    """
+    normalized = str(status or "").strip().lower()
+    return not normalized or normalized in {"done", "completed", "ready"}
+
+
+def _is_clinical_upload_origin(origin: Any) -> bool:
+    """Only explicit non-clinical origins are excluded from current context.
+
+    Missing values remain eligible for backward compatibility with legacy
+    records; the migration preserves those rows as ``legacy_unclassified``.
+    """
+    return str(origin or "").strip().lower() not in {
+        "synthetic",
+        "qa",
+        "smoke",
+        "validation",
+    }
+
+
+def select_current_active_report(
+    report_versions: Iterable[Dict[str, Any]],
+    uploads: Iterable[Dict[str, Any]],
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """Select one deterministic, user-scoped current report/upload pair.
+
+    Reliable clinical sample date is the primary ordering key. When it is
+    absent or tied, report generation time and immutable version id provide a
+    stable completion-order tiebreaker. Upload status is only an exclusion
+    gate here; report_versions remains the source of truth for readiness.
+    """
+    uploads_by_id = {
+        str(upload.get("id")): upload
+        for upload in uploads
+        if upload.get("id")
+    }
+    candidates = []
+    for version in report_versions:
+        upload = uploads_by_id.get(str(version.get("upload_id") or ""))
+        if not upload or str(version.get("status") or "").lower() not in {"completed", "blocked"}:
+            continue
+        if not _is_ready_upload_status(upload.get("status")):
+            continue
+        if not _is_clinical_upload_origin(upload.get("data_origin")):
+            continue
+        clinical_date = choose_measurement_date(upload)
+        candidates.append(
+            (
+                clinical_date or "",
+                str(version.get("created_at") or ""),
+                str(version.get("id") or ""),
+                {"report_version": version, "upload": upload},
+            )
+        )
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[:3])[3]
 
 
 async def plan_exists_for_upload(user_id: str, upload_id: str) -> bool:
