@@ -13,6 +13,7 @@ function renderNavigation(initialEntry = '/dashboard') {
 
 afterEach(() => {
   cleanup()
+  delete document.body.dataset.vtlMobileSubnav
 })
 
 describe('MobileBottomBar', () => {
@@ -30,6 +31,7 @@ describe('MobileBottomBar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'My Plan' }))
 
+    expect(document.body.dataset.vtlMobileSubnav).toBe('plan')
     expect(MOBILE_SUBNAV.plan.map((item) => item.label)).toEqual(['Action Plan / Protocol', 'Lab Plan'])
     expect(screen.getByRole('menu', { name: 'My Plan menu' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Action Plan / Protocol' })).toBeTruthy()
@@ -41,6 +43,7 @@ describe('MobileBottomBar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Account' }))
 
+    expect(document.body.dataset.vtlMobileSubnav).toBe('account')
     expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual(['Profile & Safety', 'Subscription', 'Help'])
     expect(screen.getByRole('menu', { name: 'Account menu' })).toBeTruthy()
   })

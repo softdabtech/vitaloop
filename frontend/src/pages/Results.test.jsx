@@ -6,6 +6,7 @@ import {
   filterRepeatedActions,
   formatRange,
   normalizeBiomarkerStatus,
+  reportContext,
   safetyStatusLabel,
 } from './Results.jsx'
 import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
@@ -73,6 +74,18 @@ const futureObligation = {
 }
 
 describe('Results persisted retest presentation', () => {
+  it('reads patient-facing source and report date from the frozen report metadata', () => {
+    expect(reportContext({
+      metadata: {
+        source: { lab_name: 'Very Long Lab Filename.pdf' },
+        measurement_date: '2026-10-12',
+      },
+    })).toEqual({
+      source: 'Very Long Lab Filename.pdf',
+      date: '2026-10-12',
+    })
+  })
+
   it('explains a completed marker and its distinct future retest', () => {
     render(
       <TestingPlanSection

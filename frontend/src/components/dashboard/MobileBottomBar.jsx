@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ActivitySquare, CreditCard, FileText, HelpCircle, Home, Route, Settings, Upload, UserRound } from 'lucide-react'
 import { isUkrainianLocale } from '../../lib/locale.js'
@@ -37,6 +37,17 @@ export default function MobileBottomBar() {
   const navigate = useNavigate()
   const [openSubnav, setOpenSubnav] = useState(null)
   const isUk = isUkrainianLocale()
+
+  useEffect(() => {
+    if (openSubnav) {
+      document.body.dataset.vtlMobileSubnav = openSubnav
+    } else {
+      delete document.body.dataset.vtlMobileSubnav
+    }
+    return () => {
+      delete document.body.dataset.vtlMobileSubnav
+    }
+  }, [openSubnav])
 
   function toggleSubnav(key) {
     setOpenSubnav((current) => (current === key ? null : key))

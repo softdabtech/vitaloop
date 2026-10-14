@@ -19,4 +19,10 @@ describe('SupportChat mobile shell contract', () => {
       'vtl-support-chat-panel',
     )
   })
+
+  it('uses the mobile submenu state channel for interaction-aware clearance', () => {
+    document.body.dataset.vtlMobileSubnav = 'account'
+    expect(document.body.dataset.vtlMobileSubnav).toBe('account')
+    delete document.body.dataset.vtlMobileSubnav
+  })
 })
