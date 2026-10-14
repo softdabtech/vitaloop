@@ -41,6 +41,7 @@ describe('MobileBottomBar', () => {
     expect(screen.getByRole('menu', { name: 'My Plan menu' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Action Plan / Protocol' })).toBeTruthy()
     expect(screen.getByRole('menuitem', { name: 'Lab Plan' })).toBeTruthy()
+    expect(screen.getByRole('menu', { name: 'My Plan menu' }).parentElement.className).toContain('z-50')
   })
 
   it('opens Account with Profile & Safety, Subscription, and Help access', () => {
@@ -56,6 +57,7 @@ describe('MobileBottomBar', () => {
     expect(document.body.dataset.vtlMobileSubnav).toBe('account')
     expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual(['Profile & Safety', 'Subscription', 'Help'])
     expect(screen.getByRole('menu', { name: 'Account menu' })).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' }).className).toContain('z-40')
   })
 
   it('publishes a closed state without reopening chat when a submenu closes', () => {
