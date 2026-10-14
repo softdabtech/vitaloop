@@ -22,92 +22,26 @@ export function normalizePath(pathname = '') {
  * Map of cabinet route paths to metadata (title, icon, etc.)
  * Used by navigation components to display consistent labels and titles
  */
+const routeMeta = (title, ukTitle, key) => ({ title, ukTitle, key })
+
 export const CABINET_ROUTE_META = {
-  '/dashboard': {
-    title: 'Dashboard',
-    ukTitle: 'Дашборд',
-    key: 'dashboard',
-  },
-  '/upload': {
-    title: 'Upload Results',
-    ukTitle: 'Завантажити аналізи',
-    key: 'upload',
-  },
-  '/lab-plan': {
-    title: 'Lab Plan',
-    ukTitle: 'План аналізів',
-    key: 'lab_plan',
-  },
-  '/lab-results': {
-    title: 'Results & Trends',
-    ukTitle: 'Результати й динаміка',
-    key: 'lab_results',
-  },
-  '/results': {
-    title: 'Results',
-    ukTitle: 'Результати',
-    key: 'results',
-  },
-  '/protocol': {
-    title: 'Protocol',
-    ukTitle: 'План дій',
-    key: 'protocol',
-  },
-  '/assignments': {
-    title: 'Protocol',
-    ukTitle: 'План дій',
-    key: 'assignments',
-  },
-  '/progress': {
-    title: 'Results & Trends',
-    ukTitle: 'Результати й динаміка',
-    key: 'progress',
-  },
-  '/insights': {
-    title: 'Review',
-    ukTitle: 'Огляд',
-    key: 'insights',
-  },
-  '/questionnaire': {
-    title: 'Symptom Check',
-    ukTitle: 'Перевірка симптомів',
-    key: 'questionnaire',
-  },
-  '/account': {
-    title: 'Account',
-    ukTitle: 'Акаунт',
-    key: 'account',
-  },
-  '/health-profile': {
-    title: 'Profile & Safety',
-    ukTitle: 'Профіль і безпека',
-    key: 'health_profile',
-  },
-  '/subscription': {
-    title: 'Subscription',
-    ukTitle: 'Підписка',
-    key: 'subscription',
-  },
-  '/billing-history': {
-    title: 'Billing History',
-    ukTitle: 'Історія платежів',
-    key: 'billing_history',
-  },
-  '/check-ins': {
-    title: 'Check-in History',
-    ukTitle: 'Історія чек-інів',
-    key: 'check_ins',
-  },
-  '/help-center': {
-    title: 'Help Center',
-    ukTitle: 'Допомога',
-    key: 'help_center',
-  },
-  '/onboarding': {
-    title: 'Onboarding',
-    ukTitle: 'Налаштування',
-    key: 'onboarding',
-  },
+  '/dashboard': routeMeta('Dashboard', 'Дашборд', 'dashboard'),
+  '/upload': routeMeta('Upload Results', 'Завантажити аналізи', 'upload'),
+  '/lab-plan': routeMeta('Lab Plan', 'План аналізів', 'lab_plan'),
+  '/lab-results': routeMeta('Results & Trends', 'Результати й динаміка', 'lab_results'),
+  '/results': routeMeta('Results', 'Результати', 'results'),
+  '/protocol': routeMeta('Protocol', 'План дій', 'protocol'),
+  '/assignments': routeMeta('Protocol', 'План дій', 'assignments'),
+  '/progress': routeMeta('Results & Trends', 'Результати й динаміка', 'progress'),
+  '/insights': routeMeta('Review', 'Огляд', 'insights'),
+  '/questionnaire': routeMeta('Symptom Check', 'Перевірка симптомів', 'questionnaire'),
+  '/account': routeMeta('Account', 'Акаунт', 'account'),
+  '/health-profile': routeMeta('Profile & Safety', 'Профіль і безпека', 'health_profile'),
+  '/subscription': routeMeta('Subscription', 'Підписка', 'subscription'),
+  '/billing-history': routeMeta('Billing History', 'Історія платежів', 'billing_history'),
+  '/check-ins': routeMeta('Check-in History', 'Історія чек-інів', 'check_ins'),
+  '/help-center': routeMeta('Help Center', 'Допомога', 'help_center'),
+  '/onboarding': routeMeta('Onboarding', 'Налаштування', 'onboarding'),
 }
 
 /**

@@ -1,5 +1,4 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
+import { describe, expect, it } from 'vitest'
 import { shouldGenerateInsight } from './insightEligibility.js'
 
 const eligible = (overrides = {}) => shouldGenerateInsight({
@@ -11,45 +10,43 @@ const eligible = (overrides = {}) => shouldGenerateInsight({
   ...overrides,
 })
 
-test('legacy-only load generates once', () => {
-  assert.equal(eligible(), true)
-  assert.equal(eligible({ generationAttempted: true }), false)
-})
+describe('shouldGenerateInsight', () => {
+  it('allows a legacy-only load once', () => {
+    expect(eligible()).toBe(true)
+    expect(eligible({ generationAttempted: true })).toBe(false)
+  })
 
-test('empty state generates once', () => {
-  assert.equal(eligible(), true)
-})
+  it('allows an empty state once', () => {
+    expect(eligible()).toBe(true)
+  })
 
-test('active structured insight does not generate', () => {
-  assert.equal(eligible({ generationAllowed: false }), false)
-})
+  it('does not regenerate active or dismissed structured insights', () => {
+    expect(eligible({ generationAllowed: false })).toBe(false)
+  })
 
-test('dismissed structured insight does not regenerate after reload', () => {
-  assert.equal(eligible({ generationAllowed: false }), false)
-})
+  it('allows a new backend-approved state after an old dismissal', () => {
+    expect(eligible({ generationAllowed: true })).toBe(true)
+  })
 
-test('old dismissal does not block a new backend-approved state', () => {
-  assert.equal(eligible({ generationAllowed: true }), true)
-})
+  it('emits no automatic requests after dismissal and reload', () => {
+    let automaticRequests = 0
+    const considerAutomaticGeneration = (generationAllowed) => {
+      if (eligible({ generationAllowed })) automaticRequests += 1
+    }
 
-test('post-dismiss and reload state emit zero automatic generation requests', () => {
-  let automaticRequests = 0
-  const considerAutomaticGeneration = (generationAllowed) => {
-    if (eligible({ generationAllowed })) automaticRequests += 1
-  }
+    considerAutomaticGeneration(false)
+    considerAutomaticGeneration(false)
 
-  considerAutomaticGeneration(false)
-  considerAutomaticGeneration(false)
+    expect(automaticRequests).toBe(0)
+  })
 
-  assert.equal(automaticRequests, 0)
-})
+  it('allows a changed source state to generate again', () => {
+    expect(eligible({ generationAllowed: true })).toBe(true)
+  })
 
-test('a changed source state can generate again', () => {
-  assert.equal(eligible({ generationAllowed: true }), true)
-})
-
-test('dismissal refetch and generation races do not generate', () => {
-  assert.equal(eligible({ generationAllowed: true, queryFetching: true }), false)
-  assert.equal(eligible({ querySucceeded: false }), false)
-  assert.equal(eligible({ generationInFlight: true }), false)
+  it('blocks fetching, failed-query, and in-flight states', () => {
+    expect(eligible({ generationAllowed: true, queryFetching: true })).toBe(false)
+    expect(eligible({ querySucceeded: false })).toBe(false)
+    expect(eligible({ generationInFlight: true })).toBe(false)
+  })
 })
