@@ -184,8 +184,6 @@ const RESULTS_COPY = {
     fallbackHeadline: 'Your results are organized into clear priorities.',
     healthSummary: 'Your Health Summary',
     healthSummarySubtitle: 'What is happening, why it matters, and what to do next.',
-    reportSource: 'Source',
-    reportDate: 'Report date',
     topFindings: 'Top Findings',
     whyMatters: 'Why this matters',
     doctorQuestions: 'Questions for your doctor',
@@ -407,8 +405,6 @@ const RESULTS_COPY = {
     fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
     healthSummary: 'Підсумок здоровʼя',
     healthSummarySubtitle: 'Що відбувається, чому це важливо і що робити далі.',
-    reportSource: 'Джерело',
-    reportDate: 'Дата звіту',
     topFindings: 'Головні знахідки',
     whyMatters: 'Чому це важливо',
     doctorQuestions: 'Питання до лікаря',
@@ -2151,6 +2147,9 @@ export default function Results() {
   const reportFound = knowledgeReport?.what_was_found || null
   const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
   const reportMeta = reportContext(finalAnalysis)
+  const reportMetaLabels = isUk
+    ? { source: 'Джерело', date: 'Дата звіту' }
+    : { source: 'Source', date: 'Report date' }
   const reportDateLocale = isUk ? 'uk-UA' : 'en-US'
   const formattedReportDate = reportMeta.date
     ? new Date(reportMeta.date).toLocaleDateString(reportDateLocale, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -2360,13 +2359,13 @@ export default function Results() {
                 <dl className="mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
                   {reportMeta.source && (
                     <div className="min-w-0">
-                      <dt className="font-semibold text-slate-500">{copy.reportSource}</dt>
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.source}</dt>
                       <dd className="break-words font-medium text-slate-800">{reportMeta.source}</dd>
                     </div>
                   )}
                   {formattedReportDate && (
                     <div>
-                      <dt className="font-semibold text-slate-500">{copy.reportDate}</dt>
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.date}</dt>
                       <dd className="font-medium text-slate-800">{formattedReportDate}</dd>
                     </div>
                   )}
