@@ -21,13 +21,13 @@ vi.mock('./pages/HealthProfile.jsx', () => ({
 beforeEach(() => {
   apiMock.get.mockReset()
   window.scrollTo = vi.fn()
-  Element.prototype.scrollIntoView = vi.fn()
+  globalThis.Element.prototype.scrollIntoView = vi.fn()
   window.history.replaceState({}, '', '/health-profile')
 })
 
 afterEach(() => {
   cleanup()
-  delete Element.prototype.scrollIntoView
+  delete globalThis.Element.prototype.scrollIntoView
   window.history.replaceState({}, '', '/')
 })
 
