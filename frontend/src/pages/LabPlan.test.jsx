@@ -15,6 +15,7 @@ vi.mock('../hooks/useQueries.js', () => ({
 import {
   PersonalLabPlan,
   clinicalResultDate,
+  isHistoricalLabPlanItem,
   normalizeLabPlanItems,
   reportTestDisplayName,
   selectReportSpecificRecommendations,
@@ -37,6 +38,11 @@ const plannedItem = {
 }
 
 describe('PersonalLabPlan', () => {
+  it('keeps historical context breakpoint-independent when report ids use different scalar types', () => {
+    expect(isHistoricalLabPlanItem({ source_report_version_id: 17 }, '18')).toBe(true)
+    expect(isHistoricalLabPlanItem({ source_report_version_id: 17 }, '17')).toBe(false)
+  })
+
   it('keeps report-specific biomarker labels human-readable', () => {
     expect(reportTestDisplayName('mch')).toBe('MCH')
     expect(reportTestDisplayName('transferrin_saturation')).toBe('Transferrin Saturation')

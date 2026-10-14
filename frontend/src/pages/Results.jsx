@@ -689,6 +689,28 @@ function displayBiomarkerName(biomarker, isUk) {
   return biomarkerDisplayName(value, isUk) || '—'
 }
 
+export function reportContext(data) {
+  const reportVersion = data?.report_version || {}
+  const snapshot = reportVersion.input_snapshot || {}
+  const metadata = data?.metadata || snapshot.metadata || {}
+  const source = metadata.source || snapshot.source
+  const sourceValue = typeof source === 'string'
+    ? source
+    : source?.lab_name || source?.filename || source?.file_name || data?.upload?.lab_name || metadata.lab_name || data?.lab_name || source?.source
+  const dateValue = data?.measurement_date
+    || metadata.measurement_date
+    || source?.test_date
+    || source?.collected_at
+    || source?.reported_at
+    || snapshot.measurement_date
+    || data?.report_date
+    || metadata.report_date
+  return {
+    source: typeof sourceValue === 'string' ? sourceValue.trim() : '',
+    date: typeof dateValue === 'string' ? dateValue : '',
+  }
+}
+
 function triggerSubscriptionRequiredPaywall() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
@@ -2124,6 +2146,14 @@ export default function Results() {
   const reportSummary = knowledgeReport?.summary || null
   const reportFound = knowledgeReport?.what_was_found || null
   const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
+  const reportMeta = reportContext(finalAnalysis)
+  const reportMetaLabels = isUk
+    ? { source: 'Джерело', date: 'Дата звіту' }
+    : { source: 'Source', date: 'Report date' }
+  const reportDateLocale = isUk ? 'uk-UA' : 'en-US'
+  const formattedReportDate = reportMeta.date
+    ? new Date(reportMeta.date).toLocaleDateString(reportDateLocale, { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
@@ -2325,6 +2355,22 @@ export default function Results() {
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
                 {reportFound?.summary || copy.intro}
               </p>
+              {(reportMeta.source || formattedReportDate) && (
+                <dl className="mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                  {reportMeta.source && (
+                    <div className="min-w-0">
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.source}</dt>
+                      <dd className="break-words font-medium text-slate-800">{reportMeta.source}</dd>
+                    </div>
+                  )}
+                  {formattedReportDate && (
+                    <div>
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.date}</dt>
+                      <dd className="font-medium text-slate-800">{formattedReportDate}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={() => navigate(`/protocol/${uploadId}`)}
@@ -2449,7 +2495,7 @@ export default function Results() {
                   const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
                   return (
                     <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
-                      <td data-label={copy.biomarker} className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
+                      <td data-label={copy.biomarker} className="results-biomarker-name px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
                       <td data-label={copy.value} className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
                       <td data-label={copy.ref} className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
                       <td data-label={copy.status} className="px-4 py-3">

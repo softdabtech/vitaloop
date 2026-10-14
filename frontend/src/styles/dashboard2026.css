@@ -53,14 +53,14 @@
   .lab-plan-item-card__name {
     flex: 1 1 100%;
     max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   .protocol-action-card__title,
-  .lab-plan-item-card__name {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+  .lab-plan-item-card__name,
+  .lab-progress-name,
+  .results-biomarker-table td {
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .protocol-action-card__header > :last-child,
@@ -131,11 +131,6 @@
     min-height: 44px;
   }
 
-  .lab-progress-name {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
   .results-report-hero {
     grid-template-columns: 1fr;
   }
@@ -182,8 +177,6 @@
     gap: 8px;
     grid-template-columns: minmax(92px, 0.35fr) minmax(0, 0.65fr);
     padding: 7px 4px;
-    overflow-wrap: anywhere;
-    word-break: break-word;
   }
 
   .results-biomarker-table td::before {
@@ -253,6 +246,11 @@ button[aria-label].inline-icon {
       bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 12px) !important;
       width: calc(100vw - 24px) !important;
       max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 24px) !important;
+    }
+
+    body[data-vtl-mobile-subnav] .vtl-support-chat-panel {
+      bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 168px) !important;
+      max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 180px) !important;
     }
   }
 }

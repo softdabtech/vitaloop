@@ -259,13 +259,18 @@ export function clinicalResultDate(result) {
   return candidates.find((value) => typeof value === 'string' && value.trim()) || null
 }
 
+export function isHistoricalLabPlanItem(item, activeReportVersionId = null) {
+  const sourceReportVersionId = item?.source_report_version_id
+  return Boolean(
+    sourceReportVersionId
+    && activeReportVersionId
+    && String(sourceReportVersionId) !== String(activeReportVersionId),
+  )
+}
+
 function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeReportVersionId = null }) {
   const fulfilled = item?.status === 'fulfilled'
-  const historical = Boolean(
-    item?.source_report_version_id
-    && activeReportVersionId
-    && item.source_report_version_id !== activeReportVersionId,
-  )
+  const historical = isHistoricalLabPlanItem(item, activeReportVersionId)
   return (
     <article className="lab-plan-item-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="lab-plan-item-card__header flex flex-wrap items-start justify-between gap-3">
