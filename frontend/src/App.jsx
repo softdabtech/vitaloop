@@ -66,6 +66,7 @@ const Settings = lazy(() => import('./pages/Settings.jsx'))
 const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
 const BillingHistory = lazy(() => import('./pages/BillingHistory.jsx'))
+const CheckInHistory = lazy(() => import('./pages/CheckInHistory.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
 const Questionnaire = lazy(() => import('./pages/SymptomCheck.jsx'))
 const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
@@ -934,7 +935,7 @@ export default function App() {
           {/* Legacy check-in URLs currently lead to the structured symptom flow.
               The old mixed free-text questionnaire remains outside the active
               route while the server-owned three-stage flow is validated. */}
-          <Route path="/check-ins" element={<Navigate to="/questionnaire" replace />} />
+          <Route path="/check-ins" element={renderCabinetRoute(<CheckInHistory />)} />
           <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
           <Route path="/dashboard-legacy" element={<Navigate to="/dashboard" replace />} />

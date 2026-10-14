@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Mail } from 'lucide-react'
+import { ArrowLeft, Mail, Receipt } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -10,7 +10,7 @@ import '../styles/dashboard2026.css'
 
 export default function BillingHistory() {
   const { user } = useAuth()
-  const { isPremium, subStatus, planName } = useSubscription()
+  const { isPremium, subStatus } = useSubscription()
   const navigate = useNavigate()
   const isUk = isUkrainianLocale()
 
@@ -55,10 +55,6 @@ export default function BillingHistory() {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Статус' : 'Status'}</p>
               <p className="mt-1 text-lg font-bold capitalize text-slate-950">{subStatus || (isUk ? 'безкоштовний' : 'free')}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Код доступу' : 'Access key'}</p>
-              <p className="mt-1 text-lg font-bold capitalize text-slate-950">{planName || (isPremium ? 'premium' : (isUk ? 'безкоштовний' : 'free'))}</p>
-            </div>
           </div>
 
           <p className="mt-6 max-w-2xl text-sm leading-6 text-slate-600">
@@ -85,6 +81,23 @@ export default function BillingHistory() {
               {isUk ? 'Звʼязатися з підтримкою' : 'Contact support'}
             </button>
           </div>
+        </section>
+
+        <section className="rounded-[20px] border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="mb-3 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+              <Receipt className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="cabinet-title-lg text-slate-950">{isUk ? 'Історія платежів' : 'Billing history'}</h2>
+              <p className="text-sm text-slate-500">{isUk ? 'Транзакції з’являться тут після підключення платіжної історії.' : 'Transactions will appear here when billing history is available.'}</p>
+            </div>
+          </div>
+          <p className="text-sm leading-6 text-slate-600">
+            {isUk
+              ? 'Наразі для англомовного кабінету немає підтверджених платіжних транзакцій для відображення. Статус доступу наведено вище.'
+              : 'There are no confirmed billing transactions to display for the English cabinet yet. Your current access status is shown above.'}
+          </p>
         </section>
       </div>
     </>

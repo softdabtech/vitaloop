@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFetchResultsError, canViewResults, lifecycleState, shouldShowBiomarkerCounts } from './LabResultsList.jsx'
+import { buildFetchResultsError, canViewResults, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts } from './LabResultsList.jsx'
 
 describe('LabResultsList lifecycle state', () => {
   it('keeps ready results viewable with biomarker counts', () => {
@@ -37,5 +37,11 @@ describe('LabResultsList lifecycle state', () => {
     expect(result.error).toBe('We could not load your lab results right now. Please try again.')
     expect(result.error).not.toContain('500')
     expect(result.error).not.toContain('provider')
+  })
+
+  it('does not expose internal source tokens in result history', () => {
+    expect(patientFacingLabName('b2c_file')).toBe('Lab result')
+    expect(patientFacingLabName('4b825dc642cb6eb9a060e54bf8d69288')).toBe('Lab result')
+    expect(patientFacingLabName('Quest Diagnostics')).toBe('Quest Diagnostics')
   })
 })
