@@ -38,14 +38,34 @@ export default function SupportChat({ onClose }) {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const bottomRef = useRef(null)
+  const inputRef = useRef(null)
+
+  const closeChat = (reason = 'user') => {
+    onClose?.(reason)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.('user')
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
+  useEffect(() => {
     const handleMobileSubnavChange = (event) => {
-      if (event.detail?.openSubnav) onClose?.()
+      if (event.detail?.openSubnav) onClose?.('navigation')
     }
     window.addEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
     return () => window.removeEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
@@ -66,7 +86,12 @@ export default function SupportChat({ onClose }) {
   }
 
   return (
-    <div className="vtl-support-chat-panel" style={{
+    <section
+      className="vtl-support-chat-panel"
+      role="dialog"
+      aria-labelledby="support-chat-title"
+      aria-modal="false"
+      style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 3000,
       width: 360, maxHeight: 520,
       background: '#ffffff',
@@ -95,7 +120,9 @@ export default function SupportChat({ onClose }) {
             </svg>
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>VITALOOP Support</div>
+            <h2 id="support-chat-title" style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'white' }}>
+              VITALOOP Support
+            </h2>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
               <span style={{
                 display: 'inline-block', width: 6, height: 6,
@@ -107,7 +134,9 @@ export default function SupportChat({ onClose }) {
           </div>
         </div>
         <button
-          onClick={onClose}
+          type="button"
+          onClick={() => closeChat()}
+          aria-label="Close support chat"
           style={{
             background: 'rgba(255,255,255,0.1)', border: 'none',
             borderRadius: '50%', width: 28, height: 28,
@@ -120,7 +149,13 @@ export default function SupportChat({ onClose }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div
+        role="log"
+        aria-label="Support chat messages"
+        aria-live="polite"
+        aria-relevant="additions"
+        style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}
+      >
         {messages.map((m, i) => (
           <div key={i} style={{
             display: 'flex',
@@ -197,6 +232,9 @@ export default function SupportChat({ onClose }) {
         display: 'flex', gap: 8,
       }}>
         <input
+          ref={inputRef}
+          id="support-chat-message-input"
+          aria-label="Message"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
@@ -212,7 +250,9 @@ export default function SupportChat({ onClose }) {
           onBlur={(e) => { e.target.style.borderColor = 'var(--gray-100,#d2d2d7)' }}
         />
         <button
+          type="button"
           onClick={() => sendMessage(input)}
+          aria-label="Send message"
           disabled={!input.trim()}
           style={{
             background: 'var(--teal-800,#085041)', color: 'white',
@@ -234,6 +274,6 @@ export default function SupportChat({ onClose }) {
           50% { transform: translateY(-4px); }
         }
       `}</style>
-    </div>
+    </section>
   )
 }
