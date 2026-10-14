@@ -196,18 +196,6 @@
   }
 
   @media (max-width: 767px) {
-    .vtl-support-chat-panel {
-      right: 12px !important;
-      bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 12px) !important;
-      width: calc(100vw - 24px) !important;
-      max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 24px) !important;
-    }
-
-    body[data-vtl-mobile-subnav='plan'] .vtl-support-chat-panel,
-    body[data-vtl-mobile-subnav='account'] .vtl-support-chat-panel {
-      bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 168px) !important;
-      max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 180px) !important;
-    }
   }
 }
 

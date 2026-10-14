@@ -2151,8 +2151,9 @@ export default function Results() {
   const reportFound = knowledgeReport?.what_was_found || null
   const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
   const reportMeta = reportContext(finalAnalysis)
+  const reportDateLocale = isUk ? 'uk-UA' : 'en-US'
   const formattedReportDate = reportMeta.date
-    ? new Date(reportMeta.date).toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(reportMeta.date).toLocaleDateString(reportDateLocale, { month: 'short', day: 'numeric', year: 'numeric' })
     : ''
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
