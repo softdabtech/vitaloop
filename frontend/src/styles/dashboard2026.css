@@ -53,12 +53,12 @@
   .lab-plan-item-card__name {
     flex: 1 1 100%;
     max-width: 100%;
-    overflow-wrap: break-word;
-    word-break: normal;
   }
 
   .protocol-action-card__title,
-  .lab-plan-item-card__name {
+  .lab-plan-item-card__name,
+  .lab-progress-name,
+  .results-biomarker-table td {
     overflow-wrap: break-word;
     word-break: normal;
   }
@@ -131,11 +131,6 @@
     min-height: 44px;
   }
 
-  .lab-progress-name {
-    overflow-wrap: break-word;
-    word-break: normal;
-  }
-
   .results-report-hero {
     grid-template-columns: 1fr;
   }
@@ -182,8 +177,6 @@
     gap: 8px;
     grid-template-columns: minmax(92px, 0.35fr) minmax(0, 0.65fr);
     padding: 7px 4px;
-    overflow-wrap: break-word;
-    word-break: normal;
   }
 
   .results-biomarker-table td::before {
@@ -194,7 +187,6 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-
 }
 
 /* Smooth momentum scrolling on iOS */
