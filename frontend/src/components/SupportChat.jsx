@@ -58,7 +58,7 @@ export default function SupportChat({ onClose }) {
   }
 
   return (
-    <div style={{
+    <div className="vtl-support-chat-panel" style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 3000,
       width: 360, maxHeight: 520,
       background: '#ffffff',

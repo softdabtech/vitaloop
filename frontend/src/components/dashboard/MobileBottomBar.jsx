@@ -1,90 +1,111 @@
-import { useNavigate, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ActivitySquare, Home, Settings, Stethoscope, Upload } from 'lucide-react'
+import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ActivitySquare, CreditCard, FileText, HelpCircle, Home, Route, Settings, Upload, UserRound } from 'lucide-react'
 import { isUkrainianLocale } from '../../lib/locale.js'
 
-const TAB_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', ukLabel: 'Дашборд', icon: Home },
-  { path: '/questionnaire', label: 'Symptom', ukLabel: 'Симптоми', icon: Stethoscope },
-  { path: '/upload', label: 'Upload', ukLabel: 'Аналізи', icon: Upload, accent: true },
-  { path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare },
-  { path: '/account', label: 'Account', ukLabel: 'Акаунт', icon: Settings },
+export const MOBILE_NAV_ITEMS = [
+  { key: 'home', path: '/dashboard', label: 'Home', ukLabel: 'Головна', icon: Home },
+  { key: 'results', path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare },
+  { key: 'upload', path: '/upload', label: 'Upload', ukLabel: 'Завантажити', icon: Upload },
+  { key: 'plan', label: 'My Plan', ukLabel: 'Мій план', icon: Route, submenu: 'plan' },
+  { key: 'account', label: 'Account', ukLabel: 'Акаунт', icon: UserRound, submenu: 'account' },
 ]
 
+export const MOBILE_SUBNAV = {
+  plan: [
+    { path: '/lab-results', label: 'Action Plan / Protocol', ukLabel: 'План дій / Протокол', icon: FileText },
+    { path: '/lab-plan', label: 'Lab Plan', ukLabel: 'План аналізів', icon: Route },
+  ],
+  account: [
+    { path: '/health-profile', label: 'Profile & Safety', ukLabel: 'Профіль і безпека', icon: Settings },
+    { path: '/subscription', label: 'Subscription', ukLabel: 'Підписка', icon: CreditCard },
+    { path: '/help-center', label: 'Help', ukLabel: 'Допомога', icon: HelpCircle },
+  ],
+}
+
 function isActive(current, item) {
-  if (current === item.path) return true
-  if (item.path === '/dashboard') return current === '/dashboard'
-  return current.startsWith(`${item.path}/`)
+  if (item.key === 'results') {
+    return current === '/lab-results' || current === '/progress' || current.startsWith('/results/') || current.startsWith('/protocol/')
+  }
+  if (item.key === 'plan') return current === '/lab-plan'
+  if (item.key === 'account') return ['/health-profile', '/subscription', '/help-center', '/account'].includes(current)
+  return current === item.path || current.startsWith(`${item.path}/`)
 }
 
 export default function MobileBottomBar() {
+  const location = useLocation()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const [openSubnav, setOpenSubnav] = useState(null)
   const isUk = isUkrainianLocale()
 
-  return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/97 backdrop-blur-xl md:hidden"
-      style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))', minHeight: 'var(--vtl-bottom-bar-height)' }}
-      aria-label="Main navigation"
-    >
-      <div className="flex items-end justify-around px-1 pt-2">
-        {TAB_ITEMS.map((item) => {
-          const active = isActive(pathname, item)
-          const Icon = item.icon
-          const label = isUk ? item.ukLabel || item.label : item.label
+  function toggleSubnav(key) {
+    setOpenSubnav((current) => (current === key ? null : key))
+  }
 
-          if (item.accent) {
+  return (
+    <>
+      {openSubnav && (
+        <div className="vtl-mobile-subnav fixed inset-x-3 bottom-[calc(var(--vtl-bottom-bar-height)+env(safe-area-inset-bottom)+12px)] z-40 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-xl backdrop-blur md:hidden">
+          <div className="grid gap-1" role="menu" aria-label={`${openSubnav === 'plan' ? 'My Plan' : 'Account'} menu`}>
+            {MOBILE_SUBNAV[openSubnav].map((item) => {
+              const Icon = item.icon
+              const label = isUk ? item.ukLabel : item.label
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  role="menuitem"
+                  className="vtl-focus-ring flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                  onClick={() => {
+                    navigate(item.path)
+                    setOpenSubnav(null)
+                  }}
+                >
+                  <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <nav
+        className="vtl-mobile-bottom-nav fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/97 backdrop-blur-xl md:hidden"
+        aria-label="Main navigation"
+      >
+        <div className="grid grid-cols-5 gap-1 px-2 pt-2">
+          {MOBILE_NAV_ITEMS.map((item) => {
+            const Icon = item.icon
+            const active = isActive(location.pathname, item)
+            const expanded = openSubnav === item.submenu
+            const label = isUk ? item.ukLabel : item.label
             return (
               <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
+                key={item.key}
+                type="button"
+                onClick={() => {
+                  if (item.submenu) {
+                    toggleSubnav(item.submenu)
+                  } else {
+                    navigate(item.path)
+                    setOpenSubnav(null)
+                  }
+                }}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
-                className="relative -mt-5 flex flex-col items-center"
+                aria-expanded={item.submenu ? expanded : undefined}
+                className={`vtl-focus-ring flex min-h-11 min-w-0 flex-col items-center justify-start gap-1 rounded-xl px-1 pb-2 pt-1 text-center transition ${
+                  active || expanded ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-50'
+                }`}
               >
-                <span
-                  className={`flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all duration-200 ${
-                    active
-                      ? 'bg-emerald-600 shadow-emerald-500/40 scale-105'
-                      : 'bg-emerald-500 shadow-emerald-500/30 hover:bg-emerald-600 active:scale-95'
-                  }`}
-                  style={{ boxShadow: '0 4px 16px rgba(16,185,129,0.45)' }}
-                >
-                  <Icon className="h-6 w-6 text-white" />
-                </span>
-                <span className={`mt-1.5 text-xs font-semibold ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                  {label}
-                </span>
+                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                <span className="max-w-full break-words text-[11px] font-semibold leading-tight">{label}</span>
               </button>
             )
-          }
-
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              aria-label={label}
-              aria-current={active ? 'page' : undefined}
-              className="relative flex flex-col items-center gap-1 pb-1 pt-0.5 min-w-[48px] transition-all duration-150 active:scale-95"
-            >
-              <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl transition-colors duration-200 ${active ? 'bg-emerald-50' : ''}`}>
-                <Icon className={`h-5 w-5 transition-colors duration-200 ${active ? 'text-emerald-600' : 'text-slate-400'}`} />
-                {active && (
-                  <motion.span
-                    layoutId="tab-indicator"
-                    className="absolute -bottom-0.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-emerald-500"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </span>
-              <span className={`text-xs font-semibold leading-none transition-colors duration-200 ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                {label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
+          })}
+        </div>
+      </nav>
+    </>
   )
 }

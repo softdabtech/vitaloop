@@ -2313,7 +2313,7 @@ export default function Results() {
           transition={{ duration: 0.45 }}
           className="cabinet-header-hero mb-6 overflow-hidden !p-0"
         >
-          <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
+          <div className="results-report-hero grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
             <div className="p-6 sm:p-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 <HeartPulse className="h-3.5 w-3.5" />
@@ -2342,7 +2342,7 @@ export default function Results() {
               </div>
             </div>
             <div className="border-t border-slate-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 lg:border-l lg:border-t-0">
-              <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
+              <div className="results-report-stats grid grid-cols-3 gap-3 lg:grid-cols-1">
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-slate-950">{normalizedBiomarkers.length}</div>
                   <div className="text-xs font-medium text-slate-500">{copy.markersRead}</div>
@@ -2434,7 +2434,7 @@ export default function Results() {
               </button>
             </FeatureGate>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <div className="results-biomarker-table rounded-2xl border border-slate-100">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
@@ -2449,10 +2449,10 @@ export default function Results() {
                   const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
                   return (
                     <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
-                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
-                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
-                      <td className="px-4 py-3">
+                      <td data-label={copy.biomarker} className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
+                      <td data-label={copy.value} className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
+                      <td data-label={copy.ref} className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
+                      <td data-label={copy.status} className="px-4 py-3">
                         <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
                       </td>
                     </tr>

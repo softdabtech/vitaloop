@@ -19,7 +19,7 @@
   --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --vtl-emerald-glow: 0 0 0 3px rgba(var(--brand-rgb, 29, 158, 117), 0.18);
   /* Bottom nav height so pages can account for it */
-  --vtl-bottom-bar-height: 72px;
+  --vtl-bottom-bar-height: 76px;
 }
 
 /* ── Mobile PWA baseline ───────────────────────────────────────────────── */
@@ -30,6 +30,169 @@
   textarea,
   select {
     font-size: 16px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .protocol-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .protocol-action-grid,
+  .lab-plan-recommendation-grid,
+  .lab-plan-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .protocol-action-card__header,
+  .lab-plan-item-card__header {
+    align-items: flex-start;
+  }
+
+  .protocol-action-card__identity,
+  .lab-plan-item-card__name {
+    flex: 1 1 100%;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .protocol-action-card__title,
+  .lab-plan-item-card__name {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .protocol-action-card__header > :last-child,
+  .lab-plan-item-card__status {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  .protocol-action-card button,
+  .protocol-action-card a,
+  .lab-plan-item-card button,
+  .lab-plan-item-card a {
+    min-height: 44px;
+  }
+
+  .lab-plan-item-card__timing {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .lab-results-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-results-summary-card {
+    min-width: 0;
+  }
+
+  .lab-results-summary-source,
+  .lab-result-card__source,
+  .lab-result-card__state {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .lab-result-card__body {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .lab-result-card__identity,
+  .lab-result-card__badges,
+  .lab-result-card__state,
+  .lab-result-card__action {
+    width: 100%;
+    flex: none;
+  }
+
+  .lab-result-card__identity {
+    min-height: 44px;
+  }
+
+  .lab-result-card__identity > p:last-child {
+    flex-wrap: wrap;
+    line-height: 1.4;
+  }
+
+  .lab-result-card__badges {
+    align-items: flex-start;
+  }
+
+  .lab-result-card__action {
+    justify-content: flex-start;
+  }
+
+  .lab-result-card__action button {
+    min-height: 44px;
+  }
+
+  .lab-progress-name {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .results-report-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .results-report-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .results-biomarker-table {
+    overflow: hidden;
+  }
+
+  .results-biomarker-table table,
+  .results-biomarker-table tbody,
+  .results-biomarker-table tr,
+  .results-biomarker-table td {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .results-biomarker-table thead {
+    display: none;
+  }
+
+  .results-biomarker-table tbody {
+    padding: 6px;
+  }
+
+  .results-biomarker-table tr {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 8px;
+    padding: 8px;
+  }
+
+  .results-biomarker-table tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .results-biomarker-table td {
+    border: 0;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(92px, 0.35fr) minmax(0, 0.65fr);
+    padding: 7px 4px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .results-biomarker-table td::before {
+    color: #64748b;
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
@@ -69,6 +232,28 @@ button[aria-label].inline-icon {
 @media (display-mode: standalone) {
   .vtl-topbar-standalone-pad {
     padding-top: env(safe-area-inset-top);
+  }
+
+  @media (max-width: 767px) {
+    .vtl-cabinet-content {
+      padding-bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 20px);
+    }
+
+    .vtl-mobile-bottom-nav {
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    .vtl-mobile-subnav {
+      max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 32px);
+      overflow-y: auto;
+    }
+
+    .vtl-support-chat-panel {
+      right: 12px !important;
+      bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 12px) !important;
+      width: calc(100vw - 24px) !important;
+      max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 24px) !important;
+    }
   }
 }
 

@@ -210,6 +210,7 @@ function buildCockpitViewModel({
   planExists,
   reportAge,
   sourceDate,
+  sourceName,
   newerUploadDate = null,
   symptomCheckDate,
   safety, // questionnaire safety (viewModel.safety), already built by the caller
@@ -237,6 +238,7 @@ function buildCockpitViewModel({
   // completed_at, a completely different event on a different timeline. ---
   const headerContext = {
     labDate: sourceDate || null,
+    sourceName: sourceName || null,
     symptomCheckDate: symptomCheckDate || null,
     newerUploadDate,
     reportAge,
@@ -751,6 +753,7 @@ export function buildTodayViewModel({
 
   const contract = todayContract || {}
   const latestReadyReport = contract.latest_ready_report || null
+  const sourceName = latestReadyReport?.lab_name || latestReadyReport?.labName || null
   const contractStatus = contract.latest_ready_report_status || (latestReadyReport ? 'ready' : 'none')
 
   // today_contract itself failed to resolve (distinct from "no report exists"
@@ -869,7 +872,7 @@ export function buildTodayViewModel({
     const contentStatus = returning.status === 'ready' ? 'ready' : returning.status === 'error' ? 'error' : 'loading'
     return buildCockpitViewModel({
       contentStatus,
-      reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, newerUploadDate, symptomCheckDate,
+      reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, sourceName, newerUploadDate, symptomCheckDate,
       planAccessAllowed: planIsAccessible, planExists,
       safety, reportSafety: returning.reportSafety, changes: returning.changes,
     })

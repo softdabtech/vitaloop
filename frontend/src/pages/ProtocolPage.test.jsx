@@ -95,6 +95,21 @@ describe('Protocol action provenance', () => {
     expect(screen.getByText('MEDIUM')).toBeTruthy()
     expect(screen.getByText(action.body)).toBeTruthy()
   })
+
+  it('keeps long action names in a mobile-safe identity block', () => {
+    render(
+      <ActionCard
+        item={{ ...action, title: 'Discuss Transferrin Saturation and C-Reactive Protein (CRP)' }}
+        copy={copy}
+        isUk={false}
+        reportVersionId="report-1"
+        onComplete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: /Transferrin Saturation/ }).className).toContain('protocol-action-card__title')
+    expect(screen.getByRole('button', { name: 'Mark complete' })).toBeTruthy()
+  })
 })
 
 describe('ProtocolPage completion seam', () => {
