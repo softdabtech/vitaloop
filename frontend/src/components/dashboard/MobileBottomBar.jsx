@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ActivitySquare, CreditCard, FileText, HelpCircle, Home, Route, Settings, Upload, UserRound } from 'lucide-react'
+import { ActivitySquare, CalendarDays, CreditCard, FileText, HelpCircle, Home, Receipt, Route, Settings, Upload, UserRound } from 'lucide-react'
 import { isUkrainianLocale } from '../../lib/locale.js'
 
 export const MOBILE_NAV_ITEMS = [
@@ -19,6 +19,8 @@ export const MOBILE_SUBNAV = {
   account: [
     { path: '/health-profile', label: 'Profile & Safety', ukLabel: 'Профіль і безпека', icon: Settings },
     { path: '/subscription', label: 'Subscription', ukLabel: 'Підписка', icon: CreditCard },
+    { path: '/billing-history', label: 'Billing History', ukLabel: 'Історія платежів', icon: Receipt },
+    { path: '/check-ins', label: 'Check-in History', ukLabel: 'Історія чек-інів', icon: CalendarDays },
     { path: '/help-center', label: 'Help', ukLabel: 'Допомога', icon: HelpCircle },
   ],
 }
@@ -28,7 +30,7 @@ function isActive(current, item) {
     return current === '/lab-results' || current === '/progress' || current.startsWith('/results/') || current.startsWith('/protocol/')
   }
   if (item.key === 'plan') return current === '/lab-plan'
-  if (item.key === 'account') return ['/health-profile', '/subscription', '/help-center', '/account'].includes(current)
+  if (item.key === 'account') return ['/health-profile', '/subscription', '/billing-history', '/check-ins', '/help-center', '/account'].includes(current)
   return current === item.path || current.startsWith(`${item.path}/`)
 }
 

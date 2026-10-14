@@ -55,7 +55,7 @@ describe('MobileBottomBar', () => {
       detail: { openSubnav: 'account' },
     }))
     expect(document.body.dataset.vtlMobileSubnav).toBe('account')
-    expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual(['Profile & Safety', 'Subscription', 'Help'])
+    expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual(['Profile & Safety', 'Subscription', 'Billing History', 'Check-in History', 'Help'])
     expect(screen.getByRole('menu', { name: 'Account menu' })).toBeTruthy()
     expect(screen.getByRole('navigation', { name: 'Main navigation' }).className).toContain('z-40')
   })

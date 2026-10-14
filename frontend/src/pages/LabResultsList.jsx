@@ -134,6 +134,14 @@ function getItemDate(item, isUk) {
   return measurementDateValue(item) || (isUk ? 'Дата невідома' : 'Unknown date')
 }
 
+export function patientFacingLabName(value, fallback = 'Lab result') {
+  const name = String(value || '').trim()
+  if (!name || /^(b2c_file|synthetic|validation|qa|smoke)$/i.test(name) || /^[a-f0-9-]{24,}$/i.test(name)) {
+    return fallback
+  }
+  return name
+}
+
 function getBiomarkerCounts(item) {
   const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
   return {
@@ -384,6 +392,7 @@ export default function LabResultsList() {
   const [error, setError] = useState(null)
   const [overview, setOverview] = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(true)
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -417,7 +426,7 @@ export default function LabResultsList() {
     return () => {
       active = false
     }
-  }, [user])
+  }, [user, reloadToken])
 
   const sortedItems = useMemo(() => {
     // The backend already returns items in correct clinical order (real lab
@@ -473,8 +482,19 @@ export default function LabResultsList() {
         />
 
         {error && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            {error}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true)
+                setError(null)
+                setReloadToken((value) => value + 1)
+              }}
+              className="rounded-lg border border-rose-300 bg-white px-3 py-2 font-semibold text-rose-800"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -501,7 +521,7 @@ export default function LabResultsList() {
                 </div>
                 <div className="lab-results-summary-card vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="lab-results-summary-source mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
+                  <p className="lab-results-summary-source mt-1 text-sm font-semibold text-slate-900">{latestReadyItem ? patientFacingLabName(latestReadyItem.lab_name, copy.labResults(sortedItems.length)) : copy.noCompletedReport}</p>
                   {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                       {latestActivityCopy(latestActivityState, copy)}
@@ -533,7 +553,7 @@ export default function LabResultsList() {
                         disabled={!canViewResults(item) || !uploadId}
                         className="lab-result-card__identity flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <p className="lab-result-card__source text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
+                        <p className="lab-result-card__source text-sm font-semibold text-slate-800">{patientFacingLabName(item?.lab_name, copy.labResults(sortedItems.length - index))}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
