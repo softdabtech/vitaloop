@@ -1,7 +1,7 @@
 import { useUserEntitlements, useDashboardSummary } from './useQueries.js'
 
 export function useSubscription() {
-  const { data, isLoading, refetch } = useUserEntitlements()
+  const { data, isLoading, error, refetch } = useUserEntitlements()
   // uploadLimit alone is just the free-tier cap, not how many analyses are
   // actually left — dashboard-summary's stats.total_uploads is the same
   // per-user lab_uploads count the backend quota check itself is built on
@@ -23,6 +23,7 @@ export function useSubscription() {
     uploadsRemaining,
     planName: resolved.plan_key || null,
     loading: isLoading || dashboardLoading,
+    error,
     refresh: refetch,
   }
 }

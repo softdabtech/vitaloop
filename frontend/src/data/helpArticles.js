@@ -1076,7 +1076,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'tip',
-        text: 'Still stuck? Email a copy of your lab file to info@softdab.tech and the team will manually review it.',
+        text: 'Still stuck? Email info@softdab.tech with the error, file type, and steps you tried. Do not send sensitive lab files by email.',
       },
     ],
   },

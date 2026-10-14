@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -53,6 +53,10 @@ const GOAL_OPTIONS = [
 const HEALTH_PROFILE_COPY = {
   en: {
     loadingProfile: 'Loading saved profile details...',
+    profileLoadWarning: 'Some saved profile details could not be loaded. The values shown may come from your account metadata and are not confirmed as saved profile data.',
+    retryLoad: 'Retry',
+    fullName: 'Full name',
+    fullNamePlaceholder: 'Enter your full name',
     basics: 'Basics',
     age: 'Age',
     agePlaceholder: 'Enter your age',
@@ -111,6 +115,10 @@ const HEALTH_PROFILE_COPY = {
   },
   uk: {
     loadingProfile: 'Завантажуємо збережений профіль...',
+    profileLoadWarning: 'Не вдалося повністю завантажити збережені дані профілю. Показані значення можуть походити з метаданих акаунта і не підтверджують збереження профілю.',
+    retryLoad: 'Повторити',
+    fullName: 'Повне імʼя',
+    fullNamePlaceholder: 'Введіть ваше повне імʼя',
     basics: 'Основне',
     age: 'Вік',
     agePlaceholder: 'Введіть ваш вік',
@@ -170,6 +178,7 @@ const HEALTH_PROFILE_COPY = {
 }
 
 const DEFAULT_PROFILE = {
+  full_name: '',
   age: '',
   sex: '',
   height_cm: '',
@@ -214,8 +223,10 @@ function parseCommaSeparatedList(value) {
     : []
 }
 
-function mapProfileFromApi(data) {
+export function mapProfileFromApi(data, fallbackMeta = {}) {
+  const hasPersistedFullName = Object.prototype.hasOwnProperty.call(data, 'full_name')
   return {
+    full_name: hasPersistedFullName ? (data.full_name || '') : (fallbackMeta.full_name || fallbackMeta.name || ''),
     age: data.age || '',
     sex: normalizeSexValue(data.sex),
     height_cm: data.height_cm || '',
@@ -231,8 +242,9 @@ function mapProfileFromApi(data) {
   }
 }
 
-function mapProfileFromUserMeta(meta) {
+export function mapProfileFromUserMeta(meta) {
   return {
+    full_name: meta.full_name || meta.name || '',
     age: meta.age || '',
     sex: normalizeSexValue(meta.sex),
     height_cm: meta.height_cm || '',
@@ -248,11 +260,12 @@ function mapProfileFromUserMeta(meta) {
   }
 }
 
-function buildProfileUpdatePayload(profile) {
+export function buildProfileUpdatePayload(profile) {
   const supplementsList = parseCommaSeparatedList(profile.current_supplements)
   const medicationsList = parseCommaSeparatedList(profile.current_medications)
 
   return {
+    full_name: profile.full_name?.trim() || null,
     age: profile.age ? parseInt(profile.age, 10) : null,
     sex: profile.sex,
     height_cm: profile.height_cm ? parseFloat(profile.height_cm) : null,
@@ -276,6 +289,7 @@ export default function HealthProfile() {
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [profileLoadError, setProfileLoadError] = useState(false)
 
   const profileCompletion = useMemo(() => {
     const checks = [
@@ -296,25 +310,27 @@ export default function HealthProfile() {
     return (profile.weight_kg / (heightM * heightM)).toFixed(1)
   }, [profile.height_cm, profile.weight_kg])
 
-  useEffect(() => {
-    async function loadProfile() {
-      setLoading(true)
-      try {
-        const response = await api.get('/profile', { timeout: 8000 })
-        const data = response.data?.profile || {}
-        setProfile(mapProfileFromApi(data))
-      } catch (error) {
-        const meta = user?.user_metadata || {}
-        setProfile(mapProfileFromUserMeta(meta))
-      } finally {
-        setLoading(false)
-      }
+  const loadProfile = useCallback(async () => {
+    setLoading(true)
+    setProfileLoadError(false)
+    try {
+      const response = await api.get('/profile', { timeout: 8000 })
+      const data = response.data?.profile || {}
+      setProfile(mapProfileFromApi(data, user?.user_metadata || {}))
+    } catch (error) {
+      const meta = user?.user_metadata || {}
+      setProfile(mapProfileFromUserMeta(meta))
+      setProfileLoadError(true)
+    } finally {
+      setLoading(false)
     }
+  }, [user])
 
+  useEffect(() => {
     if (user) {
       loadProfile()
     }
-  }, [user])
+  }, [loadProfile, user])
 
   async function saveProfile() {
     setSaving(true)
@@ -322,7 +338,8 @@ export default function HealthProfile() {
       const payload = buildProfileUpdatePayload(profile)
       const response = await api.patch('/profile', payload)
       const data = response.data?.profile || {}
-      setProfile(mapProfileFromApi(data))
+      setProfile(mapProfileFromApi(data, { full_name: profile.full_name }))
+      setProfileLoadError(false)
       const changedFieldCount = Object.entries(payload).filter(([, value]) => value !== null && value !== undefined).length
       trackFunnelEvent(
         'funnel_profile_updated',
@@ -364,6 +381,19 @@ export default function HealthProfile() {
         </div>
       )}
 
+      {profileLoadError && !loading && (
+        <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span>{copy.profileLoadWarning}</span>
+          <button
+            type="button"
+            onClick={loadProfile}
+            className="min-h-11 rounded-lg border border-amber-300 bg-white px-4 py-2 font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            {copy.retryLoad}
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           {/* Personal Info + Health Goals stacked */}
@@ -373,6 +403,16 @@ export default function HealthProfile() {
               <h3 className="coach-title-lg mb-6">{copy.basics}</h3>
 
               <div className="space-y-5">
+                <CoachInput label={copy.fullName}>
+                  <input
+                    type="text"
+                    value={profile.full_name}
+                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                    placeholder={copy.fullNamePlaceholder}
+                    autoComplete="name"
+                  />
+                </CoachInput>
+
                 <CoachInput label={copy.age}>
                   <input
                     type="number"
