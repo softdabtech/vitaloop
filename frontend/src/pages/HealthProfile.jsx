@@ -338,7 +338,7 @@ export default function HealthProfile() {
       const payload = buildProfileUpdatePayload(profile)
       const response = await api.patch('/profile', payload)
       const data = response.data?.profile || {}
-      setProfile(mapProfileFromApi(data, { full_name: profile.full_name }))
+      setProfile(mapProfileFromApi(data))
       setProfileLoadError(false)
       const changedFieldCount = Object.entries(payload).filter(([, value]) => value !== null && value !== undefined).length
       trackFunnelEvent(

@@ -37,7 +37,7 @@ class LocationUpdate(BaseModel):
 @router.get("")
 async def get_profile(current_user: dict = Depends(get_current_user)):
     user_id = current_user["sub"]
-    profile = await svc.get_user_profile(user_id)
+    profile = await svc.get_user_profile_with_account_name(user_id)
     location = await svc.get_user_location(user_id)
     return {"profile": profile, "location": location}
 
@@ -69,10 +69,10 @@ async def update_profile(body: ProfileUpdate, current_user: dict = Depends(get_c
             raise HTTPException(status_code=422, detail=_INVALID_SEX_DETAIL)
         data["sex"] = normalized
     if not data:
-        return {"profile": await svc.get_user_profile(user_id)}
-    updated = await svc.upsert_user_profile(user_id, data)
+        return {"profile": await svc.get_user_profile_with_account_name(user_id)}
+    await svc.upsert_user_profile(user_id, data)
     await svc.invalidate_user_protocols(user_id)
-    return {"profile": updated}
+    return {"profile": await svc.get_user_profile_with_account_name(user_id)}
 
 
 @router.patch("/goals")

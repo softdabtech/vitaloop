@@ -2225,6 +2225,14 @@ async def get_user_profile(user_id: str) -> Dict[str, Any]:
     return profile
 
 
+async def get_user_profile_with_account_name(user_id: str) -> Dict[str, Any]:
+    profile = await get_user_profile(user_id)
+    account = await get_user_account(user_id)
+    if "full_name" in account:
+        return {**profile, "full_name": account.get("full_name")}
+    return profile
+
+
 async def upsert_user_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     supabase = _get_supabase()
     payload = {"id": user_id, **data, "updated_at": datetime.now(timezone.utc).isoformat()}
