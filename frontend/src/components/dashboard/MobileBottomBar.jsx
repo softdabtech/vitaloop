@@ -39,6 +39,9 @@ export default function MobileBottomBar() {
   const isUk = isUkrainianLocale()
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent('vtl-mobile-subnav-change', {
+      detail: { openSubnav },
+    }))
     if (openSubnav) {
       document.body.dataset.vtlMobileSubnav = openSubnav
     } else {

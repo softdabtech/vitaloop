@@ -179,6 +179,17 @@
     padding: 7px 4px;
   }
 
+  @media (max-width: 390px) {
+    .results-biomarker-table td {
+      display: block;
+    }
+
+    .results-biomarker-table td::before {
+      display: block;
+      margin-bottom: 4px;
+    }
+  }
+
   .results-biomarker-table td::before {
     color: #64748b;
     content: attr(data-label);

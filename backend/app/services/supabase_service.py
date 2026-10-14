@@ -951,7 +951,7 @@ async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("id,user_id")
+        .select("id,user_id,lab_name")
         .eq("id", upload_id)
         .eq("user_id", user_id)
         .limit(1)

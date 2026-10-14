@@ -126,6 +126,7 @@ function reportRecommendationToCatalogItem(item) {
     related: item?.domain || 'Current report evidence',
     priority: String(item?.priority || 'Recommended').replace(/^./, (value) => value.toUpperCase()),
     source_recommendation_id: item?.recommendation_id || item?.source_recommendation_id || null,
+    source_report_version_id: item?.source_report_version_id || null,
   }
 }
 
@@ -140,9 +141,12 @@ export function selectReportSpecificRecommendations(
     .map(reportRecommendationToCatalogItem)
 }
 
-function LabCard({ item, status, isUk }) {
+function LabCard({ item, status, isUk, context = {} }) {
   const tone = item.priority === 'Core' ? 'primary' : item.priority === 'Recommended' ? 'warning' : 'neutral'
   const localized = isUk ? (LAB_COPY_UK.labs[item.name] || {}) : {}
+  const why = context.historical
+    ? (isUk ? 'Цей аналіз було додано на основі попереднього звіту.' : 'This test was added from an earlier report.')
+    : item.why
   return (
     <CoachCard className="p-4" interactive>
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -154,7 +158,7 @@ function LabCard({ item, status, isUk }) {
       </div>
       <h3 className="text-xl font-extrabold text-slate-950">{item.name}</h3>
       <p className="mt-3 text-sm font-bold text-slate-700">{isUk ? 'Навіщо' : 'Why'}</p>
-      <p className="mt-1 text-sm leading-6 text-slate-600">{localized.why || item.why}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{context.historical ? why : localized.why || why}</p>
       <p className="mt-3 text-sm font-bold text-slate-700">{isUk ? 'Повʼязані симптоми' : 'Related symptoms'}</p>
       <p className="mt-1 text-sm leading-6 text-slate-600">{localized.related || item.related}</p>
     </CoachCard>
@@ -215,6 +219,28 @@ function labPlanItemKey(item) {
   ).trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+function isFulfilledPlanStatus(status) {
+  return ['fulfilled', 'completed', 'complete'].includes(String(status || '').trim().toLowerCase())
+}
+
+export function classifyLabRecommendationContext(
+  item,
+  { activeReportVersionId = null, plannedItems = [] } = {},
+) {
+  const recommendationKey = reportRecommendationKey(item)
+  const matchingPlanItem = plannedItems.find((planItem) => (
+    normalizeTestKey(labPlanItemKey(planItem)) === recommendationKey
+  ))
+  const sourceReportVersionId = item?.source_report_version_id
+  return {
+    historical: Boolean(
+      sourceReportVersionId
+      && (!activeReportVersionId || String(sourceReportVersionId) !== String(activeReportVersionId)),
+    ),
+    fulfilled: isFulfilledPlanStatus(matchingPlanItem?.status),
+  }
+}
+
 export function normalizeLabPlanItems(items) {
   const byKey = new Map()
   for (const item of Array.isArray(items) ? items : []) {
@@ -270,7 +296,10 @@ export function isHistoricalLabPlanItem(item, activeReportVersionId = null) {
 
 function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeReportVersionId = null }) {
   const fulfilled = item?.status === 'fulfilled'
-  const historical = isHistoricalLabPlanItem(item, activeReportVersionId)
+  const historical = Boolean(
+    item?.source_report_version_id
+    && (!activeReportVersionId || isHistoricalLabPlanItem(item, activeReportVersionId)),
+  )
   return (
     <article className="lab-plan-item-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="lab-plan-item-card__header flex flex-wrap items-start justify-between gap-3">
@@ -522,12 +551,24 @@ export default function LabPlan() {
   const plannedKeys = useMemo(() => new Set(
     planItems.map((item) => labPlanItemKey(item)).filter(Boolean)
   ), [planItems])
+  const plannedRecommendationKeys = useMemo(
+    () => new Set([...plannedKeys].map(normalizeTestKey)),
+    [plannedKeys],
+  )
   const reportRecommendations = useMemo(() => {
     const recommendations = reportDetails?.next_best_tests?.recommended_tests
       || reportDetails?.final_analysis?.next_best_tests?.recommended_tests
       || []
-    return selectReportSpecificRecommendations(recommendations, activeMarkerNames, plannedKeys)
-  }, [activeMarkerNames, plannedKeys, reportDetails])
+    return selectReportSpecificRecommendations(recommendations, activeMarkerNames, plannedRecommendationKeys)
+      .map((item) => ({
+        item,
+        context: classifyLabRecommendationContext(item, {
+          activeReportVersionId,
+          plannedItems: planItems,
+        }),
+      }))
+      .filter(({ context }) => !context.fulfilled)
+  }, [activeMarkerNames, activeReportVersionId, planItems, plannedRecommendationKeys, reportDetails])
   const splitByLatestReport = useCallback((items) => ({
     needed: items.filter((item) => !inLatestReport(item, activeMarkerNames)),
     haveAlready: items.filter((item) => inLatestReport(item, activeMarkerNames)),
@@ -591,8 +632,8 @@ export default function LabPlan() {
           </div>
           {reportRecommendations.length ? (
             <div className="lab-plan-recommendation-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {reportRecommendations.map((item) => (
-                <LabCard key={item.name} item={item} status="suggested" isUk={isUk} />
+              {reportRecommendations.map(({ item, context }) => (
+                <LabCard key={item.name} item={item} status="suggested" isUk={isUk} context={context} />
               ))}
             </div>
           ) : (

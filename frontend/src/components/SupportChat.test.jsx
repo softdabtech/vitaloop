@@ -20,9 +20,12 @@ describe('SupportChat mobile shell contract', () => {
     )
   })
 
-  it('uses the mobile submenu state channel for interaction-aware clearance', () => {
-    document.body.dataset.vtlMobileSubnav = 'account'
-    expect(document.body.dataset.vtlMobileSubnav).toBe('account')
-    delete document.body.dataset.vtlMobileSubnav
+  it.each(['plan', 'account'])('closes when the %s submenu opens', (openSubnav) => {
+    const onClose = vi.fn()
+    render(<SupportChat onClose={onClose} />)
+
+    window.dispatchEvent(new CustomEvent('vtl-mobile-subnav-change', { detail: { openSubnav } }))
+
+    expect(onClose).toHaveBeenCalledOnce()
   })
 })
