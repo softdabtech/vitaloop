@@ -1,5 +1,33 @@
-import { describe, expect, it } from 'vitest'
-import { isCabinetRoutePath, shouldRedirectToOnboarding } from './App.jsx'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import App, { isCabinetRoutePath, shouldRedirectToOnboarding } from './App.jsx'
+
+const { apiMock } = vi.hoisted(() => ({
+  apiMock: { get: vi.fn() },
+}))
+
+vi.mock('./lib/api.js', () => ({ default: apiMock }))
+vi.mock('./hooks/useAuth.js', () => ({
+  useAuth: () => ({ user: { id: 'test-user' }, loading: false }),
+}))
+vi.mock('./components/PaywallModal.jsx', () => ({ default: () => null }))
+vi.mock('./components/dashboard/UserCabinetLayout.jsx', () => ({
+  default: ({ children }) => children,
+}))
+vi.mock('./pages/HealthProfile.jsx', () => ({
+  default: () => <div>Health profile route content</div>,
+}))
+
+beforeEach(() => {
+  apiMock.get.mockReset()
+  window.scrollTo = vi.fn()
+  window.history.replaceState({}, '', '/health-profile')
+})
+
+afterEach(() => {
+  cleanup()
+  window.history.replaceState({}, '', '/')
+})
 
 describe('cabinet route classification', () => {
   it('classifies Help Center with cabinet routes', () => {
@@ -10,6 +38,41 @@ describe('cabinet route classification', () => {
   it('keeps public Help outside the cabinet shell', () => {
     expect(isCabinetRoutePath('/help')).toBe(false)
     expect(isCabinetRoutePath('/help/section/billing')).toBe(false)
+  })
+})
+
+describe('EndUserFlowRoute onboarding error recovery', () => {
+  it('shows the error screen, retries, recovers to the protected route, and does not redirect', async () => {
+    apiMock.get
+      .mockRejectedValueOnce(new Error('Onboarding service unavailable'))
+      .mockResolvedValueOnce({ data: { requires_onboarding: false } })
+
+    render(<App />)
+
+    expect(await screen.findByText('Unable to load dashboard')).toBeTruthy()
+    expect(screen.getByText('Onboarding service unavailable')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByText('Health profile route content')).toBeTruthy()
+    expect(apiMock.get).toHaveBeenCalledTimes(2)
+    expect(window.location.pathname).toBe('/health-profile')
+    expect(screen.queryByText('Unable to load dashboard')).toBeNull()
+  })
+
+  it('keeps the error UI after a persistent failure without redirecting or spinning', async () => {
+    apiMock.get.mockRejectedValue(new Error('Service remains unavailable'))
+
+    render(<App />)
+
+    expect(await screen.findByText('Unable to load dashboard')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalledTimes(2))
+    expect(screen.getByText('Service remains unavailable')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    expect(screen.queryByText('Loading your health dashboard...')).toBeNull()
+    expect(window.location.pathname).toBe('/health-profile')
+    expect(screen.queryByText('Health profile route content')).toBeNull()
   })
 })
 
