@@ -105,8 +105,12 @@ async def test_profile_get_merges_canonical_account_name(monkeypatch):
     async def fake_get_user_account(_user_id):
         return {"full_name": "Canonical Name"}
 
+    async def fake_get_user_location(_user_id):
+        return None
+
     monkeypatch.setattr(svc, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
+    monkeypatch.setattr(svc, "get_user_location", fake_get_user_location)
     app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
     try:
         transport = ASGITransport(app=app)
