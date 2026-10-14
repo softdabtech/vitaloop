@@ -30,13 +30,23 @@ const FALLBACK_STATE = {
   first_health_loop_complete: false,
 }
 
-export function useOnboardingState() {
+export function useOnboardingState({ enabled = true } = {}) {
   const [state, setState] = useState(LOADING_STATE)
   const [loading, setLoading] = useState(true)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let active = true
 
+    if (!enabled) {
+      setState(LOADING_STATE)
+      setLoading(true)
+      return () => {
+        active = false
+      }
+    }
+
+    setLoading(true)
     async function load() {
       try {
         const { data } = await api.get('/auth/onboarding/state', { timeout: 6000 })
@@ -44,10 +54,8 @@ export function useOnboardingState() {
           setState({ ...FALLBACK_STATE, ...data, checklist: { ...FALLBACK_STATE.checklist, ...(data.checklist || {}) } })
         }
       } catch {
-        // Required profile data is a safety boundary. If its state cannot be
-        // verified, send the user to onboarding instead of allowing a bypass.
         if (active) {
-          setState(FALLBACK_STATE)
+          setState(LOADING_STATE)
         }
       } finally {
         if (active) {
@@ -61,7 +69,11 @@ export function useOnboardingState() {
     return () => {
       active = false
     }
-  }, [])
+  }, [attempt, enabled])
 
-  return { state, loading }
+  return {
+    state,
+    loading,
+    retry: () => setAttempt((value) => value + 1),
+  }
 }

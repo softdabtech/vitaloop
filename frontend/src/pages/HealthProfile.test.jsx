@@ -121,13 +121,26 @@ describe('HealthProfile profile resilience', () => {
     renderPage()
     expect((await screen.findByRole('textbox', { name: 'Full name' })).value).toBe('Persisted Name')
 
+    apiMock.patch.mockResolvedValueOnce({ data: { profile: { ...profile, full_name: 'Updated Name' } } })
     fireEvent.change(screen.getByRole('textbox', { name: 'Full name' }), { target: { value: 'Updated Name' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save Profile & Safety' }))
 
     await waitFor(() => expect(apiMock.patch).toHaveBeenCalledOnce())
     expect(apiMock.patch.mock.calls[0][1]).toMatchObject({ full_name: 'Updated Name' })
-    expect(await screen.findByDisplayValue('Persisted Name')).toBeTruthy()
+    expect(await screen.findByDisplayValue('Updated Name')).toBeTruthy()
     expect(toastMock.success).toHaveBeenCalledWith('Profile & Safety updated!')
+  })
+
+  it('does not fake a saved name when the PATCH response omits it', async () => {
+    renderPage()
+    expect((await screen.findByRole('textbox', { name: 'Full name' })).value).toBe('Persisted Name')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Full name' }), { target: { value: 'Updated Name' } })
+    apiMock.patch.mockResolvedValueOnce({ data: { profile: { age: 42 } } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Profile & Safety' }))
+
+    await waitFor(() => expect(apiMock.patch).toHaveBeenCalledOnce())
+    expect(screen.getByRole('textbox', { name: 'Full name' }).value).toBe('')
   })
 
   it('does not send an accidental empty full_name overwrite', () => {

@@ -186,8 +186,8 @@ function CRMRoute({ children, needsOps = false }) {
 }
 
 function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfOnboardingComplete = false }) {
-  const { loading } = useAuth()
-  const { state, loading: onboardingLoading } = useOnboardingState()
+  const { user, loading } = useAuth()
+  const { state, loading: onboardingLoading } = useOnboardingState({ enabled: Boolean(user) && !loading })
   const shouldWaitForOnboarding = !allowBeforeOnboarding || redirectIfOnboardingComplete
   const onboardingStateKnown = state?.requires_onboarding !== null && state?.requires_onboarding !== undefined
   const requiresOnboarding = Boolean(state?.requires_onboarding)
@@ -198,10 +198,16 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
   if (!shouldWaitForOnboarding) return children
   if (onboardingLoading || !onboardingStateKnown) return <AppLoadingScreen />
 
-  if (requiresOnboarding && !allowBeforeOnboarding) return <Navigate to="/onboarding" replace />
+  if (shouldRedirectToOnboarding({ onboardingStateKnown, requiresOnboarding, allowBeforeOnboarding })) {
+    return <Navigate to="/onboarding" replace />
+  }
   if (!requiresOnboarding && redirectIfOnboardingComplete) return <Navigate to="/dashboard" replace />
 
   return children
+}
+
+export function shouldRedirectToOnboarding({ onboardingStateKnown, requiresOnboarding, allowBeforeOnboarding }) {
+  return onboardingStateKnown && requiresOnboarding && !allowBeforeOnboarding
 }
 
 // PremiumRoute removed — use <FeatureGate> component instead for fine-grained access control
