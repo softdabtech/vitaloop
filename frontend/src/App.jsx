@@ -188,7 +188,7 @@ function CRMRoute({ children, needsOps = false }) {
 
 function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfOnboardingComplete = false }) {
   const { user, loading } = useAuth()
-  const { state, loading: onboardingLoading } = useOnboardingState({ enabled: Boolean(user) && !loading })
+  const { state, loading: onboardingLoading, isError, error, retry } = useOnboardingState({ enabled: Boolean(user) && !loading })
   const shouldWaitForOnboarding = !allowBeforeOnboarding || redirectIfOnboardingComplete
   const onboardingStateKnown = state?.requires_onboarding !== null && state?.requires_onboarding !== undefined
   const requiresOnboarding = Boolean(state?.requires_onboarding)
@@ -197,6 +197,13 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
     return <AppLoadingScreen />
   }
   if (!shouldWaitForOnboarding) return children
+
+  // Show error state when onboarding request fails
+  if (isError) {
+    return <AppLoadingScreen error={error} onRetry={retry} />
+  }
+
+  // Wait for onboarding state to resolve (not loading, not error)
   if (onboardingLoading || !onboardingStateKnown) return <AppLoadingScreen />
 
   if (shouldRedirectToOnboarding({ onboardingStateKnown, requiresOnboarding, allowBeforeOnboarding })) {

@@ -30,9 +30,16 @@ const FALLBACK_STATE = {
   first_health_loop_complete: false,
 }
 
+export const ONBOARDING_LOAD_STATE = {
+  LOADING: 'loading',
+  ERROR: 'error',
+  RESOLVED: 'resolved',
+}
+
 export function useOnboardingState({ enabled = true } = {}) {
   const [state, setState] = useState(LOADING_STATE)
-  const [loading, setLoading] = useState(true)
+  const [loadState, setLoadState] = useState(ONBOARDING_LOAD_STATE.LOADING)
+  const [error, setError] = useState(null)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -40,26 +47,28 @@ export function useOnboardingState({ enabled = true } = {}) {
 
     if (!enabled) {
       setState(LOADING_STATE)
-      setLoading(true)
+      setLoadState(ONBOARDING_LOAD_STATE.LOADING)
+      setError(null)
       return () => {
         active = false
       }
     }
 
-    setLoading(true)
+    setLoadState(ONBOARDING_LOAD_STATE.LOADING)
+    setError(null)
     async function load() {
       try {
         const { data } = await api.get('/auth/onboarding/state', { timeout: 6000 })
         if (active && data) {
           setState({ ...FALLBACK_STATE, ...data, checklist: { ...FALLBACK_STATE.checklist, ...(data.checklist || {}) } })
+          setLoadState(ONBOARDING_LOAD_STATE.RESOLVED)
+          setError(null)
         }
-      } catch {
+      } catch (err) {
         if (active) {
+          setLoadState(ONBOARDING_LOAD_STATE.ERROR)
+          setError(err)
           setState(LOADING_STATE)
-        }
-      } finally {
-        if (active) {
-          setLoading(false)
         }
       }
     }
@@ -73,7 +82,10 @@ export function useOnboardingState({ enabled = true } = {}) {
 
   return {
     state,
-    loading,
+    loadState,
+    error,
+    loading: loadState === ONBOARDING_LOAD_STATE.LOADING,
+    isError: loadState === ONBOARDING_LOAD_STATE.ERROR,
     retry: () => setAttempt((value) => value + 1),
   }
 }

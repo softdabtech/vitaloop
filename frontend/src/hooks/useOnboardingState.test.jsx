@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useOnboardingState } from './useOnboardingState.js'
+import { useOnboardingState, ONBOARDING_LOAD_STATE } from './useOnboardingState.js'
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn() },
@@ -9,11 +9,14 @@ const { apiMock } = vi.hoisted(() => ({
 vi.mock('../lib/api.js', () => ({ default: apiMock }))
 
 function Harness({ enabled = true }) {
-  const { state, loading, retry } = useOnboardingState({ enabled })
+  const { state, loadState, error, loading, isError, retry } = useOnboardingState({ enabled })
   return (
     <div>
       <output data-testid="loading">{String(loading)}</output>
+      <output data-testid="loadState">{loadState}</output>
+      <output data-testid="isError">{String(isError)}</output>
       <output data-testid="requires">{String(state.requires_onboarding)}</output>
+      <output data-testid="error">{error ? error.message : 'null'}</output>
       <button type="button" onClick={retry}>Retry</button>
     </div>
   )
@@ -36,6 +39,38 @@ describe('useOnboardingState', () => {
     expect(screen.getByTestId('requires').textContent).toBe('null')
   })
 
+  it('shows ERROR state when onboarding request fails', async () => {
+    apiMock.get.mockRejectedValueOnce(new Error('Network error'))
+    render(<Harness />)
+
+    await waitFor(() => expect(apiMock.get).toHaveBeenCalledOnce())
+    expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.ERROR)
+    expect(screen.getByTestId('isError').textContent).toBe('true')
+    expect(screen.getByTestId('loading').textContent).toBe('false')
+    expect(screen.getByTestId('error').textContent).toBe('Network error')
+    expect(screen.getByTestId('requires').textContent).toBe('null')
+  })
+
+  it('retries successfully after error', async () => {
+    apiMock.get.mockRejectedValueOnce(new Error('Network error'))
+    const { unmount } = render(<Harness />)
+
+    await waitFor(() => expect(screen.getByTestId('isError').textContent).toBe('true'))
+
+    act(() => {
+      screen.getByRole('button', { name: 'Retry' }).click()
+    })
+
+    apiMock.get.mockResolvedValueOnce({
+      data: { requires_onboarding: false, completed: true },
+    })
+
+    await waitFor(() => expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED))
+    expect(screen.getByTestId('requires').textContent).toBe('false')
+    expect(screen.getByTestId('isError').textContent).toBe('false')
+    unmount()
+  })
+
   it('keeps transient failures unresolved and retries explicitly', async () => {
     apiMock.get.mockRejectedValueOnce(new Error('aborted')).mockResolvedValueOnce({
       data: { requires_onboarding: false, completed: true },
@@ -43,6 +78,7 @@ describe('useOnboardingState', () => {
     render(<Harness />)
 
     await waitFor(() => expect(apiMock.get).toHaveBeenCalledOnce())
+    expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.ERROR)
     expect(screen.getByTestId('requires').textContent).toBe('null')
 
     act(() => {
@@ -57,10 +93,20 @@ describe('useOnboardingState', () => {
     const { unmount } = render(<Harness />)
 
     await waitFor(() => expect(screen.getByTestId('requires').textContent).toBe('true'))
+    expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED)
     unmount()
 
     apiMock.get.mockResolvedValueOnce({ data: { requires_onboarding: false } })
     render(<Harness />)
     await waitFor(() => expect(screen.getByTestId('requires').textContent).toBe('false'))
+  })
+
+  it('no infinite spinner on persistent error', async () => {
+    apiMock.get.mockRejectedValue(new Error('Service unavailable'))
+    render(<Harness />)
+
+    await waitFor(() => expect(screen.getByTestId('isError').textContent).toBe('true'))
+    // After one retry attempt, should not revert to loading again
+    expect(screen.getByTestId('loading').textContent).toBe('false')
   })
 })
