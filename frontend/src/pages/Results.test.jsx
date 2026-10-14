@@ -86,6 +86,17 @@ describe('Results persisted retest presentation', () => {
     })
   })
 
+  it('prefers the uploaded filename over an internal source token', () => {
+    expect(reportContext({
+      upload: { lab_name: 'Гілевич (8).pdf' },
+      metadata: { source: 'b2c_file' },
+    }).source).toBe('Гілевич (8).pdf')
+  })
+
+  it('omits internal source tokens when no patient-facing filename exists', () => {
+    expect(reportContext({ metadata: { source: 'b2c_file' } }).source).toBe('')
+  })
+
   it('explains a completed marker and its distinct future retest', () => {
     render(
       <TestingPlanSection

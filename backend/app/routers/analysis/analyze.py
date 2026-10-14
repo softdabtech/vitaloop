@@ -1502,7 +1502,7 @@ async def get_results(
     user_id = current_user.get("sub")
 
     # Verify the upload belongs to the user
-    await assert_upload_belongs_to_user(upload_id, user_id)
+    upload = await assert_upload_belongs_to_user(upload_id, user_id)
 
     # Get biomarkers
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
@@ -1565,6 +1565,7 @@ async def get_results(
             entity_id=str(upload_id),
             new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations), "report_source": REPORT_SOURCE_FROZEN},
         )
+        response["upload"] = {"lab_name": (upload or {}).get("lab_name")}
         response["final_analysis"] = {
             key: value for key, value in response.items() if key != "final_analysis"
         }
@@ -1659,6 +1660,7 @@ async def get_results(
 
     return {
         "upload_id": upload_id,
+        "upload": {"lab_name": (upload or {}).get("lab_name")},
         # Stage 2B: naturally reflects "needs_confirmation" when this upload has no
         # canonical biomarkers yet (get_biomarkers_by_upload returns [] for an
         # unconfirmed upload, which the gate correctly re-derives as

@@ -59,7 +59,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     """Compatibility endpoint for clients expecting /results/{upload_id}."""
     user_id = current_user.get("sub")
 
-    await assert_upload_belongs_to_user(upload_id, user_id)
+    upload = await assert_upload_belongs_to_user(upload_id, user_id)
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = (protocol_row or {}).get("recommendations") or []
@@ -87,7 +87,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     # behavior. This mirrors analyze.py::get_results via the shared
     # app/services/report_history.py helper so the two endpoints cannot drift.
     if is_frozen_report_version(report_version):
-        return assemble_frozen_response(
+        response = assemble_frozen_response(
             upload_id=upload_id,
             biomarkers=biomarkers or [],
             protocol_recommendations=protocol_recommendations,
@@ -95,6 +95,9 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
             user_profile=user_profile,
             locale=locale,
         )
+        response["upload"] = {"lab_name": (upload or {}).get("lab_name")}
+        response["final_analysis"] = dict(response)
+        return response
 
     # Protocol-locale fix — mirrors analyze.py::get_results (see its docstring
     # comment for the full rationale). `protocols` has no locale column; if a
@@ -145,6 +148,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
 
     return {
         "upload_id": upload_id,
+        "upload": {"lab_name": (upload or {}).get("lab_name")},
         "report_source": report_source,
         "biomarkers": biomarkers or [],
         "protocol": protocol_recommendations,
@@ -162,5 +166,5 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         # non-frozen/legacy upload. Purely additive -- same value already
         # present in final_analysis, just aliased at the top level too.
         "doctor_escalation_precision": pipeline_result.get("doctor_escalation_precision"),
-        "final_analysis": pipeline_result,
+        "final_analysis": {**pipeline_result, "upload": {"lab_name": (upload or {}).get("lab_name")}},
     }

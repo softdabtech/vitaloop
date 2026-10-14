@@ -43,6 +43,14 @@ export default function SupportChat({ onClose }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    const handleMobileSubnavChange = (event) => {
+      if (event.detail?.openSubnav) onClose?.()
+    }
+    window.addEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
+    return () => window.removeEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
+  }, [onClose])
+
   const sendMessage = (text) => {
     if (!text.trim()) return
     const userMsg = { from: 'user', text: text.trim() }

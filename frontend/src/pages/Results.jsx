@@ -694,9 +694,20 @@ export function reportContext(data) {
   const snapshot = reportVersion.input_snapshot || {}
   const metadata = data?.metadata || snapshot.metadata || {}
   const source = metadata.source || snapshot.source
-  const sourceValue = typeof source === 'string'
-    ? source
-    : source?.lab_name || source?.filename || source?.file_name || data?.upload?.lab_name || metadata.lab_name || data?.lab_name || source?.source
+  const sourceObject = typeof source === 'object' && source ? source : {}
+  const patientFacingSources = [
+    data?.upload?.lab_name,
+    metadata.lab_name,
+    sourceObject.lab_name,
+    sourceObject.filename,
+    sourceObject.file_name,
+    snapshot.metadata?.lab_name,
+    snapshot.lab_name,
+    data?.lab_name,
+  ]
+  const internalSources = new Set(['b2c_file', 'manual', 'api', 'parser', 'synthetic', 'qa', 'smoke', 'validation'])
+  const sourceValue = patientFacingSources.find((value) => typeof value === 'string' && value.trim())
+    || (typeof source === 'string' && !internalSources.has(source.trim().toLowerCase()) ? source : '')
   const dateValue = data?.measurement_date
     || metadata.measurement_date
     || source?.test_date
@@ -2055,7 +2066,9 @@ export default function Results() {
               : []
         )
         setKnowledgeReport(data.knowledge_report ?? null)
-        setFinalAnalysis(data.final_analysis ?? null)
+        setFinalAnalysis(data.final_analysis
+          ? { ...data.final_analysis, upload: data.upload }
+          : null)
         setExplainability(data.explainability ?? data.final_analysis?.explainability ?? null)
         setSafetyResult(data.safety_result ?? data.final_analysis?.safety_result ?? null)
         setReasoningTraces(

@@ -14,6 +14,7 @@ vi.mock('../hooks/useQueries.js', () => ({
 
 import {
   PersonalLabPlan,
+  classifyLabRecommendationContext,
   clinicalResultDate,
   isHistoricalLabPlanItem,
   normalizeLabPlanItems,
@@ -43,6 +44,32 @@ describe('PersonalLabPlan', () => {
     expect(isHistoricalLabPlanItem({ source_report_version_id: 17 }, '17')).toBe(false)
   })
 
+  it('keeps persisted reasons neutral while the active report identity is unavailable', () => {
+    render(<PersonalLabPlan items={[plannedItem]} isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
+
+    expect(screen.getByText('Historical context')).toBeTruthy()
+    expect(screen.getByText('This test was added from an earlier report.')).toBeTruthy()
+    expect(screen.queryByText(plannedItem.reason)).toBeNull()
+    expect(screen.getByText('Planned')).toBeTruthy()
+  })
+
+  it('classifies fulfilled report recommendations without exposing their reason', () => {
+    expect(classifyLabRecommendationContext(
+      { marker: 'crp', source_report_version_id: 'report-current' },
+      {
+        activeReportVersionId: 'report-current',
+        plannedItems: [{ test_name: 'CRP', status: 'fulfilled' }],
+      },
+    )).toEqual({ historical: false, fulfilled: true })
+  })
+
+  it('classifies an older report recommendation as historical', () => {
+    expect(classifyLabRecommendationContext(
+      { marker: 'vitamin_d', source_report_version_id: 'report-old' },
+      { activeReportVersionId: 'report-current', plannedItems: [] },
+    )).toEqual({ historical: true, fulfilled: false })
+  })
+
   it('keeps report-specific biomarker labels human-readable', () => {
     expect(reportTestDisplayName('mch')).toBe('MCH')
     expect(reportTestDisplayName('transferrin_saturation')).toBe('Transferrin Saturation')
@@ -64,7 +91,7 @@ describe('PersonalLabPlan', () => {
   })
 
   it('renders a persisted planned item with human-readable context', () => {
-    render(<PersonalLabPlan items={[plannedItem]} isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
+    render(<PersonalLabPlan items={[plannedItem]} activeReportVersionId="report-secret" isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'Your saved Lab Plan' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Ferritin' })).toBeTruthy()
@@ -79,6 +106,7 @@ describe('PersonalLabPlan', () => {
     render(
       <PersonalLabPlan
         items={[{ ...plannedItem, test_name: 'Transferrin Saturation', timing_text: 'Repeat in 6-12 weeks after the next clinical review window.' }]}
+        activeReportVersionId="report-secret"
         isUk={false}
         loading={false}
         error={false}
@@ -92,7 +120,7 @@ describe('PersonalLabPlan', () => {
 
   it('normalizes persisted biomarker names without changing the source item', () => {
     const item = { ...plannedItem, test_name: 'mch', canonical_normalized_test_name: 'mch' }
-    render(<PersonalLabPlan items={[item]} isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
+    render(<PersonalLabPlan items={[item]} activeReportVersionId="report-secret" isUk={false} loading={false} error={false} onRetry={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'MCH' })).toBeTruthy()
     expect(item.test_name).toBe('mch')
