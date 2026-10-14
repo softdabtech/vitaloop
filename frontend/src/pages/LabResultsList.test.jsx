@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { buildFetchResultsError, canViewResults, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts } from './LabResultsList.jsx'
+import { buildFetchResultsError, canViewResults, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts, sortProgressItems } from './LabResultsList.jsx'
 
 describe('LabResultsList lifecycle state', () => {
+  it('keeps uploads in real clinical-date order and leaves undated records last', () => {
+    const items = [
+      { id: 'older', test_date: '2025-08-10', created_at: '2026-10-13T10:00:00Z' },
+      { id: 'undated', created_at: '2026-10-14T10:00:00Z' },
+      { id: 'latest', collected_at: '2026-01-20', created_at: '2025-01-01T10:00:00Z' },
+    ]
+
+    expect(sortProgressItems(items).map((item) => item.id)).toEqual(['latest', 'older', 'undated'])
+    expect(items.map((item) => item.id)).toEqual(['older', 'undated', 'latest'])
+  })
+
   it('keeps ready results viewable with biomarker counts', () => {
     const item = { status: 'done', biomarkers: [{ status: 'OPTIMAL' }] }
 
