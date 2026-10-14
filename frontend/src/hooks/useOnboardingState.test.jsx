@@ -52,8 +52,13 @@ describe('useOnboardingState', () => {
   })
 
   it('retries successfully after error', async () => {
-    apiMock.get.mockRejectedValueOnce(new Error('Network error'))
-    const { unmount } = render(<Harness />)
+    apiMock.get
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockResolvedValueOnce({
+        data: { requires_onboarding: false, completed: true },
+      })
+
+    render(<Harness />)
 
     await waitFor(() => expect(screen.getByTestId('isError').textContent).toBe('true'))
 
@@ -61,20 +66,18 @@ describe('useOnboardingState', () => {
       screen.getByRole('button', { name: 'Retry' }).click()
     })
 
-    apiMock.get.mockResolvedValueOnce({
-      data: { requires_onboarding: false, completed: true },
-    })
-
     await waitFor(() => expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED))
     expect(screen.getByTestId('requires').textContent).toBe('false')
     expect(screen.getByTestId('isError').textContent).toBe('false')
-    unmount()
   })
 
   it('keeps transient failures unresolved and retries explicitly', async () => {
-    apiMock.get.mockRejectedValueOnce(new Error('aborted')).mockResolvedValueOnce({
-      data: { requires_onboarding: false, completed: true },
-    })
+    apiMock.get
+      .mockRejectedValueOnce(new Error('aborted'))
+      .mockResolvedValueOnce({
+        data: { requires_onboarding: false, completed: true },
+      })
+
     render(<Harness />)
 
     await waitFor(() => expect(apiMock.get).toHaveBeenCalledOnce())
@@ -84,7 +87,9 @@ describe('useOnboardingState', () => {
     act(() => {
       screen.getByRole('button', { name: 'Retry' }).click()
     })
+
     await waitFor(() => expect(apiMock.get).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED))
     expect(screen.getByTestId('requires').textContent).toBe('false')
   })
 
@@ -96,9 +101,11 @@ describe('useOnboardingState', () => {
     expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED)
     unmount()
 
+    vi.clearAllMocks()
     apiMock.get.mockResolvedValueOnce({ data: { requires_onboarding: false } })
     render(<Harness />)
     await waitFor(() => expect(screen.getByTestId('requires').textContent).toBe('false'))
+    expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.RESOLVED)
   })
 
   it('no infinite spinner on persistent error', async () => {
@@ -106,7 +113,7 @@ describe('useOnboardingState', () => {
     render(<Harness />)
 
     await waitFor(() => expect(screen.getByTestId('isError').textContent).toBe('true'))
-    // After one retry attempt, should not revert to loading again
+    expect(screen.getByTestId('loadState').textContent).toBe(ONBOARDING_LOAD_STATE.ERROR)
     expect(screen.getByTestId('loading').textContent).toBe('false')
   })
 })
