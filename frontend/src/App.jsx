@@ -8,7 +8,7 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import { gaPageView, gaPurchase, gaSetUserId } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
@@ -262,6 +262,9 @@ function FloatingSupportChat() {
   const navigate = useNavigate()
   const [chatOpen, setChatOpen] = useState(false)
   const [mobileSubnavOpen, setMobileSubnavOpen] = useState(false)
+  const chatLauncherRef = useRef(null)
+  const chatCloseReasonRef = useRef('user')
+  const wasChatOpenRef = useRef(false)
   const [ferriOpen, setFerriOpen] = useState(false)
   const [ferriInvestigating, setFerriInvestigating] = useState(false)
   const [ferriGreetingVisible, setFerriGreetingVisible] = useState(false)
@@ -270,10 +273,20 @@ function FloatingSupportChat() {
   const isCabinetRoute = isCabinetRoutePath(location.pathname)
 
   useEffect(() => {
+    if (!chatOpen && wasChatOpenRef.current && chatCloseReasonRef.current !== 'navigation') {
+      chatLauncherRef.current?.focus()
+    }
+    wasChatOpenRef.current = chatOpen
+  }, [chatOpen])
+
+  useEffect(() => {
     const handleMobileSubnavChange = (event) => {
       const openSubnav = event.detail?.openSubnav || null
       setMobileSubnavOpen(Boolean(openSubnav))
-      if (openSubnav) setChatOpen(false)
+      if (openSubnav) {
+        chatCloseReasonRef.current = 'navigation'
+        setChatOpen(false)
+      }
     }
     window.addEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
     return () => window.removeEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
@@ -634,8 +647,12 @@ function FloatingSupportChat() {
   return (
     <>
       <button
-        onClick={() => setChatOpen((v) => !v)}
-        aria-label="Open support chat"
+        ref={chatLauncherRef}
+        onClick={() => setChatOpen((v) => {
+          chatCloseReasonRef.current = 'user'
+          return !v
+        })}
+        aria-label={chatOpen ? 'Close support chat' : 'Open support chat'}
         className={`fixed right-6 ${isCabinetRoute ? 'z-[41]' : 'z-[2999]'} flex h-[52px] w-[52px] items-center justify-center rounded-full border-0 bg-[var(--teal-800,#085041)] shadow-[0_4px_20px_rgba(8,80,65,0.35)] transition hover:bg-[var(--teal-600,#0F6E56)] ${isCabinetRoute ? 'bottom-24 md:bottom-6' : 'bottom-6'} ${mobileSubnavOpen ? 'hidden' : ''}`}
         style={{ bottom: isCabinetRoute ? 'calc(env(safe-area-inset-bottom) + var(--vtl-bottom-bar-height) + 12px)' : 'max(24px, calc(env(safe-area-inset-bottom) + 12px))' }}
       >
@@ -651,7 +668,10 @@ function FloatingSupportChat() {
         }
       </button>
 
-      {chatOpen && <Suspense fallback={null}><SupportChat onClose={() => setChatOpen(false)} /></Suspense>}
+      {chatOpen && <Suspense fallback={null}><SupportChat onClose={(reason) => {
+        chatCloseReasonRef.current = reason || 'user'
+        setChatOpen(false)
+      }} /></Suspense>}
     </>
   )
 }
