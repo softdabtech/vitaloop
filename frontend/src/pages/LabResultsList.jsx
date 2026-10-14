@@ -286,7 +286,7 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
           {topChanges.map((change) => (
             <div key={change.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{change.name}</p>
+                <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{change.name}</p>
                 <span className={`vtl-status-pill border ${statusGroupTone(change.current_status_group)}`}>
                   {labels.direction[change.direction] || change.direction}
                 </span>
@@ -316,7 +316,7 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
             return (
               <div key={marker.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{marker.name}</p>
+                  <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{marker.name}</p>
                   {history.length < 2 && (
                     <span className="vtl-status-pill border border-slate-200 bg-slate-50 text-slate-600">
                       {labels.insufficientHistory}
@@ -494,21 +494,21 @@ export default function LabResultsList() {
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
             <div className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="vtl-light-card p-4">
+              <div className="lab-results-summary grid gap-3 md:grid-cols-3">
+                <div className="lab-results-summary-card vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
                 </div>
-                <div className="vtl-light-card p-4">
+                <div className="lab-results-summary-card vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
+                  <p className="lab-results-summary-source mt-1 text-sm font-semibold text-slate-900">{latestReadyItem?.lab_name || copy.noCompletedReport}</p>
                   {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                       {latestActivityCopy(latestActivityState, copy)}
                     </p>
                   )}
                 </div>
-                <div className="vtl-light-card p-4">
+                <div className="lab-results-summary-card vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
                 </div>
@@ -525,15 +525,15 @@ export default function LabResultsList() {
                 return (
                   <div
                     key={uploadId || `${date}-${index}`}
-                    className="vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
+                    className="lab-result-card vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                    <div className="lab-result-card__body flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
                       <button
                         onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
                         disabled={!canViewResults(item) || !uploadId}
-                        className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                        className="lab-result-card__identity flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
+                        <p className="lab-result-card__source text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
@@ -541,19 +541,19 @@ export default function LabResultsList() {
                       </button>
 
                       {showCounts ? (
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <div className="lab-result-card__badges flex flex-wrap items-center gap-2 text-xs">
                           <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
                           <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
                           <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
                         </div>
                       ) : (
-                        <output className="min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
+                        <output className="lab-result-card__state min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
                           <span className="font-semibold">{stateCopy.label}</span>
                           <span className="mt-1 block leading-5">{stateCopy.body}</span>
                         </output>
                       )}
 
-                      <div className="flex items-center gap-2">
+                      <div className="lab-result-card__action flex items-center gap-2">
                         <button
                           onClick={() => state === 'failed'
                             ? navigate('/upload')

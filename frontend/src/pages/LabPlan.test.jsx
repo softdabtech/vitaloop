@@ -66,6 +66,22 @@ describe('PersonalLabPlan', () => {
     expect(screen.getByText('Repeat to check whether the change persists.')).toBeTruthy()
     expect(screen.getByText('In 6-12 weeks')).toBeTruthy()
     expect(screen.getByText('Based on your report · recommendation')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Ferritin' }).className).toContain('lab-plan-item-card__name')
+  })
+
+  it('keeps long persisted test names and timing in mobile-safe blocks', () => {
+    render(
+      <PersonalLabPlan
+        items={[{ ...plannedItem, test_name: 'Transferrin Saturation', timing_text: 'Repeat in 6-12 weeks after the next clinical review window.' }]}
+        isUk={false}
+        loading={false}
+        error={false}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Transferrin Saturation' }).className).toContain('lab-plan-item-card__name')
+    expect(screen.getByText('Repeat in 6-12 weeks after the next clinical review window.').className).toContain('lab-plan-item-card__timing')
   })
 
   it('normalizes persisted biomarker names without changing the source item', () => {

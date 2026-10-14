@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Menu } from 'lucide-react'
 import toast from 'react-hot-toast'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
 import MobileBottomBar from './MobileBottomBar.jsx'
@@ -48,7 +47,6 @@ function resolvePageMeta(pathname, isUk = false) {
 export default function UserCabinetLayout({ children }) {
   const location = useLocation()
   const { user, signOut } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const isUk = isUkrainianLocale()
 
@@ -99,50 +97,9 @@ export default function UserCabinetLayout({ children }) {
         />
       </div>
 
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)}>
-          <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
-            <UserDashboardSidebar
-              collapsed={false}
-              mobile
-              onCloseMobile={() => setSidebarOpen(false)}
-              user={user}
-              onLogout={handleLogout}
-            />
-          </div>
-        </div>
-      )}
-
       <div className="flex min-w-0 flex-1 flex-col vtl-topbar-standalone-pad">
-        {/* The sticky title/Website/Sign-out/avatar bar that used to live here was
-            removed per explicit request — it duplicated controls already present
-            in the sidebar (Sign out, avatar → Settings) and just ate vertical
-            space on every page. `vtl-topbar-standalone-pad` (PWA status-bar
-            safe-area padding) moved up onto this wrapper so installed-PWA users
-            on notched phones don't lose that inset now that there's no bar to
-            carry it. The mobile sidebar still needs a way to open without that
-            bar's hamburger button — this floating icon-only button is the
-            minimum replacement, not a header. */}
-        <button
-          onClick={() => setSidebarOpen((prev) => !prev)}
-          className="vtl-focus-ring fixed left-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-slate-700 shadow-sm backdrop-blur transition hover:bg-white md:hidden"
-          aria-label="Open navigation"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
         <main className="flex-1 overflow-x-hidden">
-          {/* pt-16 (mobile+sm) -> md:pt-7: the floating hamburger button above
-              is `fixed left-3 top-3 h-10 w-10`, only visible below `md`. Content
-              used to start at the same py-5/sm:py-7 top offset the button sits
-              in, so the button's own semi-transparent pill covered the first
-              couple of characters of every page's eyebrow/heading text (e.g.
-              "YOUR NEXT BEST STEP" rendered as "UR NEXT BEST STEP") — confirmed
-              on every cabinet route in a mobile-viewport screenshot audit. This
-              reserves clearance for the button exactly on the widths where it's
-              visible, reverting to the original tighter spacing at md+ where it
-              hides. */}
-          <div className="mx-auto w-full max-w-[1380px] px-3 pt-16 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 md:pt-7 md:pb-8 lg:px-6">
+          <div className="vtl-cabinet-content mx-auto w-full max-w-[1380px] px-3 pt-7 sm:px-5 md:pb-8 lg:px-6">
             {location.pathname === '/dashboard' && <PWAInstallBanner />}
             {children}
           </div>

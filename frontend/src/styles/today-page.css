@@ -477,6 +477,11 @@
   color: #64748B;
 }
 
+.cockpit-source-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .cockpit-freshness-chip {
   padding: 1px 8px;
   border-radius: 999px;
@@ -596,8 +601,101 @@
 }
 
 @media (max-width: 640px) {
+  .cockpit-page {
+    gap: 12px;
+  }
+
+  .cockpit-hero {
+    order: 0;
+    padding: 14px 14px 12px;
+    border-radius: 18px;
+  }
+
+  .cockpit-header .coach-eyebrow {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .cockpit-title {
+    font-size: clamp(25px, 8vw, 30px);
+  }
+
+  .cockpit-header__intro,
+  .cockpit-report-overview .cockpit-section-intro {
+    display: none;
+  }
+
+  .cockpit-header__dates {
+    align-items: flex-start;
+    gap: 4px 8px;
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  .cockpit-source-name {
+    flex-basis: 100%;
+  }
+
+  .cockpit-report-overview {
+    order: 1;
+  }
+
+  .cockpit-safety-note {
+    order: 2;
+  }
+
+  .cockpit-symptom-context {
+    order: 3;
+  }
+
+  .cockpit-this-week {
+    order: 4;
+  }
+
+  .cockpit-clinical-summary {
+    order: 5;
+  }
+
+  .cockpit-lab-snapshot {
+    order: 6;
+  }
+
+  .cockpit-section--detail {
+    order: 7;
+  }
+
+  .cockpit-documents {
+    order: 8;
+  }
+
   .cockpit-status-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px !important;
+  }
+
+  .cockpit-status-cell:first-child {
+    display: none;
+  }
+
+  .cockpit-status-cell {
+    min-width: 0;
+    padding: 8px 9px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .cockpit-status-cell span {
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+
+  .cockpit-status-cell small {
+    font-size: 9px;
+  }
+
+  .cockpit-this-week .cockpit-primary-action--compact {
+    width: 100%;
   }
 }
 

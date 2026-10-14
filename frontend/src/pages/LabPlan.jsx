@@ -267,9 +267,9 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeRepo
     && item.source_report_version_id !== activeReportVersionId,
   )
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h3 className="min-w-0 break-words text-lg font-extrabold text-slate-950">{planItemName(item)}</h3>
+    <article className="lab-plan-item-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="lab-plan-item-card__header flex flex-wrap items-start justify-between gap-3">
+        <h3 className="lab-plan-item-card__name min-w-0 break-words text-lg font-extrabold text-slate-950">{planItemName(item)}</h3>
         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${fulfilled ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
           {fulfilled ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
           {fulfilled ? copy.fulfilled : copy.planned}
@@ -286,7 +286,7 @@ function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeRepo
         </div>
       )}
       {!!item?.timing_text && (
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+        <p className="lab-plan-item-card__timing mt-3 text-sm leading-6 text-slate-600">
           <span className="font-bold text-slate-700">{copy.timing}:</span> {item.timing_text}
         </p>
       )}
@@ -556,7 +556,7 @@ export default function LabPlan() {
         activeReportVersionId={activeReportVersionId}
       />
       <section className="coach-hero">
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+        <div className="lab-plan-hero relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <p className="coach-eyebrow">{isUk ? 'План аналізів' : 'Lab Plan'}</p>
             <h1 className="coach-title-xl">{isUk ? 'Аналізи, які мають сенс для вашого поточного запиту.' : 'Tests that make sense for your current question.'}</h1>
@@ -574,7 +574,7 @@ export default function LabPlan() {
       </section>
 
       {readyUploadId && reportDetails && (
-        <CoachCard className="p-5 sm:p-6">
+        <CoachCard className="lab-plan-report-recommendations p-5 sm:p-6">
           <div className="mb-5">
             <p className="coach-eyebrow">{isUk ? 'На основі останнього звіту' : 'Based on your latest report'}</p>
             <h2 className="coach-title-lg">{isUk ? 'Аналізи, які можуть уточнити цей звіт' : 'Tests that may clarify this report'}</h2>
@@ -585,7 +585,7 @@ export default function LabPlan() {
             </p>
           </div>
           {reportRecommendations.length ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="lab-plan-recommendation-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {reportRecommendations.map((item) => (
                 <LabCard key={item.name} item={item} status="suggested" isUk={isUk} />
               ))}
@@ -616,7 +616,7 @@ export default function LabPlan() {
               : 'An educational reference list, not a personalized recommendation for the current report.'}
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {coreSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
         <AlreadyHaveStrip items={coreSplit.haveAlready} isUk={isUk} />
@@ -627,7 +627,7 @@ export default function LabPlan() {
           <p className="coach-eyebrow">{isUk ? 'Рекомендовані аналізи' : 'Recommended Tests'}</p>
           <h2 className="coach-title-lg">{isUk ? 'Додайте, коли вони відповідають патерну симптомів' : 'Add when they match your symptom pattern'}</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-3">
           {recommendedSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
         <AlreadyHaveStrip items={recommendedSplit.haveAlready} isUk={isUk} />
@@ -638,7 +638,7 @@ export default function LabPlan() {
           <p className="coach-eyebrow">{isUk ? 'Додаткові аналізи' : 'Optional Tests'}</p>
           <h2 className="coach-title-lg">{isUk ? 'Корисні для глибшого контексту, але не завжди потрібні спочатку' : 'Useful for deeper context, not always necessary first'}</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-2">
           {optionalSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
         <AlreadyHaveStrip items={optionalSplit.haveAlready} isUk={isUk} />

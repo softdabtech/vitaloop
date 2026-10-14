@@ -152,6 +152,7 @@ const TODAY_COPY = {
       header: {
         labDateLabel: (date) => `Lab date: ${date}`,
         labDateUnavailable: 'Lab date unavailable',
+        sourceLabel: 'Source',
         newerUploadLabel: (date) => `Newer upload awaiting report: ${date}`,
         symptomCheckLabel: (date) => `Symptom check: ${date}`,
         // P37k.2: very_old gets stronger, still-calm framing -- "Saved"
@@ -365,6 +366,7 @@ const TODAY_COPY = {
       header: {
         labDateLabel: (date) => `Дата аналізів: ${date}`,
         labDateUnavailable: 'Дата аналізів недоступна',
+        sourceLabel: 'Джерело',
         newerUploadLabel: (date) => `Новіше завантаження очікує на звіт: ${date}`,
         symptomCheckLabel: (date) => `Перевірка симптомів: ${date}`,
         freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Старий збережений звіт' },
@@ -597,6 +599,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           <p className="cockpit-header__intro">{copy.ui.intro}</p>
           <div className="cockpit-header__dates">
             <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
+            {headerContext.sourceName && <span className="cockpit-source-name">{c.header.sourceLabel}: {headerContext.sourceName}</span>}
             {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
             {headerContext.newerUploadDate && <span className="cockpit-freshness-chip cockpit-freshness-chip--very-old">{c.header.newerUploadLabel(headerContext.newerUploadDate)}</span>}
             <span className={`cockpit-freshness-chip${headerContext.reportAge === 'very_old' ? ' cockpit-freshness-chip--very-old' : ''}`}>
@@ -645,7 +648,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
       )}
 
       {symptomContext?.primary_signal && (
-        <section className="cockpit-section" aria-label={copy.ui.symptomContext}>
+        <section className="cockpit-section cockpit-symptom-context" aria-label={copy.ui.symptomContext}>
           <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{copy.ui.symptomContext}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.mainSignal}</p><p className="mt-1 text-sm font-bold text-slate-950">{localizedSymptomLabel(symptomContext.primary_signal, isUk)}</p></div>
@@ -780,7 +783,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
         </div>
       ) : (
         <>
-          {visibleThisWeek.length > 0 && <section className="cockpit-section" aria-label={c.thisWeek.title}>
+          {visibleThisWeek.length > 0 && <section className="cockpit-section cockpit-this-week" aria-label={c.thisWeek.title}>
             <h2 className="today-section-label"><ClipboardList className="h-4 w-4 text-emerald-600" />{c.thisWeek.title}</h2>
             <div className="cockpit-row-list">
               {visibleThisWeek.map((row, index) => (
@@ -798,7 +801,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
             </div>
           </section>}
 
-          <section className="cockpit-section" aria-label={c.labSnapshot.title}>
+          <section className="cockpit-section cockpit-lab-snapshot" aria-label={c.labSnapshot.title}>
             <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{c.labSnapshot.title}</h2>
             {labSnapshot.length === 0 ? (
               isLoadingContent ? (

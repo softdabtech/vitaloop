@@ -883,10 +883,10 @@ export function ActionCard({ item, copy, isUk, reportVersionId, completed, savin
   const provenance = actionSourceLabel(item?.source, isUk)
   const canComplete = Boolean(item?.action_id && reportVersionId)
   return (
-    <CoachCard className="p-4" interactive>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-extrabold text-slate-950">{title}</h3>
+    <CoachCard className="protocol-action-card p-4" interactive>
+      <div className="protocol-action-card__header mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="protocol-action-card__identity min-w-0">
+          <h3 className="protocol-action-card__title text-lg font-extrabold text-slate-950">{title}</h3>
           {category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{category}</p>}
           {provenance && <p className="mt-1 text-xs font-medium text-slate-500">{provenance}</p>}
         </div>
@@ -1140,7 +1140,7 @@ export default function ProtocolPage() {
   return (
     <div className="coach-shell coach-grid">
       <section className="coach-hero">
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+        <div className="protocol-hero relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <p className="coach-eyebrow">{copy.summaryEyebrow}</p>
             <h1 className="coach-title-xl">{copy.summaryTitle}</h1>
@@ -1183,7 +1183,7 @@ export default function ProtocolPage() {
             <p className="coach-eyebrow">{section.title}</p>
             <h2 className="coach-title-lg">{section.body}</h2>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="protocol-action-grid grid gap-4 md:grid-cols-2">
             {section.rows.map((item, index) => (
               <ActionCard
                 key={`${protocolTitle(item)}-${index}`}
