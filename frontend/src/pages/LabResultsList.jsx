@@ -168,6 +168,17 @@ export function shouldShowBiomarkerCounts(item) {
   return canViewResults(item)
 }
 
+export function sortProgressItems(items) {
+  return [...items].sort((a, b) => {
+    const da = measurementDateValue(a)
+    const db = measurementDateValue(b)
+    if (!da && !db) return 0
+    if (!da) return 1
+    if (!db) return -1
+    return new Date(db).getTime() - new Date(da).getTime()
+  })
+}
+
 function lifecycleStateCopy(state, copy) {
   if (state === 'processing') return { label: copy.processing, body: copy.processingBody }
   if (state === 'failed') return { label: copy.failed, body: copy.failedBody }
@@ -258,7 +269,7 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
   if (loading) {
     return (
       <aside className="vtl-light-card h-fit p-5">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{labels.title}</h3>
+        <h2 id="lab-progress-title" className="text-base font-semibold tracking-tight text-slate-800">{labels.title}</h2>
         <div className="mt-4 space-y-2">
           <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
           <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
@@ -285,7 +296,7 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
 
   return (
     <aside className="vtl-light-card h-fit p-5">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{labels.title}</h3>
+      <h2 id="lab-progress-title" className="text-base font-semibold tracking-tight text-slate-800">{labels.title}</h2>
       <p className="mt-3 text-sm text-slate-500">{helperText}</p>
 
       {timelineEligible && topChanges.length > 0 && (
@@ -433,14 +444,7 @@ export default function LabResultsList() {
     // date, undated results last — see get_user_progress()). This re-sort only
     // guards against a non-chronological API response; it must never rank an
     // undated item above a properly dated one by falling back to created_at.
-    return [...items].sort((a, b) => {
-      const da = measurementDateValue(a)
-      const db = measurementDateValue(b)
-      if (!da && !db) return 0
-      if (!da) return 1
-      if (!db) return -1
-      return new Date(db).getTime() - new Date(da).getTime()
-    })
+    return sortProgressItems(items)
   }, [items])
   const latestReadyItem = sortedItems.find((item) => canViewResults(item))
   const latestActivity = sortedItems[0]
@@ -512,9 +516,8 @@ export default function LabResultsList() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
-            <div className="space-y-3">
-              <div className="lab-results-summary grid gap-3 md:grid-cols-3">
+          <div className="space-y-5">
+            <div className="lab-results-summary grid gap-3 md:grid-cols-3">
                 <div className="lab-results-summary-card vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
@@ -532,87 +535,95 @@ export default function LabResultsList() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
                 </div>
-              </div>
+            </div>
 
-              {sortedItems.map((item, index) => {
-                const date = getItemDate(item, isUk)
-                const state = lifecycleState(item)
-                const showCounts = shouldShowBiomarkerCounts(item)
-                const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
-                const uploadId = item?.upload_id || item?.id
-                const stateCopy = lifecycleStateCopy(state, copy)
+            <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+              <section aria-labelledby="lab-progress-title" className="min-w-0">
+                <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
+              </section>
 
-                return (
-                  <div
-                    key={uploadId || `${date}-${index}`}
-                    className="lab-result-card vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
-                  >
-                    <div className="lab-result-card__body flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
-                      <button
-                        onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
-                        disabled={!canViewResults(item) || !uploadId}
-                        className="lab-result-card__identity flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <p className="lab-result-card__source text-sm font-semibold text-slate-800">{patientFacingLabName(item?.lab_name, copy.labResults(sortedItems.length - index))}</p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
-                          <Calendar className="h-3 w-3" />
-                          {date}
-                        </p>
-                      </button>
+              <section aria-labelledby="upload-history-title" className="min-w-0 space-y-3">
+                <h2 id="upload-history-title" className="text-base font-semibold tracking-tight text-slate-800">
+                  {copy.uploadHistory}
+                </h2>
+                {sortedItems.map((item, index) => {
+                  const date = getItemDate(item, isUk)
+                  const state = lifecycleState(item)
+                  const showCounts = shouldShowBiomarkerCounts(item)
+                  const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
+                  const uploadId = item?.upload_id || item?.id
+                  const stateCopy = lifecycleStateCopy(state, copy)
 
-                      {showCounts ? (
-                        <div className="lab-result-card__badges flex flex-wrap items-center gap-2 text-xs">
-                          <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
-                          <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
-                          <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
-                        </div>
-                      ) : (
-                        <output className="lab-result-card__state min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
-                          <span className="font-semibold">{stateCopy.label}</span>
-                          <span className="mt-1 block leading-5">{stateCopy.body}</span>
-                        </output>
-                      )}
-
-                      <div className="lab-result-card__action flex items-center gap-2">
+                  return (
+                    <div
+                      key={uploadId || `${date}-${index}`}
+                      className="lab-result-card vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
+                    >
+                      <div className="lab-result-card__body flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
                         <button
-                          onClick={() => state === 'failed'
-                            ? navigate('/upload')
-                            : canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
-                          disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
-                          className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
+                          onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                          disabled={!canViewResults(item) || !uploadId}
+                          className="lab-result-card__identity flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {lifecycleActionLabel(state, item, copy)}
-                          <ChevronRight className="h-4 w-4" />
+                          <p className="lab-result-card__source text-sm font-semibold text-slate-800">{patientFacingLabName(item?.lab_name, copy.labResults(sortedItems.length - index))}</p>
+                          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                            <Calendar className="h-3 w-3" />
+                            {date}
+                          </p>
+                        </button>
+
+                        {showCounts ? (
+                          <div className="lab-result-card__badges flex flex-wrap items-center gap-2 text-xs">
+                            <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
+                            <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
+                            <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
+                          </div>
+                        ) : (
+                          <output className="lab-result-card__state min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
+                            <span className="font-semibold">{stateCopy.label}</span>
+                            <span className="mt-1 block leading-5">{stateCopy.body}</span>
+                          </output>
+                        )}
+
+                        <div className="lab-result-card__action flex items-center gap-2">
+                          <button
+                            onClick={() => state === 'failed'
+                              ? navigate('/upload')
+                              : canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
+                            disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
+                            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
+                          >
+                            {lifecycleActionLabel(state, item, copy)}
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {/* Premium features hint for free users */}
+                {!hasAccess && (
+                  <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-amber-800">{copy.premiumTitle}</p>
+                        <p className="mt-1 text-sm text-amber-700">
+                          {copy.premiumBody}
+                        </p>
+                        <button
+                          onClick={triggerLabHistoryAccessPaywall}
+                          className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
+                        >
+                          {copy.premiumCta}
                         </button>
                       </div>
                     </div>
                   </div>
-                )
-              })}
-
-              {/* Premium features hint for free users */}
-              {!hasAccess && (
-                <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-amber-800">{copy.premiumTitle}</p>
-                      <p className="mt-1 text-sm text-amber-700">
-                        {copy.premiumBody}
-                      </p>
-                      <button
-                        onClick={triggerLabHistoryAccessPaywall}
-                        className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
-                      >
-                        {copy.premiumCta}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </section>
             </div>
-
-            <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
           </div>
         )}
       </CabinetPageFrame>
