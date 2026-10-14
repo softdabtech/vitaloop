@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { HELP_SECTIONS, getArticle, searchArticles } from '../data/helpArticles.js'
 import Navbar from '../components/landing/Navbar.jsx'
 import Footer from '../components/landing/Footer.jsx'
@@ -280,6 +280,17 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
 
   return (
     <div>
+      <section className="mb-8 rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6" aria-labelledby="medical-safety-heading">
+        <h2 id="medical-safety-heading" className="text-lg font-bold text-rose-950">Medical safety and urgent concerns</h2>
+        <p className="mt-2 text-sm leading-6 text-rose-900">
+          VITALOOP does not provide emergency care. If your symptoms may be urgent or severe, contact local emergency services or seek immediate medical care.
+          Do not wait for VITALOOP analysis or a support response.
+        </p>
+        <p className="mt-2 text-sm leading-6 text-rose-900">
+          For non-urgent questions about your results, discuss the findings with a qualified clinician.
+        </p>
+      </section>
+
       {/* Popular articles */}
       <div className="mb-10">
         <h2 className="text-lg font-bold text-slate-900 mb-4">Popular articles</h2>
@@ -322,7 +333,7 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
                 return (
                   <li key={articleId}>
                     <button
-                      onClick={() => navigate(`/help/${articleId}`)}
+                      onClick={() => navigate(buildHelpPath(helpBasePath, articleId))}
                       className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                     >
                       {article.title}
@@ -344,6 +355,19 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
           </div>
         ))}
       </div>
+
+      <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6" aria-labelledby="support-paths-heading">
+        <h2 id="support-paths-heading" className="text-lg font-bold text-slate-900">Support paths</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Email <a className="font-semibold text-emerald-700 underline underline-offset-2" href="mailto:info@softdab.tech">info@softdab.tech</a> for help with:
+        </p>
+        <ul className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+          <li><strong>Upload problems:</strong> include the error and file type, but do not send sensitive lab files by email.</li>
+          <li><strong>Report questions:</strong> include the report page and your question.</li>
+          <li><strong>Account issues:</strong> include the account email and what action failed.</li>
+          <li><strong>Billing issues:</strong> include the account email and transaction date.</li>
+        </ul>
+      </section>
     </div>
   )
 }
@@ -653,11 +677,11 @@ export default function Help({ embedded = false, basePath = '/help' }) {
               <div className={`${embedded ? 'mt-4 rounded-2xl' : 'mt-4 rounded-xl sm:mt-6 sm:rounded-2xl'} bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center text-white sm:p-6`}>
                 <h3 className="text-lg font-bold mb-1">Still need help?</h3>
                 <p className="text-emerald-100 text-sm mb-4">
-                  Our team usually replies within one business day.
+                  Email info@softdab.tech for upload, report, account, or billing questions. Our team usually replies within one business day.
                 </p>
                 <a
                   href="mailto:info@softdab.tech"
-                  className="inline-flex items-center gap-2 bg-white text-emerald-700 font-bold text-sm px-5 py-2.5 rounded-full hover:bg-emerald-50 transition-colors"
+                  className="inline-flex min-h-11 items-center gap-2 bg-white text-emerald-700 font-bold text-sm px-5 py-2.5 rounded-full hover:bg-emerald-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -665,6 +689,19 @@ export default function Help({ embedded = false, basePath = '/help' }) {
                   Contact support
                 </a>
               </div>
+
+              {embedded && (
+                <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="help-legal-heading">
+                  <h3 id="help-legal-heading" className="text-sm font-bold uppercase tracking-wide text-slate-500">Legal and safety</h3>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                    <Link className="min-h-11 inline-flex items-center text-emerald-700 underline underline-offset-2" to="/privacy-policy">Privacy &amp; Security</Link>
+                    <Link className="min-h-11 inline-flex items-center text-emerald-700 underline underline-offset-2" to="/terms">Terms</Link>
+                    <Link className="min-h-11 inline-flex items-center text-emerald-700 underline underline-offset-2" to="/editorial-policy">Editorial Policy</Link>
+                    <Link className="min-h-11 inline-flex items-center text-emerald-700 underline underline-offset-2" to="/medical-review-policy">Medical Review Policy</Link>
+                    <Link className="min-h-11 inline-flex items-center text-emerald-700 underline underline-offset-2" to="/terms">Medical Disclaimer (in Terms)</Link>
+                  </div>
+                </section>
+              )}
             </main>
 
           </div>

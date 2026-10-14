@@ -62,7 +62,7 @@ function FeatureList({ items }) {
 
 export default function Subscription() {
   const { user } = useAuth()
-  const { isPremium, subStatus, planName, loading, refresh } = useSubscription()
+  const { isPremium, subStatus, uploadCount, uploadLimit, uploadsRemaining, loading, error, refresh } = useSubscription()
   const isUk = isUkrainianLocale()
   const statusLabel = isPremium ? (isUk ? 'Преміум активний' : 'Premium active') : (isUk ? 'Активний безкоштовний тариф' : 'Free plan active')
   const planLabel = isPremium ? 'Premium' : (isUk ? 'Безкоштовний' : 'Free')
@@ -130,11 +130,45 @@ export default function Subscription() {
     )
   }
 
+  if (error) {
+    return (
+      <>
+        <CabinetPageHeader
+          title={ct().subscription.title}
+          subtitle={ct().subscription.subtitle}
+          helper={ct().subscription.helper}
+        />
+        <div role="alert" className="rounded-[20px] border border-amber-200 bg-amber-50 p-6 text-amber-950">
+          <h2 className="text-lg font-bold">{isUk ? 'Не вдалося завантажити статус підписки' : 'We could not load your subscription status'}</h2>
+          <p className="mt-2 text-sm leading-6">
+            {isUk
+              ? 'Спробуйте ще раз. Якщо статус доступу виглядає неправильно, напишіть команді підтримки.'
+              : 'Try again. If your access status still looks wrong, email our support team at info@softdab.tech.'}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button type="button" onClick={refresh} className="cabinet-btn cabinet-btn--primary min-h-11">
+              {isUk ? 'Повторити' : 'Retry'}
+            </button>
+            <a href="mailto:info@softdab.tech" className="cabinet-btn cabinet-btn--secondary min-h-11">
+              {isUk ? 'Написати підтримці' : 'Contact support'}
+            </a>
+          </div>
+        </div>
+      </>
+    )
+  }
+
   async function handlePremiumRequest() {
     await requestPremiumAccess({ userEmail: user?.email, source: 'subscription_page' })
   }
 
   async function handleCancelSubscription() {
+    if (!isUk) {
+      await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
+      setShowCancelConfirm(false)
+      return
+    }
+
     // P46 -- for a WayForPay-billed subscription, cancel it there directly
     // (stops the next recurring charge; current access is untouched until
     // the period already paid for ends). /wayforpay/cancel 400s for any
@@ -222,19 +256,11 @@ export default function Subscription() {
                 className="cabinet-btn cabinet-btn--primary"
               >
                 <Mail className="h-4 w-4" />
-                Request Premium access
-              </button>
-              <button
-                type="button"
-                onClick={handlePremiumRequest}
-                className="cabinet-btn cabinet-btn--secondary"
-              >
-                <Sparkles className="h-4 w-4" />
-                Ask about annual access
+                Request Premium activation
               </button>
               <p className="text-xs leading-5 text-slate-500">
-                <strong className="text-slate-600">What happens next:</strong>{' '}
-                clicking either button opens an email to our team with your account details pre-filled. We confirm and activate Premium by email — nothing is charged automatically.
+                <strong className="text-slate-600">How activation works:</strong>{' '}
+                Premium activation is currently handled by our support team. This opens an email with your account details pre-filled; nothing is charged automatically here.
               </p>
             </div>
           )}
@@ -290,8 +316,15 @@ export default function Subscription() {
             <p className="mt-1 text-2xl font-bold capitalize text-slate-950">{subStatus || (isUk ? 'безкоштовний' : 'free')}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Код доступу' : 'Access key'}</p>
-            <p className="mt-1 text-2xl font-bold capitalize text-slate-950">{planName || planLabel}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Завантаження' : 'Lab uploads'}</p>
+            <p className="mt-1 text-2xl font-bold text-slate-950">
+              {isPremium ? (isUk ? 'Без обмежень' : 'Unlimited') : `${uploadsRemaining} / ${uploadLimit}`}
+            </p>
+            {!isPremium && (
+              <p className="mt-1 text-xs text-slate-500">
+                {isUk ? `Використано: ${uploadCount}` : `${uploadCount} used`}
+              </p>
+            )}
           </div>
         </div>
       </motion.section>
@@ -341,11 +374,18 @@ export default function Subscription() {
             <p className="mt-1 text-sm leading-6 text-blue-800">
               {isUk
                 ? 'Оплата Premium проходить через WayForPay і активується автоматично. Ми не передаємо симптоми, завантажені аналізи, біомаркери, звіти чи медичні нотатки платіжним інструментам — лише суму й дані картки, потрібні для оплати.'
-                : 'Premium access is currently invite-based and activated manually by the VITALOOP team. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to billing tools.'}
+                : 'Premium is $10/month. Activation is currently handled manually by the VITALOOP support team; there is no English checkout on this page. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to billing tools.'}
             </p>
-            <button type="button" onClick={handlePremiumRequest} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm mt-4">
-              {isUk ? 'Написати нам' : 'Email us'}
-            </button>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" onClick={handlePremiumRequest} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm min-h-11">
+                {isUk ? 'Написати нам' : 'Contact support'}
+              </button>
+              {!isUk && (
+                <a href="mailto:info@softdab.tech" className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm min-h-11">
+                  Email info@softdab.tech
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </motion.section>

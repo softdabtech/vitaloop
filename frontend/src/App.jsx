@@ -218,6 +218,31 @@ function RegisterRedirect() {
   return <Navigate to={`/login${query ? `?${query}` : '?signup=true'}`} replace />
 }
 
+const CABINET_ROUTE_PREFIXES = [
+  '/dashboard',
+  '/upload',
+  '/lab-plan',
+  '/results/',
+  '/protocol/',
+  '/progress',
+  '/assignments',
+  '/lab-results',
+  '/account',
+  '/settings',
+  '/health-profile',
+  '/subscription',
+  '/billing-history',
+  '/help-center',
+  '/onboarding',
+  '/questionnaire',
+  '/check-ins',
+  '/insights',
+]
+
+export function isCabinetRoutePath(pathname) {
+  return CABINET_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))
+}
+
 function FloatingSupportChat() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -228,25 +253,7 @@ function FloatingSupportChat() {
   const [ferriGreetingVisible, setFerriGreetingVisible] = useState(false)
   const [ferriAction, setFerriAction] = useState('idle')
 
-  const isCabinetRoute = [
-    '/dashboard',
-    '/upload',
-    '/lab-plan',
-    '/results/',
-    '/protocol/',
-    '/progress',
-    '/assignments',
-    '/lab-results',
-    '/account',
-    '/settings',
-    '/health-profile',
-    '/subscription',
-    '/billing-history',
-    '/onboarding',
-    '/questionnaire',
-    '/check-ins',
-    '/insights',
-  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(prefix))
+  const isCabinetRoute = isCabinetRoutePath(location.pathname)
 
   useEffect(() => {
     const handleMobileSubnavChange = (event) => {
