@@ -44,7 +44,7 @@ describe('MobileBottomBar', () => {
     expect(screen.getByRole('menu', { name: 'My Plan menu' }).parentElement.className).toContain('z-50')
   })
 
-  it('opens Account with Profile & Safety, Subscription, and Help access', () => {
+  it('opens Account with six items: Account Settings, Profile & Safety, Subscription, Billing History, Check-in History, and Help', () => {
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     renderNavigation()
 
@@ -55,7 +55,15 @@ describe('MobileBottomBar', () => {
       detail: { openSubnav: 'account' },
     }))
     expect(document.body.dataset.vtlMobileSubnav).toBe('account')
-    expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual(['Profile & Safety', 'Subscription', 'Billing History', 'Check-in History', 'Help'])
+    expect(MOBILE_SUBNAV.account).toHaveLength(6)
+    expect(MOBILE_SUBNAV.account.map((item) => item.label)).toEqual([
+      'Account Settings',
+      'Profile & Safety',
+      'Subscription',
+      'Billing History',
+      'Check-in History',
+      'Help',
+    ])
     expect(screen.getByRole('menu', { name: 'Account menu' })).toBeTruthy()
     expect(screen.getByRole('navigation', { name: 'Main navigation' }).className).toContain('z-40')
   })

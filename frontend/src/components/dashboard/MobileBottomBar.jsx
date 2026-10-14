@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ActivitySquare, CalendarDays, CreditCard, FileText, HelpCircle, Home, Receipt, Route, Settings, Upload, UserRound } from 'lucide-react'
 import { isUkrainianLocale } from '../../lib/locale.js'
+import { normalizePath } from '../../lib/pathUtils.js'
 
 export const MOBILE_NAV_ITEMS = [
   { key: 'home', path: '/dashboard', label: 'Home', ukLabel: 'Головна', icon: Home },
@@ -17,6 +18,7 @@ export const MOBILE_SUBNAV = {
     { path: '/lab-plan', label: 'Lab Plan', ukLabel: 'План аналізів', icon: Route },
   ],
   account: [
+    { path: '/account', label: 'Account Settings', ukLabel: 'Налаштування', icon: Settings },
     { path: '/health-profile', label: 'Profile & Safety', ukLabel: 'Профіль і безпека', icon: Settings },
     { path: '/subscription', label: 'Subscription', ukLabel: 'Підписка', icon: CreditCard },
     { path: '/billing-history', label: 'Billing History', ukLabel: 'Історія платежів', icon: Receipt },
@@ -26,12 +28,13 @@ export const MOBILE_SUBNAV = {
 }
 
 function isActive(current, item) {
+  const normalized = normalizePath(current)
   if (item.key === 'results') {
-    return current === '/lab-results' || current === '/progress' || current.startsWith('/results/') || current.startsWith('/protocol/')
+    return normalized === '/lab-results' || normalized === '/progress' || normalized.startsWith('/results/') || normalized.startsWith('/protocol/')
   }
-  if (item.key === 'plan') return current === '/lab-plan'
-  if (item.key === 'account') return ['/health-profile', '/subscription', '/billing-history', '/check-ins', '/help-center', '/account'].includes(current)
-  return current === item.path || current.startsWith(`${item.path}/`)
+  if (item.key === 'plan') return normalized === '/lab-plan'
+  if (item.key === 'account') return ['/account', '/health-profile', '/subscription', '/billing-history', '/check-ins', '/help-center'].includes(normalized)
+  return normalized === item.path || normalized.startsWith(`${item.path}/`)
 }
 
 export default function MobileBottomBar() {

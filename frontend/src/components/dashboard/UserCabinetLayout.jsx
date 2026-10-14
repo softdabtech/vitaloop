@@ -6,6 +6,7 @@ import MobileBottomBar from './MobileBottomBar.jsx'
 import PWAInstallBanner from './PWAInstallBanner.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
+import { normalizePath, resolvePageMeta } from '../../lib/pathUtils.js'
 import '../../styles/dashboard2026.css'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
@@ -20,37 +21,14 @@ function isCrmRole(user) {
   return CRM_ROLES.has(role)
 }
 
-const PAGE_META = {
-  '/dashboard': { title: 'Dashboard', ukTitle: 'Дашборд', subtitle: null },
-  '/upload': { title: 'Upload Results', ukTitle: 'Завантажити аналізи', subtitle: null },
-  '/lab-plan': { title: 'Lab Plan', ukTitle: 'План аналізів', subtitle: null },
-  '/lab-results': { title: 'Results & Trends', ukTitle: 'Результати й динаміка', subtitle: null },
-  '/assignments': { title: 'Protocol', ukTitle: 'План дій', subtitle: null },
-  '/progress': { title: 'Results & Trends', ukTitle: 'Результати й динаміка', subtitle: null },
-  '/insights': { title: 'Review', ukTitle: 'Огляд', subtitle: null },
-  '/check-ins': { title: 'Check-in', ukTitle: 'Чек-ін', subtitle: null },
-  '/onboarding': { title: 'Onboarding', ukTitle: 'Налаштування', subtitle: null },
-  '/questionnaire': { title: 'Symptom Check', ukTitle: 'Перевірка симптомів', subtitle: null },
-  '/account': { title: 'Account', ukTitle: 'Акаунт', subtitle: null },
-  '/help-center': { title: 'Help Center', ukTitle: 'Допомога', subtitle: null },
-}
-
-function resolvePageMeta(pathname, isUk = false) {
-  const direct = PAGE_META[pathname]
-  if (direct) return { ...direct, title: isUk ? direct.ukTitle || direct.title : direct.title }
-  if (pathname.startsWith('/results/')) return { title: isUk ? 'Результати' : 'Results', subtitle: null }
-  if (pathname.startsWith('/protocol/')) return { title: isUk ? 'План дій' : 'Protocol', subtitle: null }
-  if (pathname.startsWith('/assignments/')) return { title: isUk ? 'Завдання' : 'Assignment', subtitle: null }
-  return { title: 'Vitaloop', subtitle: null }
-}
-
 export default function UserCabinetLayout({ children }) {
   const location = useLocation()
   const { user, signOut } = useAuth()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const isUk = isUkrainianLocale()
 
-  const pageMeta = useMemo(() => resolvePageMeta(location.pathname, isUk), [location.pathname, isUk])
+  const normalizedPath = normalizePath(location.pathname)
+  const pageMeta = useMemo(() => resolvePageMeta(normalizedPath, isUk), [normalizedPath, isUk])
 
   useEffect(() => {
     document.title = `${pageMeta.title} | VITALOOP`

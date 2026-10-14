@@ -19,6 +19,7 @@ import {
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
+import { normalizePath } from '../../lib/pathUtils.js'
 import UserAvatar from '../UserAvatar.jsx'
 
 const MENU_ITEMS = [
@@ -46,28 +47,29 @@ const MENU_ITEMS = [
 ]
 
 function isItemActive(currentPath, itemPath) {
+  const normalized = normalizePath(currentPath)
   if (itemPath === '/lab-results') {
-    return currentPath === '/lab-results' || currentPath === '/progress' || currentPath.startsWith('/results/') || currentPath.startsWith('/protocol/')
+    return normalized === '/lab-results' || normalized === '/progress' || normalized.startsWith('/results/') || normalized.startsWith('/protocol/')
   }
   if (itemPath === '/questionnaire') {
-    return currentPath === '/questionnaire'
+    return normalized === '/questionnaire'
   }
   if (itemPath === '/lab-plan') {
-    return currentPath === '/lab-plan'
+    return normalized === '/lab-plan'
   }
   if (itemPath === '/assignments') {
-    return currentPath === '/assignments' || currentPath.startsWith('/assignments/')
+    return normalized === '/assignments' || normalized.startsWith('/assignments/')
   }
   if (itemPath === '/check-ins') {
-    return currentPath === '/check-ins' || currentPath === '/checkin'
+    return normalized === '/check-ins' || normalized === '/checkin'
   }
   if (itemPath === '/account' || itemPath === '/health-profile' || itemPath === '/subscription' || itemPath === '/upload') {
-    return currentPath === itemPath
+    return normalized === itemPath
   }
   if (itemPath === '/dashboard') {
-    return currentPath === '/dashboard'
+    return normalized === '/dashboard'
   }
-  return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`)
+  return normalized === itemPath || normalized.startsWith(`${itemPath}/`)
 }
 
 function triggerPaywall(detail) {
