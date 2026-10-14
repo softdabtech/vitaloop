@@ -195,8 +195,6 @@
     text-transform: uppercase;
   }
 
-  @media (max-width: 767px) {
-  }
 }
 
 /* Smooth momentum scrolling on iOS */
@@ -258,8 +256,7 @@ button[aria-label].inline-icon {
       max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 24px) !important;
     }
 
-    body[data-vtl-mobile-subnav='plan'] .vtl-support-chat-panel,
-    body[data-vtl-mobile-subnav='account'] .vtl-support-chat-panel {
+    body[data-vtl-mobile-subnav] .vtl-support-chat-panel {
       bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 168px) !important;
       max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 180px) !important;
     }
