@@ -32,15 +32,18 @@ class _Query:
 
 
 class _Supabase:
-    def __init__(self, uploads, biomarkers=None):
+    def __init__(self, uploads, biomarkers=None, report_versions=None):
         self.uploads = uploads
         self.biomarkers = biomarkers or []
+        self.report_versions = report_versions or []
 
     def table(self, name):
         if name == "lab_uploads":
             return _Query(self.uploads)
         if name == "biomarkers":
             return _Query(self.biomarkers)
+        if name == "report_versions":
+            return _Query(self.report_versions)
         raise AssertionError(name)
 
 

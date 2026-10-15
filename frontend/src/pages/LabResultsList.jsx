@@ -10,6 +10,7 @@ import { ct } from '../lib/cabinetI18n.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import { summarizeBiomarkerStatuses } from '../lib/biomarkerStatus.js'
 import '../styles/dashboard2026.css'
 
 // Cabinet reconciliation: full EN/UA coverage ported from origin/main's
@@ -28,7 +29,8 @@ const LAB_RESULTS_COPY_KEYS = [
   'uploadResults', 'noResults', 'startSymptom', 'openLabPlan', 'uploads', 'mostRecent',
   'uploadHistory', 'retestPlan', 'reviewWindow', 'labResults', 'processing', 'processingBody',
   'failed', 'failedBody', 'queued', 'queuedBody', 'uploadAgain', 'noCompletedReport',
-  'newerUploadProcessing', 'newerUploadFailed', 'optimal', 'warning', 'review', 'viewResults',
+  'newerUploadProcessing', 'newerUploadFailed', 'inRange', 'worthWatching', 'belowRange', 'aboveRange',
+  'notEvaluated', 'viewResults',
   'premiumTitle', 'premiumBody', 'premiumCta', 'safetyContext', 'safetyBody', 'nextStep', 'nextBody',
 ]
 
@@ -58,9 +60,11 @@ const LAB_RESULTS_COPY = {
     'No completed report yet',
     'A newer upload is still being processed.',
     'A newer upload could not be processed.',
-    'Optimal',
-    'Warning',
-    'Review',
+    'In range',
+    'Worth watching',
+    'Below range',
+    'Above range',
+    'Not evaluated',
     'View Results',
     'Premium features available',
     'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
@@ -93,9 +97,11 @@ const LAB_RESULTS_COPY = {
     'Завершених звітів ще немає',
     'Нове завантаження ще обробляється.',
     'Нове завантаження не вдалося обробити.',
-    'У нормі',
-    'Спостерігати',
-    'Перегляд',
+    'У референсі',
+    'Потребує спостереження',
+    'Нижче референсу',
+    'Вище референсу',
+    'Не оцінено',
     'Переглянути',
     'Доступні Premium-функції',
     'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
@@ -107,14 +113,6 @@ const LAB_RESULTS_COPY = {
   ]),
 }
 
-function normalizeStatus(status) {
-  const value = String(status || '').toLowerCase()
-  if (value.includes('optimal') || value.includes('normal')) return 'optimal'
-  if (value.includes('border') || value.includes('warn')) return 'warning'
-  if (value.includes('critical') || value.includes('deficient') || value.includes('elevated')) return 'critical'
-  return 'warning'
-}
-
 function normalizeProgressPayload(payload) {
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.items)) return payload.items
@@ -122,12 +120,10 @@ function normalizeProgressPayload(payload) {
   return []
 }
 
-// Stage 2D-1: clinical chronology priority is test_date -> collected_at ->
-// reported_at, matching the backend's choose_measurement_date() helper
-// (app/services/lab_date_extraction.py). created_at (upload time) is
-// deliberately excluded — it is never a substitute for a real lab date.
+// Frozen report measurement dates take precedence; legacy rows use the same
+// test_date -> collected_at -> reported_at chronology as the backend.
 function measurementDateValue(item) {
-  return item?.test_date || item?.collected_at || item?.reported_at || null
+  return item?.measurement_date || item?.test_date || item?.collected_at || item?.reported_at || null
 }
 
 function getItemDate(item, isUk) {
@@ -142,13 +138,9 @@ export function patientFacingLabName(value, fallback = 'Lab result') {
   return name
 }
 
-function getBiomarkerCounts(item) {
+export function getBiomarkerCounts(item) {
   const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
-  return {
-    optimal: biomarkers.filter((b) => normalizeStatus(b?.status) === 'optimal').length,
-    warning: biomarkers.filter((b) => normalizeStatus(b?.status) === 'warning').length,
-    critical: biomarkers.filter((b) => normalizeStatus(b?.status) === 'critical').length,
-  }
+  return summarizeBiomarkerStatuses(biomarkers)
 }
 
 export function lifecycleState(item) {
@@ -550,7 +542,15 @@ export default function LabResultsList() {
                   const date = getItemDate(item, isUk)
                   const state = lifecycleState(item)
                   const showCounts = shouldShowBiomarkerCounts(item)
-                  const { optimal, warning, critical } = showCounts ? getBiomarkerCounts(item) : { optimal: 0, warning: 0, critical: 0 }
+                  const {
+                    optimal,
+                    borderline,
+                    deficient,
+                    elevated,
+                    unknown,
+                  } = showCounts
+                    ? getBiomarkerCounts(item)
+                    : { optimal: 0, borderline: 0, deficient: 0, elevated: 0, unknown: 0 }
                   const uploadId = item?.upload_id || item?.id
                   const stateCopy = lifecycleStateCopy(state, copy)
 
@@ -574,9 +574,11 @@ export default function LabResultsList() {
 
                         {showCounts ? (
                           <div className="lab-result-card__badges flex flex-wrap items-center gap-2 text-xs">
-                            <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
-                            <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
-                            <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
+                            <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.inRange} {optimal}</span>
+                            <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.worthWatching} {borderline}</span>
+                            <span className="vtl-status-pill border border-sky-200 bg-sky-50 text-sky-700">{copy.belowRange} {deficient}</span>
+                            <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.aboveRange} {elevated}</span>
+                            <span className="vtl-status-pill border border-slate-200 bg-slate-50 text-slate-600">{copy.notEvaluated} {unknown}</span>
                           </div>
                         ) : (
                           <output className="lab-result-card__state min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">

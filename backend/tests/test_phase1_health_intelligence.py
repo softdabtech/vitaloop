@@ -749,6 +749,9 @@ async def test_get_user_progress_orders_by_measurement_date_not_created_at(monke
         def eq(self, *_args, **_kwargs):
             return self
 
+        def order(self, *_args, **_kwargs):
+            return self
+
         def execute(self):
             return type("Resp", (), {"data": []})()
 
@@ -757,6 +760,8 @@ async def test_get_user_progress_orders_by_measurement_date_not_created_at(monke
             if name == "lab_uploads":
                 return _UploadsTable()
             if name == "biomarkers":
+                return _BiomarkersTable()
+            if name == "report_versions":
                 return _BiomarkersTable()
             raise AssertionError(name)
 

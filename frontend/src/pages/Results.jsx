@@ -32,6 +32,13 @@ import {
 import { isUkrainianLocale } from '../lib/locale.js'
 import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
 import { buildResultOverview, isBiomarkerCountSummary } from '../lib/resultOverview.js'
+import {
+  BIOMARKER_STATUS_META,
+  biomarkerStatusLabel,
+  normalizeBiomarkerStatus,
+  summarizeBiomarkerStatuses,
+} from '../lib/biomarkerStatus.js'
+import { embedReportFonts } from '../lib/reportPdf.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
@@ -46,33 +53,7 @@ import '../styles/coach-design-system.css'
 // splits CSS per lazy route chunk, so this page must import it directly.
 import '../styles/dashboard2026.css'
 
-const STATUS_META = {
-  DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
-  ELEVATED: { rank: 1, label: 'Above range', ukLabel: 'Вище референсу', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
-  BORDERLINE: { rank: 2, label: 'Worth watching', ukLabel: 'Потребує спостереження', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
-  OPTIMAL: { rank: 3, label: 'In range', ukLabel: 'У референсі', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  UNKNOWN: { rank: 4, label: 'Not evaluated', ukLabel: 'Не оцінено', badge: 'bg-slate-50 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
-}
-
-const STATUS_ALIAS_MAP = {
-  OPTIMAL: 'OPTIMAL',
-  NORMAL: 'OPTIMAL',
-  N: 'OPTIMAL',
-  IN_RANGE: 'OPTIMAL',
-  'IN RANGE': 'OPTIMAL',
-  BORDERLINE: 'BORDERLINE',
-  'LOW NORMAL': 'BORDERLINE',
-  'HIGH NORMAL': 'BORDERLINE',
-  LOW: 'DEFICIENT',
-  L: 'DEFICIENT',
-  DEFICIENT: 'DEFICIENT',
-  HIGH: 'ELEVATED',
-  H: 'ELEVATED',
-  ELEVATED: 'ELEVATED',
-  CRITICAL: 'ELEVATED',
-  UNKNOWN: 'UNKNOWN',
-  UNEVALUATED: 'UNKNOWN',
-}
+const STATUS_META = BIOMARKER_STATUS_META
 
 const BIOMARKER_NAME_TRANSLATIONS = [
   [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
@@ -186,6 +167,7 @@ const RESULTS_COPY = {
     fallbackHeadline: 'Your results are organized into clear priorities.',
     healthSummary: 'Your Health Summary',
     healthSummarySubtitle: 'What is happening, why it matters, and what to do next.',
+    sourceNarrative: 'Report narrative (source text; not a status classification)',
     topFindings: 'Top Findings',
     whyMatters: 'Why this matters',
     doctorQuestions: 'Questions for your doctor',
@@ -409,6 +391,7 @@ const RESULTS_COPY = {
     fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
     healthSummary: 'Підсумок здоровʼя',
     healthSummarySubtitle: 'Що відбувається, чому це важливо і що робити далі.',
+    sourceNarrative: 'Текстова інтерпретація звіту (не класифікація статусів)',
     topFindings: 'Головні знахідки',
     whyMatters: 'Чому це важливо',
     doctorQuestions: 'Питання до лікаря',
@@ -649,55 +632,7 @@ function toEnglishBiomarkerName(name) {
   return raw
 }
 
-function inferStatusFromRange(biomarker) {
-  const low = Number(biomarker?.ref_low)
-  const high = Number(biomarker?.ref_high)
-  const value = Number(biomarker?.value)
-  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 'UNKNOWN'
-  if (value < low) return 'DEFICIENT'
-  if (value > high) return 'ELEVATED'
-  const span = high - low
-  if (value <= low + span * 0.15 || value >= high - span * 0.15) return 'BORDERLINE'
-  return 'OPTIMAL'
-}
-
-export function normalizeBiomarkerStatus(biomarker) {
-  const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
-  const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
-  const low = hasLow ? Number(biomarker.ref_low) : null
-  const high = hasHigh ? Number(biomarker.ref_high) : null
-  const hasInvalidBounds = (hasLow && !Number.isFinite(low))
-    || (hasHigh && !Number.isFinite(high))
-    || (hasLow && hasHigh && high <= low)
-  if (hasInvalidBounds || (!hasLow && !hasHigh)) return 'UNKNOWN'
-
-  const raw = String(biomarker?.status || '').trim().toUpperCase()
-  if (raw === 'UNKNOWN' || raw === 'UNEVALUATED') return 'UNKNOWN'
-
-  const value = Number(biomarker?.value)
-  if (hasLow !== hasHigh) {
-    if (!Number.isFinite(value)) return 'UNKNOWN'
-    if (hasLow && value < low) return 'DEFICIENT'
-    if (hasHigh && value > high) return 'ELEVATED'
-    return 'UNKNOWN'
-  }
-
-  if (Object.hasOwn(STATUS_ALIAS_MAP, raw)) return STATUS_ALIAS_MAP[raw]
-  return raw ? 'UNKNOWN' : inferStatusFromRange(biomarker)
-}
-
-export function summarizeBiomarkerStatuses(biomarkers = []) {
-  const counts = { total: biomarkers.length, optimal: 0, borderline: 0, deficient: 0, elevated: 0, unknown: 0 }
-  for (const biomarker of biomarkers) {
-    const status = normalizeBiomarkerStatus(biomarker)
-    if (status === 'OPTIMAL') counts.optimal += 1
-    else if (status === 'BORDERLINE') counts.borderline += 1
-    else if (status === 'DEFICIENT') counts.deficient += 1
-    else if (status === 'ELEVATED') counts.elevated += 1
-    else counts.unknown += 1
-  }
-  return counts
-}
+export { normalizeBiomarkerStatus, summarizeBiomarkerStatuses }
 
 function scoreStatus(status) {
   return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
@@ -710,7 +645,14 @@ function formatMetric(biomarker) {
 }
 
 export function formatRange(biomarker, copy = RESULTS_COPY.en) {
-  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return copy.noRange
+  const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
+  const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
+  if (hasLow && !hasHigh) return `≥ ${biomarker.ref_low}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+  if (!hasLow && hasHigh) return `≤ ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+  if (!hasLow && !hasHigh) return copy.noRange
+  const low = Number(biomarker.ref_low)
+  const high = Number(biomarker.ref_high)
+  if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) return copy.noRange
   return `${biomarker.ref_low} - ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
 }
 
@@ -2275,12 +2217,13 @@ export default function Results() {
     try {
       const jsPDF = (await import('jspdf')).jsPDF
       const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+      await embedReportFonts(pdf)
       const margin = 44
       const width = pdf.internal.pageSize.getWidth() - margin * 2
       let y = 48
       const addTitle = (text, size = 18) => {
         if (y > 720) { pdf.addPage(); y = 48 }
-        pdf.setFont('helvetica', 'bold')
+        pdf.setFont('NotoSans', 'bold')
         pdf.setFontSize(size)
         pdf.setTextColor(15, 23, 42)
         pdf.text(text, margin, y)
@@ -2288,7 +2231,7 @@ export default function Results() {
       }
       const addText = (text, size = 10) => {
         if (!text) return
-        pdf.setFont('helvetica', 'normal')
+        pdf.setFont('NotoSans', 'normal')
         pdf.setFontSize(size)
         pdf.setTextColor(71, 85, 105)
         const lines = pdf.splitTextToSize(String(text), width)
@@ -2307,9 +2250,11 @@ export default function Results() {
       }
 
       addTitle('VITALOOP Health Report', 20)
+      if (reportMeta.source) addText(`Source: ${reportMeta.source}`)
+      if (reportMeta.date) addText(`Report date: ${reportMeta.date}`)
       addText(biomarkerSummaryHeadline, 12)
-      addTitle('1. Executive Summary', 14)
-      addText(reportFoundSummary || copy.intro)
+      addTitle('1. Status summary', 14)
+      addText(biomarkerSummaryHeadline)
       addTitle('2. Findings', 14)
       addList(priorityMarkers.slice(0, 5).map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)} (${formatRange(b, copy)})`))
       addTitle('3. Action Plan', 14)
@@ -2317,10 +2262,14 @@ export default function Results() {
       addTitle('4. Doctor Questions', 14)
       addList(reportDiscussion)
       addTitle('5. Biomarkers', 14)
-      addList(rankedBiomarkers.map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)}; reference ${formatRange(b, copy)}; status ${b.status_normalized}`))
+      addList(rankedBiomarkers.map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)}; reference ${formatRange(b, copy)}; status ${biomarkerStatusLabel(b.status_normalized, isUk)}`))
       addTitle('6. Retest Plan', 14)
       addList(reportRetest)
-      addTitle('7. Disclaimer', 14)
+      if (reportFoundSummary) {
+        addTitle('7. Report narrative (source text; not a status classification)', 11)
+        addText(reportFoundSummary)
+      }
+      addTitle('8. Disclaimer', 14)
       addText(reportSummary?.disclaimer || copy.disclaimer, 9)
       pdf.save('vitaloop-results.pdf')
     } catch (err) {
@@ -2415,6 +2364,7 @@ export default function Results() {
               <h1 className="cabinet-title max-w-3xl">
                 {biomarkerSummaryHeadline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceNarrative}</p>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
                 {reportFoundSummary || copy.intro}
               </p>
@@ -2555,7 +2505,7 @@ export default function Results() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {rankedBiomarkers.map((b, idx) => {
-                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.UNKNOWN
                   return (
                     <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
                       <td data-label={copy.biomarker} className="results-biomarker-name px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>

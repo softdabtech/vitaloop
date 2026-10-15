@@ -45,15 +45,18 @@ class _Query:
 
 
 class _FakeSupabase:
-    def __init__(self, lab_uploads, biomarkers):
+    def __init__(self, lab_uploads, biomarkers, report_versions):
         self._lab_uploads = lab_uploads
         self._biomarkers = biomarkers
+        self._report_versions = report_versions
 
     def table(self, name):
         if name == "lab_uploads":
             return _Query(self._lab_uploads)
         if name == "biomarkers":
             return _Query(self._biomarkers)
+        if name == "report_versions":
+            return _Query(self._report_versions)
         raise AssertionError(f"unexpected table requested in this fixture: {name!r}")
 
 
@@ -64,8 +67,12 @@ def _mock_progress(monkeypatch):
 
     monkeypatch.setattr(svc, "_audit_medical_read", _fake_audit)
 
-    def _apply(lab_uploads, biomarkers=None):
-        monkeypatch.setattr(svc, "_get_supabase", lambda: _FakeSupabase(lab_uploads, biomarkers or []))
+    def _apply(lab_uploads, biomarkers=None, report_versions=None):
+        monkeypatch.setattr(
+            svc,
+            "_get_supabase",
+            lambda: _FakeSupabase(lab_uploads, biomarkers or [], report_versions or []),
+        )
 
     return _apply
 
@@ -116,6 +123,84 @@ async def test_f2_latest_marker_value_selected_by_measurement_date_not_upload_or
     # The first row in clinical order must be the one carrying the NEWER test_date.
     assert result[0]["id"] == "upload-new"
     assert result[0]["biomarkers"][0]["value"] == 95, "the clinically-latest Glucose value must be from the newer lab date"
+
+
+@pytest.mark.asyncio
+async def test_history_prefers_frozen_report_biomarkers_over_mutable_marker_rows(_mock_progress):
+    upload = {
+        "id": "upload-snapshot", "created_at": "2026-10-01T09:00:00Z", "lab_name": "Snapshot",
+        "test_date": "2026-09-30", "collected_at": None, "reported_at": None,
+        "date_source": "user_provided", "date_confidence": "high",
+    }
+    current_table_biomarkers = [
+        {
+            "upload_id": "upload-snapshot", "name": "Marker", "value": 99, "unit": "U/L",
+            "status": "OPTIMAL", "ref_low": 1, "ref_high": 10,
+        },
+    ]
+    frozen_snapshot_biomarkers = [
+        {
+            "name": "Marker", "value": 12, "unit": "µmol/L", "status": "BORDERLINE",
+            "ref_low": 1, "ref_high": 10, "source_status": "BORDERLINE",
+        },
+    ]
+    _mock_progress(
+        [upload],
+        current_table_biomarkers,
+        [{
+            "upload_id": "upload-snapshot",
+            "created_at": "2026-10-02T09:00:00Z",
+            "biomarkers": frozen_snapshot_biomarkers,
+            "measurement_date": "2026-09-29",
+        }],
+    )
+
+    result = await svc.get_user_progress(user_id="user-snapshot")
+
+    assert result[0]["biomarkers"] == frozen_snapshot_biomarkers
+    assert result[0]["measurement_date"] == "2026-09-29"
+
+
+@pytest.mark.asyncio
+async def test_empty_latest_snapshot_uses_legacy_table_instead_of_older_version(_mock_progress):
+    upload = {
+        "id": "upload-empty-snapshot", "created_at": "2026-10-01T09:00:00Z", "lab_name": "Legacy",
+        "test_date": "2026-09-30", "collected_at": None, "reported_at": None,
+        "date_source": "user_provided", "date_confidence": "high",
+    }
+    current_table_biomarkers = [
+        {
+            "upload_id": "upload-empty-snapshot", "name": "Current", "value": 8, "unit": "U/L",
+            "status": "UNKNOWN", "ref_low": None, "ref_high": None,
+        },
+    ]
+    older_snapshot_biomarkers = [
+        {"name": "Obsolete", "value": 4, "unit": "U/L", "status": "OPTIMAL", "ref_low": 1, "ref_high": 10},
+    ]
+    _mock_progress(
+        [upload],
+        current_table_biomarkers,
+        [
+            {
+                "upload_id": "upload-empty-snapshot",
+                "created_at": "2026-10-02T09:00:00Z",
+                "biomarkers": [],
+                "measurement_date": "2026-09-29",
+            },
+            {
+                "upload_id": "upload-empty-snapshot",
+                "created_at": "2026-10-01T09:00:00Z",
+                "biomarkers": older_snapshot_biomarkers,
+                "measurement_date": "2026-09-28",
+            },
+        ],
+    )
+
+    result = await svc.get_user_progress(user_id="user-empty-snapshot")
+
+    assert result[0]["biomarkers"][0]["name"] == "Current"
+    assert result[0]["biomarkers"][0]["status"] == "UNKNOWN"
+    assert result[0]["measurement_date"] == "2026-09-29"
 
 
 # --- F3: undated upload never becomes "latest lab result" ----------------------

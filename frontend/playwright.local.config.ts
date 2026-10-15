@@ -4,7 +4,11 @@ const externalBaseURL = process.env.PLAYWRIGHT_EXTERNAL_BASE_URL
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['**/symptom-check-en.spec.ts', '**/onboarding-required-profile.spec.ts'],
+  testMatch: [
+    '**/symptom-check-en.spec.ts',
+    '**/onboarding-required-profile.spec.ts',
+    '**/results-status-regression.spec.ts',
+  ],
   fullyParallel: false,
   workers: 1,
   retries: 0,

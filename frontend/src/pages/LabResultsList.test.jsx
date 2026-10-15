@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFetchResultsError, canViewResults, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts, sortProgressItems } from './LabResultsList.jsx'
+import { buildFetchResultsError, canViewResults, getBiomarkerCounts, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts, sortProgressItems } from './LabResultsList.jsx'
 
 describe('LabResultsList lifecycle state', () => {
   it('keeps uploads in real clinical-date order and leaves undated records last', () => {
@@ -13,12 +13,53 @@ describe('LabResultsList lifecycle state', () => {
     expect(items.map((item) => item.id)).toEqual(['older', 'undated', 'latest'])
   })
 
+  it('uses the frozen report measurement date ahead of mutable upload date fields', () => {
+    const items = [
+      { id: 'frozen-latest', measurement_date: '2026-10-01', test_date: '2025-01-01' },
+      { id: 'older', test_date: '2026-09-01' },
+    ]
+
+    expect(sortProgressItems(items).map((item) => item.id)).toEqual(['frozen-latest', 'older'])
+  })
+
   it('keeps ready results viewable with biomarker counts', () => {
     const item = { status: 'done', biomarkers: [{ status: 'OPTIMAL' }] }
 
     expect(lifecycleState(item)).toBe('ready')
     expect(canViewResults(item)).toBe(true)
     expect(shouldShowBiomarkerCounts(item)).toBe(true)
+  })
+
+  it.each([
+    [
+      'latest UNKNOWN and UNEVALUATED snapshots',
+      [
+        { status: 'OPTIMAL', value: 5, ref_low: 1, ref_high: 10 },
+        { status: 'UNKNOWN', value: 5, ref_low: 1, ref_high: 10 },
+        { status: 'UNEVALUATED', value: 5, ref_low: 1, ref_high: 10 },
+      ],
+      { total: 3, optimal: 1, borderline: 0, deficient: 0, elevated: 0, unknown: 2 },
+    ],
+    [
+      'historical BORDERLINE snapshot',
+      [
+        { status: 'BORDERLINE', value: 5, ref_low: 1, ref_high: 10 },
+        { status: 'NORMAL', value: 5, ref_low: 1, ref_high: 10 },
+      ],
+      { total: 2, optimal: 1, borderline: 1, deficient: 0, elevated: 0, unknown: 0 },
+    ],
+    [
+      'historical missing-reference snapshot',
+      [
+        { status: 'OPTIMAL', value: 5 },
+        { status: 'OPTIMAL', value: 4, ref_low: 5 },
+        { status: 'OPTIMAL', value: 12, ref_high: 10 },
+        { status: 'DEFICIENT' },
+      ],
+      { total: 4, optimal: 0, borderline: 0, deficient: 2, elevated: 1, unknown: 1 },
+    ],
+  ])('classifies %s with the shared evidence-aware contract', (_name, biomarkers, expected) => {
+    expect(getBiomarkerCounts({ biomarkers })).toEqual(expected)
   })
 
   it.each([
