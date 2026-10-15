@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -30,7 +31,10 @@ def test_p4_first_result_layer_has_all_five_user_questions_in_both_locales():
 
 
 def test_p4_overview_uses_grounded_contract_and_caps_actions_at_three():
-    assert "import { buildResultOverview }" in RESULTS
+    assert re.search(
+        r"import\s*\{[^}]*\bbuildResultOverview\b[^}]*\}\s*from\s*['\"]\.\./lib/resultOverview\.js['\"]",
+        RESULTS,
+    )
     assert "groundedNarrative: finalAnalysis?.grounded_ai_narrative" in RESULTS
     assert "caseSynthesis: finalAnalysis?.case_synthesis" in RESULTS
     assert "actions: dedupeItems" in ADAPTER
