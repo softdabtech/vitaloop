@@ -31,7 +31,7 @@ import {
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
-import { buildResultOverview } from '../lib/resultOverview.js'
+import { buildResultOverview, isBiomarkerCountSummary } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
@@ -58,6 +58,8 @@ const STATUS_ALIAS_MAP = {
   OPTIMAL: 'OPTIMAL',
   NORMAL: 'OPTIMAL',
   N: 'OPTIMAL',
+  IN_RANGE: 'OPTIMAL',
+  'IN RANGE': 'OPTIMAL',
   BORDERLINE: 'BORDERLINE',
   'LOW NORMAL': 'BORDERLINE',
   'HIGH NORMAL': 'BORDERLINE',
@@ -197,6 +199,8 @@ const RESULTS_COPY = {
     markersRead: 'markers read',
     watchList: 'watch list',
     outOfRange: 'out of range',
+    biomarkerSummary: (total, review, optimal, unknown) => `${total} biomarkers found. ${review} need review, ${optimal} are currently in range, ${unknown} could not be classified.`,
+    classificationUnavailable: 'Biomarker classification is unavailable.',
     medicalSignal: 'Medical review signal',
     urgentSignal: 'Prompt medical review signal',
     urgentFallback: 'Some values in this report may require prompt medical review. Contact a qualified clinician or urgent care if symptoms are severe or worsening.',
@@ -213,7 +217,7 @@ const RESULTS_COPY = {
     retest: 'Retest plan',
     retestFallback: 'Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.',
     tableTitle: 'Full biomarker table',
-    tableSummary: (optimal, watch, out) => `${optimal} in range · ${watch} worth watching · ${out} out of range`,
+    tableSummary: (optimal, watch, out, unknown) => `${optimal} in range · ${watch} worth watching · ${out} out of range · ${unknown} not classified`,
     biomarker: 'Biomarker',
     value: 'Value',
     ref: 'Reference',
@@ -418,6 +422,8 @@ const RESULTS_COPY = {
     markersRead: 'показників',
     watchList: 'спостерігати',
     outOfRange: 'поза референсом',
+    biomarkerSummary: (total, review, optimal, unknown) => `Знайдено ${total} показників. ${review} потребують перегляду, ${optimal} наразі у референсі, ${unknown} не класифіковано.`,
+    classificationUnavailable: 'Класифікація показників недоступна.',
     medicalSignal: 'Сигнал для медичного перегляду',
     urgentSignal: 'Сигнал для швидкого медичного перегляду',
     urgentFallback: 'Деякі значення у звіті можуть потребувати швидкого медичного перегляду. Зверніться до лікаря або невідкладної допомоги, якщо симптоми виражені чи погіршуються.',
@@ -434,7 +440,7 @@ const RESULTS_COPY = {
     retest: 'План повторної перевірки',
     retestFallback: 'Повторна перевірка залежить від показника, симптомів і рекомендацій лікаря. Збережіть звіт для порівняння.',
     tableTitle: 'Повна таблиця показників',
-    tableSummary: (optimal, watch, out) => `${optimal} у референсі · ${watch} потребують спостереження · ${out} поза референсом`,
+    tableSummary: (optimal, watch, out, unknown) => `${optimal} у референсі · ${watch} потребують спостереження · ${out} поза референсом · ${unknown} не класифіковано`,
     biomarker: 'Показник',
     value: 'Значення',
     ref: 'Референс',
@@ -656,9 +662,41 @@ function inferStatusFromRange(biomarker) {
 }
 
 export function normalizeBiomarkerStatus(biomarker) {
-  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return 'UNKNOWN'
+  const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
+  const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
+  const low = hasLow ? Number(biomarker.ref_low) : null
+  const high = hasHigh ? Number(biomarker.ref_high) : null
+  const hasInvalidBounds = (hasLow && !Number.isFinite(low))
+    || (hasHigh && !Number.isFinite(high))
+    || (hasLow && hasHigh && high <= low)
+  if (hasInvalidBounds || (!hasLow && !hasHigh)) return 'UNKNOWN'
+
   const raw = String(biomarker?.status || '').trim().toUpperCase()
-  return STATUS_ALIAS_MAP[raw] || inferStatusFromRange(biomarker)
+  if (raw === 'UNKNOWN' || raw === 'UNEVALUATED') return 'UNKNOWN'
+
+  const value = Number(biomarker?.value)
+  if (hasLow !== hasHigh) {
+    if (!Number.isFinite(value)) return 'UNKNOWN'
+    if (hasLow && value < low) return 'DEFICIENT'
+    if (hasHigh && value > high) return 'ELEVATED'
+    return 'UNKNOWN'
+  }
+
+  if (Object.hasOwn(STATUS_ALIAS_MAP, raw)) return STATUS_ALIAS_MAP[raw]
+  return raw ? 'UNKNOWN' : inferStatusFromRange(biomarker)
+}
+
+export function summarizeBiomarkerStatuses(biomarkers = []) {
+  const counts = { total: biomarkers.length, optimal: 0, borderline: 0, deficient: 0, elevated: 0, unknown: 0 }
+  for (const biomarker of biomarkers) {
+    const status = normalizeBiomarkerStatus(biomarker)
+    if (status === 'OPTIMAL') counts.optimal += 1
+    else if (status === 'BORDERLINE') counts.borderline += 1
+    else if (status === 'DEFICIENT') counts.deficient += 1
+    else if (status === 'ELEVATED') counts.elevated += 1
+    else counts.unknown += 1
+  }
+  return counts
 }
 
 function scoreStatus(status) {
@@ -2152,12 +2190,23 @@ export default function Results() {
   )
 
   const priorityMarkers = rankedBiomarkers.filter((b) => !['OPTIMAL', 'UNKNOWN'].includes(b.status_normalized)).slice(0, 5)
-  const optimalCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
-  const watchCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
-  const outOfRangeCount = normalizedBiomarkers.filter((b) => ['DEFICIENT', 'ELEVATED'].includes(b.status_normalized)).length
+  const biomarkerCounts = summarizeBiomarkerStatuses(normalizedBiomarkers)
+  const { optimal: optimalCount, borderline: watchCount, deficient, elevated } = biomarkerCounts
+  const outOfRangeCount = deficient + elevated
+  const biomarkerSummaryHeadline = biomarkerCounts.total
+    ? copy.biomarkerSummary(
+      biomarkerCounts.total,
+      watchCount + outOfRangeCount,
+      optimalCount,
+      biomarkerCounts.unknown,
+    )
+    : copy.classificationUnavailable
 
   const reportSummary = knowledgeReport?.summary || null
   const reportFound = knowledgeReport?.what_was_found || null
+  const reportFoundSummary = typeof reportFound?.summary === 'string' && !isBiomarkerCountSummary(reportFound.summary)
+    ? reportFound.summary
+    : null
   const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
   const reportMeta = reportContext(finalAnalysis)
   const reportMetaLabels = isUk
@@ -2209,6 +2258,7 @@ export default function Results() {
     knowledgeReport,
     protocol,
     priorityMarkers,
+    biomarkerSummaryText: biomarkerSummaryHeadline,
   })
   const authoritativeActions = actionPlanItems(actionPlanByRole)
   const presentationOverview = {
@@ -2257,9 +2307,9 @@ export default function Results() {
       }
 
       addTitle('VITALOOP Health Report', 20)
-      addText(reportSummary?.headline || copy.fallbackHeadline, 12)
+      addText(biomarkerSummaryHeadline, 12)
       addTitle('1. Executive Summary', 14)
-      addText(reportFound?.summary || copy.intro)
+      addText(reportFoundSummary || copy.intro)
       addTitle('2. Findings', 14)
       addList(priorityMarkers.slice(0, 5).map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)} (${formatRange(b, copy)})`))
       addTitle('3. Action Plan', 14)
@@ -2363,10 +2413,10 @@ export default function Results() {
                 {copy.healthSummary}
               </div>
               <h1 className="cabinet-title max-w-3xl">
-                {reportSummary?.headline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
+                {biomarkerSummaryHeadline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                {reportFound?.summary || copy.intro}
+                {reportFoundSummary || copy.intro}
               </p>
               {(reportMeta.source || formattedReportDate) && (
                 <dl className="mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
@@ -2477,7 +2527,7 @@ export default function Results() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
-              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
+              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount, biomarkerCounts.unknown)}</p>
             </div>
             <FeatureGate
               feature="advanced_protocol"

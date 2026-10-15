@@ -13,6 +13,7 @@ _CANONICAL_MAP и квалификаторной логики), а unit-норм
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
@@ -171,28 +172,53 @@ def _status_for_value(
     if has_reference and not is_verified_fallback:
         return "UNEVALUATED"
 
+    if not math.isfinite(value):
+        return "UNKNOWN"
+
+    raw_status = str(raw_status or "").strip().upper()
+    if raw_status in {"UNKNOWN", "UNEVALUATED"}:
+        return raw_status
+
     # Normal status computation when reference is lab-provided or verified
     if ref_low is not None and value < ref_low:
         return "DEFICIENT"
     if ref_high is not None and value > ref_high:
         return "ELEVATED"
-    if ref_low is not None or ref_high is not None:
+    if ref_low is not None and ref_high is not None:
+        if raw_status == "BORDERLINE":
+            return "BORDERLINE"
         return "OPTIMAL"
+    if ref_low is not None or ref_high is not None:
+        return "UNKNOWN"
 
     # No reference range at all
     if not has_reference:
         # Try to map from raw status if provided
-        status = str(raw_status or "").strip().upper()
+        status = raw_status
         mapped = _STATUS_ALIASES.get(status)
+        if status == "OPTIMAL" or mapped == "OPTIMAL":
+            return "UNKNOWN"
         if mapped:
             return mapped
         if status in STATUS_PRIORITY:
             return status
         return "UNKNOWN"
 
-    # Legacy path: has_reference=True but both bounds are None
-    status = str(raw_status or "").strip().upper()
-    return _STATUS_ALIASES.get(status, status if status in STATUS_PRIORITY else "BORDERLINE")
+    return "UNKNOWN"
+
+
+def _reference_bound(value: Any) -> tuple[float | None, bool]:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None, False
+    if isinstance(value, bool):
+        return None, True
+    try:
+        bound = float(value)
+    except (TypeError, ValueError):
+        return None, True
+    if not math.isfinite(bound):
+        return None, True
+    return bound, False
 
 
 def _iso_or_none(value: Any) -> str | None:
@@ -276,26 +302,40 @@ def normalize_biomarkers(
         incoming_reference_source = item.get("reference_source")
         incoming_status = str(item.get("status") or "").strip().upper()
         incoming_unevaluated_reason = item.get("unevaluated_reason")
-        ref_low = item.get("ref_low") or item.get("reference_low")
-        ref_high = item.get("ref_high") or item.get("reference_high")
+        raw_ref_low = item.get("ref_low") if item.get("ref_low") not in (None, "") else item.get("reference_low")
+        raw_ref_high = item.get("ref_high") if item.get("ref_high") not in (None, "") else item.get("reference_high")
+        ref_low, invalid_low = _reference_bound(raw_ref_low)
+        ref_high, invalid_high = _reference_bound(raw_ref_high)
+        has_invalid_reference = invalid_low or invalid_high or (
+            ref_low is not None and ref_high is not None and ref_low >= ref_high
+        )
         if ref_low in (None, "") or ref_high in (None, ""):
             parsed_low, parsed_high = _parse_reference_range(item.get("reference_range"))
             ref_low = ref_low if ref_low not in (None, "") else parsed_low
             ref_high = ref_high if ref_high not in (None, "") else parsed_high
-        ref_low = float(ref_low) if ref_low not in (None, "") else None
-        ref_high = float(ref_high) if ref_high not in (None, "") else None
+            if not has_invalid_reference:
+                ref_low, invalid_low = _reference_bound(ref_low)
+                ref_high, invalid_high = _reference_bound(ref_high)
+                has_invalid_reference = invalid_low or invalid_high or (
+                    ref_low is not None and ref_high is not None and ref_low >= ref_high
+                )
         ref_low, ref_high = _convert_reference_range_for_unit(canonical, ref_low, ref_high, raw_unit)
-        reference_source = "lab_report" if (ref_low is not None or ref_high is not None) else None
+        reference_source = "lab_report" if (
+            raw_ref_low not in (None, "") or raw_ref_high not in (None, "") or item.get("reference_range")
+        ) else None
         is_verified_fallback = True  # Default: lab ranges are always verified
-        if reference_source is None:
+        if reference_source is None and not has_invalid_reference:
             ref_low, ref_high, is_verified_fallback = reference_range_fallback(canonical, normalized_unit, sex=sex, age=age)
             if ref_low is not None or ref_high is not None:
                 # Fallback range found, but track whether it's verified
                 reference_source = "vitaloop_reference_table"
                 # is_verified_fallback is already set from reference_range_fallback()
         has_reference = reference_source is not None
-        status = _status_for_value(
-            numeric_value, ref_low, ref_high, item.get("status"),
+        status = "UNKNOWN" if has_invalid_reference else _status_for_value(
+            numeric_value,
+            ref_low,
+            ref_high,
+            item.get("status"),
             has_reference=has_reference,
             is_verified_fallback=is_verified_fallback,
         )

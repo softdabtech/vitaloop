@@ -1,4 +1,5 @@
 from app.services.knowledge.report import build_knowledge_report
+from app.services.clinical_engine.normalizer import normalize_biomarkers
 
 
 def test_build_knowledge_report_creates_user_facing_sections():
@@ -94,3 +95,70 @@ def test_build_knowledge_report_supports_ukrainian_locale():
     assert report["action_plan"][0]["title"] == "Обговоріть подальшу перевірку статусу заліза"
     assert report["doctor_discussion"][0].startswith("Обговоріть")
     assert report["retest_plan"][0]["marker"] == "Феритин"
+
+
+def test_normalizer_requires_valid_support_for_optimal_and_preserves_one_sided_limits():
+    cases = [
+        ({"ref_low": 1, "ref_high": 10, "status": "OPTIMAL"}, "OPTIMAL"),
+        ({"ref_low": 0, "ref_high": 10, "status": "OPTIMAL"}, "OPTIMAL"),
+        ({"status": "OPTIMAL"}, "UNKNOWN"),
+        ({"ref_low": "invalid", "ref_high": 10, "status": "OPTIMAL"}, "UNKNOWN"),
+        ({"ref_low": "NaN", "ref_high": 10, "status": "OPTIMAL"}, "UNKNOWN"),
+        ({"ref_low": 10, "ref_high": 1, "status": "OPTIMAL"}, "UNKNOWN"),
+        ({"ref_low": 5, "status": "OPTIMAL", "value": 4}, "DEFICIENT"),
+        ({"ref_low": 5, "status": "OPTIMAL", "value": 6}, "UNKNOWN"),
+        ({"ref_high": 5, "status": "OPTIMAL", "value": 6}, "ELEVATED"),
+        ({"ref_high": 5, "status": "OPTIMAL", "value": 4}, "UNKNOWN"),
+        ({"ref_low": 1, "ref_high": 10, "status": "UNKNOWN"}, "UNKNOWN"),
+        ({"ref_low": 1, "ref_high": 10, "status": "UNEVALUATED"}, "UNEVALUATED"),
+        ({"ref_low": 1, "ref_high": 10, "status": "BORDERLINE"}, "BORDERLINE"),
+    ]
+
+    for index, (reference, expected_status) in enumerate(cases):
+        result = normalize_biomarkers(
+            [{
+                "name": f"Unlisted analyte {index}",
+                "value": reference.get("value", 5),
+                "unit": "mg/L",
+                **reference,
+            }]
+        )
+        assert result[0]["status"] == expected_status
+
+
+def test_report_counts_incomplete_reference_snapshots_as_unknown_not_in_range():
+    biomarkers = [
+        {"name": "Complete", "value": 5, "status": "OPTIMAL", "ref_low": 1, "ref_high": 10},
+        {"name": "Missing", "value": 5, "status": "OPTIMAL"},
+        {"name": "Invalid", "value": 5, "status": "OPTIMAL", "ref_low": "bad", "ref_high": 10},
+        {"name": "One-sided", "value": 5, "status": "OPTIMAL", "ref_low": 1},
+        {"name": "One-sided elevated", "value": 12, "status": "ELEVATED", "ref_high": 10},
+        {"name": "Unknown", "value": 5, "status": "UNKNOWN", "ref_low": 1, "ref_high": 10},
+        {"name": "Unevaluated", "value": 5, "status": "UNEVALUATED", "ref_low": 1, "ref_high": 10},
+        {"name": "Borderline", "value": 5, "status": "BORDERLINE", "ref_low": 1, "ref_high": 10},
+    ]
+
+    report = build_knowledge_report(biomarkers=biomarkers, knowledge_evaluation={})
+
+    assert report["what_was_found"]["counts"] == {
+        "total": 8,
+        "optimal": 1,
+        "borderline": 1,
+        "deficient": 0,
+        "elevated": 1,
+        "unknown": 5,
+    }
+
+
+def test_report_preserves_explicit_abnormal_signals_without_reference_bounds():
+    biomarkers = [
+        {"name": f"Flagged marker {index}", "value": 1, "status": "ELEVATED"}
+        for index in range(20)
+    ]
+
+    report = build_knowledge_report(biomarkers=biomarkers, knowledge_evaluation={})
+
+    counts = report["what_was_found"]["counts"]
+    assert counts["elevated"] == 20
+    assert counts["unknown"] == 0
+    assert len(report["what_was_found"]["flagged_markers"]) == 20
