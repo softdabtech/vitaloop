@@ -209,11 +209,11 @@ def _report_status(item: Dict[str, Any]) -> str:
     has_high = item.get("ref_high") not in (None, "")
 
     if (has_low and low is None) or (has_high and high is None):
-        return "UNKNOWN"
+        return status if status in {"DEFICIENT", "ELEVATED", "BORDERLINE"} else "UNKNOWN"
     if low is not None and high is not None and low >= high:
-        return "UNKNOWN"
+        return status if status in {"DEFICIENT", "ELEVATED", "BORDERLINE"} else "UNKNOWN"
     if low is None and high is None:
-        return "UNKNOWN"
+        return status if status in {"DEFICIENT", "ELEVATED", "BORDERLINE"} else "UNKNOWN"
     if low is None or high is None:
         if value is None:
             return "UNKNOWN"

@@ -148,3 +148,17 @@ def test_report_counts_incomplete_reference_snapshots_as_unknown_not_in_range():
         "elevated": 1,
         "unknown": 5,
     }
+
+
+def test_report_preserves_explicit_abnormal_signals_without_reference_bounds():
+    biomarkers = [
+        {"name": f"Flagged marker {index}", "value": 1, "status": "ELEVATED"}
+        for index in range(20)
+    ]
+
+    report = build_knowledge_report(biomarkers=biomarkers, knowledge_evaluation={})
+
+    counts = report["what_was_found"]["counts"]
+    assert counts["elevated"] == 20
+    assert counts["unknown"] == 0
+    assert len(report["what_was_found"]["flagged_markers"]) == 20
