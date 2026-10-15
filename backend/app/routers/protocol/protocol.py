@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -20,6 +21,7 @@ from app.services.safety_state_resolver import (
     resolve_biomarker_safety_state,
     format_safety_state_for_response,
 )
+from app.services.safety import sanitize_protocol_for_safety, validate_protocol
 from app.services.symptom_snapshot import (
     load_latest_eligible_symptom_snapshot,
     symptoms_from_snapshot,
@@ -29,6 +31,73 @@ from app.utils.validation import normalize_symptoms as _normalize_symptoms
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
+
+
+def _is_review_only_recommendation(rec: dict) -> bool:
+    return bool(
+        rec.get("original_dosage_hidden")
+        or str(rec.get("timing") or "").strip().lower() == "clinician_review"
+        or str(rec.get("category") or "").strip().lower() in {"profile", "nutrition", "supplement_safety"}
+    )
+
+
+def _sanitize_and_validate_recommendations(
+    recommendations: object,
+    *,
+    user_profile: dict,
+    user_id: str,
+    upload_id: str,
+) -> list[dict]:
+    if not isinstance(recommendations, list) or not recommendations or any(not isinstance(rec, dict) for rec in recommendations):
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Protocol recommendations are empty or invalid", "code": "PROTOCOL_INVALID"},
+        )
+
+    sanitized = sanitize_protocol_for_safety(
+        deepcopy(recommendations),
+        profile=user_profile,
+        locale="en",
+        require_clinician_review_for_supplement_dosing=True,
+    )
+    sanitized = [rec for rec in sanitized if not rec.get("withheld_for_safety")]
+    if not sanitized:
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Protocol recommendations were withheld for safety", "code": "PROTOCOL_UNSAFE"},
+        )
+    try:
+        validation = validate_protocol(sanitized, profile=user_profile, locale="en")
+    except Exception as exc:
+        logger.error(
+            "protocol_validation_failed upload_id=%s user_id=%s error=%s",
+            upload_id,
+            user_id,
+            repr(exc),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={"detail": "Protocol safety validation is unavailable", "code": "PROTOCOL_VALIDATION_FAILED"},
+        ) from exc
+
+    if (
+        not isinstance(validation, dict)
+        or validation.get("status") not in {"approved", "approved_with_warnings"}
+        or validation.get("warnings")
+        or validation.get("blocked_items")
+    ):
+        logger.warning("protocol_rejected_by_safety_validation upload_id=%s user_id=%s", upload_id, user_id)
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Protocol recommendations did not pass safety validation", "code": "PROTOCOL_UNSAFE"},
+        )
+
+    for rec in sanitized:
+        if _is_review_only_recommendation(rec):
+            rec["iherb_search"] = ""
+            rec.pop("iherb_url", None)
+    return sanitized
 
 
 class ProtocolRequest(BaseModel):
@@ -80,6 +149,13 @@ async def create_protocol(
         # P2 FIX: Get user profile and biomarkers to add unified_safety_state even to cached protocol
         biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
         user_profile = await get_user_profile(user_id) or {}
+        response_dict = deepcopy(existing_protocol)
+        response_dict["recommendations"] = _sanitize_and_validate_recommendations(
+            response_dict.get("recommendations"),
+            user_profile=user_profile,
+            user_id=user_id,
+            upload_id=upload_id,
+        )
         unified_safety_state = None
         if biomarkers:
             try:
@@ -87,7 +163,6 @@ async def create_protocol(
                 unified_safety_state = format_safety_state_for_response(safety_state)
             except Exception as exc:
                 logger.warning("resolve_safety_state_failed protocol_cached upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
-        response_dict = dict(existing_protocol)
         response_dict["unified_safety_state"] = unified_safety_state
         return response_dict
 
@@ -142,8 +217,23 @@ async def create_protocol(
             detail={"detail": "Protocol recommendations are empty", "code": "PROTOCOL_EMPTY"},
         )
 
+    if not isinstance(recommendations, list) or any(not isinstance(rec, dict) for rec in recommendations):
+        raise HTTPException(
+            status_code=502,
+            detail={"detail": "Protocol generation returned an invalid response", "code": "PROTOCOL_INVALID"},
+        )
+
+    recommendations = _sanitize_and_validate_recommendations(
+        recommendations,
+        user_profile=user_profile,
+        user_id=user_id,
+        upload_id=upload_id,
+    )
+
     # Enrich with iHerb affiliate link
     for rec in recommendations:
+        if _is_review_only_recommendation(rec):
+            continue
         search_term = rec.get("iherb_search") or rec.get("supplement")
         rec["iherb_url"] = build_iherb_url(search_term or "supplement")
 

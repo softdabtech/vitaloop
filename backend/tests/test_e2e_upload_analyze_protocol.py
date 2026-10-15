@@ -115,7 +115,15 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
                 "priority": "HIGH",
                 "rationale": "Vitamin D is below reference range.",
                 "iherb_search": "Vitamin D3 5000 IU",
-            }
+            },
+            {
+                "supplement": "Targeted supplements only after confirmation",
+                "dosage": "Discuss any dosing with a qualified clinician after confirmatory labs.",
+                "timing": "clinician_review",
+                "priority": "MEDIUM",
+                "rationale": "Dosing depends on clinical context and contraindications.",
+                "iherb_search": "",
+            },
         ]
 
     async def fake_save_protocol(user_id, upload_id, recommendations, prompt_version=None):
@@ -239,7 +247,9 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             assert protocol_json["user_id"] == fake_user_id
             assert protocol_json["upload_id"] == analyze_json["upload_id"]
             assert len(protocol_json["recommendations"]) == 1
-            assert "iherb_url" in protocol_json["recommendations"][0]
+            protocol_recommendation = protocol_json["recommendations"][0]
+            assert protocol_recommendation["timing"] == "clinician_review"
+            assert "iherb_url" not in protocol_recommendation
             assert state["protocol_profiles"] == [{"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}]
 
             protocol_second_response = await client.post(

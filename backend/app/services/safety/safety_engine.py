@@ -481,6 +481,25 @@ def _clinician_review_dosage_text(locale: str) -> str:
     return "Confirm dosing with a qualified clinician based on age, weight, labs, and current supplements."
 
 
+def _nested_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return " ".join(_nested_text(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_nested_text(item) for item in value)
+    return value if isinstance(value, str) else ""
+
+
+_UNSUPPORTED_SUPPLEMENT_INDICATION = re.compile(
+    r"\b(?:for|treat(?:s|ing|ment)?|correct(?:s|ing|ion)?|replet(?:e|ion|ing)|due to|because of)"
+    r"\s+(?:a\s+)?(?:confirmed\s+)?(?:vitamin\s+)?(?:d\s+)?deficien(?:cy|t)\b|"
+    r"\b(?:vitamin\s+d(?:\s*3)?|d3|iron|vitamin\s+b12|b12|folate|folic\s+acid|magnesium|potassium)"
+    r"\s+(?:(?:is|has)\s+)?deficien(?:cy|t)\b|"
+    r"\bdeficien(?:cy|t)\s+(?:of|in)\s+(?:vitamin\s+d(?:\s*3)?|d3|iron|vitamin\s+b12|b12|"
+    r"folate|folic\s+acid|magnesium|potassium)\b",
+    re.IGNORECASE,
+)
+
+
 def _supplement_dosage_safety_note(locale: str) -> str:
     if str(locale or "").lower().startswith("uk"):
         return "Для дитячого або вагітного контексту VITALOOP не показує самостійні дозування добавок."
@@ -656,7 +675,18 @@ def _sanitize_protocol_item(
     *,
     profile: Dict[str, Any] | None = None,
     locale: str = "en",
+    require_clinician_review_for_supplement_dosing: bool = False,
 ) -> tuple[Dict[str, Any], bool]:
+    if require_clinician_review_for_supplement_dosing:
+        nested_text = _nested_text(item)
+        if _DOSAGE_PATTERN.search(nested_text) or _UNSUPPORTED_SUPPLEMENT_INDICATION.search(nested_text):
+            return {
+                **item,
+                "withheld_for_safety": True,
+                "original_content_hidden": True,
+                "requires_doctor": True,
+            }, True
+
     sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
     supplement_key = _contains_sensitive_supplement(item)
     had_prescriptive_dosage = _contains_explicit_dosage(item)
@@ -671,7 +701,10 @@ def _sanitize_protocol_item(
             changed = True
 
     supplement_key = supplement_key or _contains_sensitive_supplement(sanitized)
-    if supplement_key and (had_prescriptive_dosage or _contains_explicit_dosage(sanitized)):
+    if (
+        supplement_key
+        and (had_prescriptive_dosage or _contains_explicit_dosage(sanitized))
+    ):
         sanitized["original_dosage_hidden"] = True
         sanitized["dosage"] = _clinician_review_dosage_text(locale)
         sanitized["requires_doctor"] = True
@@ -695,6 +728,7 @@ def sanitize_protocol_for_safety(
     *,
     profile: Dict[str, Any] | None = None,
     locale: str = "en",
+    require_clinician_review_for_supplement_dosing: bool = False,
 ) -> Any:
     """
     Enforce the safety engine's existing blocked-content semantics on individual
@@ -706,6 +740,9 @@ def sanitize_protocol_for_safety(
     2. Self-directed supplement dosing in a pediatric/pregnancy context (the
        existing `..._dosage_blocked_for_sensitive_context` blocker) is redacted,
        as before — unchanged, still context-gated.
+    3. Callers without verified protocol context may opt into
+       `require_clinician_review_for_supplement_dosing`; quantified supplement
+       or explicit deficiency-indication content is withheld.
 
     Both reuse the exact same detectors already used to compute blocked_items
     in validate_recommendation() (_diagnosis_like_text, _contains_sensitive_
@@ -715,7 +752,12 @@ def sanitize_protocol_for_safety(
     def sanitize_item(item: Any) -> Any:
         if not isinstance(item, dict):
             return item
-        sanitized, changed = _sanitize_protocol_item(item, profile=profile, locale=locale)
+        sanitized, changed = _sanitize_protocol_item(
+            item,
+            profile=profile,
+            locale=locale,
+            require_clinician_review_for_supplement_dosing=require_clinician_review_for_supplement_dosing,
+        )
         return sanitized if changed else item
 
     if isinstance(protocol, dict):
