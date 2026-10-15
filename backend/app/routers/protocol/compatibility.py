@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request
 
 from app.dependencies import get_current_user, require_active_subscription
 from app.services.assignment_service import AssignmentService
-from app.services.lab_date_extraction import choose_measurement_date
+from app.services.lab_date_extraction import choose_report_measurement_date
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
@@ -61,7 +61,6 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     user_id = current_user.get("sub")
 
     upload = await assert_upload_belongs_to_user(upload_id, user_id)
-    upload_measurement_date = choose_measurement_date(upload or {})
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = (protocol_row or {}).get("recommendations") or []
@@ -82,6 +81,15 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
             repr(exc),
         )
         report_version = None
+
+    input_snapshot = (report_version or {}).get("input_snapshot")
+    snapshot_metadata = input_snapshot.get("metadata") if isinstance(input_snapshot, dict) else None
+    frozen_measurement_date = (
+        snapshot_metadata.get("measurement_date")
+        if isinstance(snapshot_metadata, dict)
+        else None
+    )
+    upload_measurement_date = choose_report_measurement_date(upload or {}, frozen_measurement_date)
 
     # Stage 2G: a completed analysis with a persisted report version is an
     # immutable historical artifact — serve it from the frozen row, never

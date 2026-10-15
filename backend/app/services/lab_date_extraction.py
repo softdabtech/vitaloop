@@ -393,3 +393,13 @@ def choose_measurement_date(row: dict[str, Any]) -> str | None:
         if parsed:
             return parsed.isoformat()
     return None
+
+
+def choose_report_measurement_date(
+    upload: dict[str, Any],
+    frozen_measurement_date: Any = None,
+) -> str | None:
+    """Resolve the same frozen-first date used in historical report lists."""
+    if frozen_measurement_date:
+        return str(frozen_measurement_date)
+    return choose_measurement_date(upload)
