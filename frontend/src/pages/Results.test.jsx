@@ -7,11 +7,13 @@ import {
   formatRange,
   normalizeBiomarkerStatus,
   reportContext,
+  formatReportDate,
   safetyStatusLabel,
   summarizeBiomarkerStatuses,
 } from './Results.jsx'
 import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
 import { reliableClinicalDate } from '../lib/retest.js'
+import { formatPdfComparisonOperators } from '../lib/reportPdf.js'
 
 afterEach(cleanup)
 
@@ -98,6 +100,21 @@ describe('Results persisted retest presentation', () => {
     expect(reportContext({ metadata: { source: 'b2c_file' } }).source).toBe('')
   })
 
+  it('uses the verified legacy upload measurement date but never its creation date', () => {
+    expect(reportContext({
+      upload: { measurement_date: '2022-01-04', created_at: '2026-10-15T12:00:00Z' },
+    }).date).toBe('2022-01-04')
+    expect(reportContext({
+      upload: { created_at: '2026-10-15T12:00:00Z' },
+    }).date).toBe('')
+  })
+
+  it('formats a verified date consistently and labels missing or invalid dates explicitly', () => {
+    expect(formatReportDate('2022-01-04', 'en-US', 'Unknown date')).toBe('Jan 4, 2022')
+    expect(formatReportDate('', 'en-US', 'Unknown date')).toBe('Unknown date')
+    expect(formatReportDate('2022-02-30', 'en-US', 'Unknown date')).toBe('Unknown date')
+  })
+
   it('explains a completed marker and its distinct future retest', () => {
     render(
       <TestingPlanSection
@@ -115,6 +132,11 @@ describe('Results persisted retest presentation', () => {
   })
 
   describe('Results uncertainty and narrative presentation', () => {
+    it('preserves all comparison operators in exported reference text', () => {
+      expect(formatPdfComparisonOperators('≤ 5 µmol/L; ≥ 2; < 7; > 1'))
+        .toBe('<= 5 µmol/L; >= 2; < 7; > 1')
+    })
+
     it('keeps missing or unevaluated biomarkers fail-closed with clear wording', () => {
       expect(normalizeBiomarkerStatus({ value: 4, status: 'UNEVALUATED', ref_low: null, ref_high: null })).toBe('UNKNOWN')
       expect(normalizeBiomarkerStatus({ value: 4, status: 'UNKNOWN', ref_low: 1, ref_high: 10 })).toBe('UNKNOWN')
@@ -132,6 +154,10 @@ describe('Results persisted retest presentation', () => {
       expect(formatRange({ ref_low: null, ref_high: null })).toBe('Reference range could not be verified')
       expect(formatRange({ ref_low: 5, ref_high: null, unit: 'µmol/L' })).toBe('≥ 5 µmol/L')
       expect(formatRange({ ref_low: null, ref_high: 10, unit: 'µmol/L' })).toBe('≤ 10 µmol/L')
+      expect(formatRange({ ref_high: 5, reference_range: '≤ 5', unit: 'µmol/L' })).toBe('≤ 5 µmol/L')
+      expect(formatRange({ ref_low: 5, reference_range: '≥ 5', unit: 'µmol/L' })).toBe('≥ 5 µmol/L')
+      expect(formatRange({ ref_high: 5, reference_range: '< 5 µmol/L', unit: 'µmol/L' })).toBe('< 5 µmol/L')
+      expect(formatRange({ ref_low: 5, reference_range: '> 5 µmol/L', unit: 'µmol/L' })).toBe('> 5 µmol/L')
     })
 
     it('normalizes status aliases while preserving borderline as a separate category', () => {

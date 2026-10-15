@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { embedReportFonts } from '../reportPdf.js'
+import { embedReportFonts, formatPdfComparisonOperators } from '../reportPdf.js'
 
 describe('report PDF font embedding', () => {
   it('embeds regular and bold Noto Sans fonts for Unicode units and status labels', async () => {
@@ -26,5 +26,10 @@ describe('report PDF font embedding', () => {
       { addFileToVFS: vi.fn(), addFont: vi.fn() },
       async () => ({ ok: false, status: 404 }),
     )).rejects.toThrow('Failed to load report font: NotoSans-Regular.ttf (404)')
+  })
+
+  it('preserves inclusive and strict range operators in PDF-safe text', () => {
+    expect(formatPdfComparisonOperators('≤ 5 µmol/L; ≥ 2; < 7; > 1'))
+      .toBe('<= 5 µmol/L; >= 2; < 7; > 1')
   })
 })

@@ -38,7 +38,7 @@ import {
   normalizeBiomarkerStatus,
   summarizeBiomarkerStatuses,
 } from '../lib/biomarkerStatus.js'
-import { embedReportFonts } from '../lib/reportPdf.js'
+import { embedReportFonts, formatPdfComparisonOperators } from '../lib/reportPdf.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
 import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
@@ -139,6 +139,7 @@ const RESULTS_ADDED_COPY = [
   ['narrativeNoChange', 'No verified change over time was available for this report.', 'Перевірених змін у часі для цього звіту не знайдено.'],
   ['progressPatternFallback', 'Pattern insight', 'Виявлена закономірність'],
   ['noRange', 'Reference range could not be verified', 'Референсний діапазон не вдалося перевірити'],
+  ['unknownReportDate', 'Unknown date', 'Невідома дата'],
 ]
 
 const SAFETY_STATUS_COPY = {
@@ -645,6 +646,15 @@ function formatMetric(biomarker) {
 }
 
 export function formatRange(biomarker, copy = RESULTS_COPY.en) {
+  const originalRange = typeof biomarker?.reference_range === 'string'
+    ? biomarker.reference_range.trim()
+    : ''
+  if (originalRange) {
+    const unit = String(biomarker.unit || '').trim()
+    return unit && !originalRange.toLocaleLowerCase().includes(unit.toLocaleLowerCase())
+      ? `${originalRange} ${unit}`
+      : originalRange
+  }
   const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
   const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
   if (hasLow && !hasHigh) return `≥ ${biomarker.ref_low}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
@@ -694,12 +704,28 @@ export function reportContext(data) {
     || source?.collected_at
     || source?.reported_at
     || snapshot.measurement_date
-    || data?.report_date
-    || metadata.report_date
+    || data?.upload?.measurement_date
   return {
     source: typeof sourceValue === 'string' ? sourceValue.trim() : '',
     date: typeof dateValue === 'string' ? dateValue : '',
   }
+}
+
+export function formatReportDate(dateValue, locale, unknownDate) {
+  if (typeof dateValue !== 'string' || !dateValue.trim()) return unknownDate
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue.trim())
+  const parsedDate = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(dateValue)
+  if (
+    Number.isNaN(parsedDate.getTime())
+    || (dateOnly && (
+      parsedDate.getFullYear() !== Number(dateOnly[1])
+      || parsedDate.getMonth() !== Number(dateOnly[2]) - 1
+      || parsedDate.getDate() !== Number(dateOnly[3])
+    ))
+  ) return unknownDate
+  return parsedDate.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function triggerSubscriptionRequiredPaywall() {
@@ -2155,9 +2181,7 @@ export default function Results() {
     ? { source: 'Джерело', date: 'Дата звіту' }
     : { source: 'Source', date: 'Report date' }
   const reportDateLocale = isUk ? 'uk-UA' : 'en-US'
-  const formattedReportDate = reportMeta.date
-    ? new Date(reportMeta.date).toLocaleDateString(reportDateLocale, { month: 'short', day: 'numeric', year: 'numeric' })
-    : ''
+  const formattedReportDate = formatReportDate(reportMeta.date, reportDateLocale, copy.unknownReportDate)
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
@@ -2234,7 +2258,7 @@ export default function Results() {
         pdf.setFont('NotoSans', 'normal')
         pdf.setFontSize(size)
         pdf.setTextColor(71, 85, 105)
-        const lines = pdf.splitTextToSize(String(text), width)
+        const lines = pdf.splitTextToSize(formatPdfComparisonOperators(String(text)), width)
         lines.forEach((line) => {
           if (y > 760) { pdf.addPage(); y = 48 }
           pdf.text(line, margin, y)
@@ -2251,7 +2275,7 @@ export default function Results() {
 
       addTitle('VITALOOP Health Report', 20)
       if (reportMeta.source) addText(`Source: ${reportMeta.source}`)
-      if (reportMeta.date) addText(`Report date: ${reportMeta.date}`)
+      addText(`Report date: ${formattedReportDate}`)
       addText(biomarkerSummaryHeadline, 12)
       addTitle('1. Status summary', 14)
       addText(biomarkerSummaryHeadline)
