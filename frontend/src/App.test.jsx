@@ -44,11 +44,25 @@ describe('cabinet route classification', () => {
 })
 
 describe('EndUserFlowRoute onboarding error recovery', () => {
+  it('keeps the Results chat launcher in document flow to avoid covering clinical content', async () => {
+    apiMock.get.mockResolvedValue({ data: [] })
+    window.history.replaceState({}, '', '/lab-results/')
+
+    render(<App />)
+
+    const launcher = await screen.findByRole('button', { name: 'Open support chat' })
+    expect(launcher.className).toContain('relative')
+    expect(launcher.className).toContain('md:fixed')
+    expect(launcher.className).not.toMatch(/(^|\s)fixed(\s|$)/)
+  })
+
   it('opens SupportChat accessibly and restores launcher focus after Escape', async () => {
     apiMock.get.mockResolvedValue({ data: { requires_onboarding: false } })
 
     render(<App />)
     const launcher = await screen.findByRole('button', { name: 'Open support chat' })
+    expect(launcher.className).toContain('fixed')
+    expect(launcher.className).toContain('bottom-24')
     fireEvent.click(launcher)
 
     expect(await screen.findByRole('dialog', { name: 'VITALOOP Support' })).toBeTruthy()
