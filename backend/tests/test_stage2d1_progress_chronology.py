@@ -162,6 +162,33 @@ async def test_history_prefers_frozen_report_biomarkers_over_mutable_marker_rows
 
 
 @pytest.mark.asyncio
+async def test_history_measurement_date_prefers_frozen_date_over_missing_upload_date(_mock_progress):
+    upload = {
+        "id": "upload-historical-date",
+        "created_at": "2026-10-15T12:00:00Z",
+        "lab_name": "Historical",
+        "test_date": None,
+        "collected_at": None,
+        "reported_at": None,
+        "date_source": "missing",
+        "date_confidence": "low",
+    }
+    _mock_progress(
+        [upload],
+        report_versions=[{
+            "upload_id": "upload-historical-date",
+            "created_at": "2026-10-16T12:00:00Z",
+            "biomarkers": [],
+            "measurement_date": "2022-01-04",
+        }],
+    )
+
+    result = await svc.get_user_progress(user_id="user-historical-date")
+
+    assert result[0]["measurement_date"] == "2022-01-04"
+
+
+@pytest.mark.asyncio
 async def test_empty_latest_snapshot_uses_legacy_table_instead_of_older_version(_mock_progress):
     upload = {
         "id": "upload-empty-snapshot", "created_at": "2026-10-01T09:00:00Z", "lab_name": "Legacy",

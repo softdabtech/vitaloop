@@ -10,7 +10,7 @@ from fastapi import HTTPException
 import httpx
 from supabase import create_client, Client
 from app.config import settings
-from app.services.lab_date_extraction import choose_measurement_date
+from app.services.lab_date_extraction import choose_measurement_date, choose_report_measurement_date
 from app.services.lab_normalization.biomarker_mapping import (
     is_metadata_field,
     to_known_canonical_name,
@@ -951,7 +951,7 @@ async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("id,user_id,lab_name")
+        .select("id,user_id,lab_name,test_date,collected_at,reported_at")
         .eq("id", upload_id)
         .eq("user_id", user_id)
         .limit(1)
@@ -1584,9 +1584,9 @@ async def get_user_progress(user_id: str) -> List[Dict]:
                 frozen_versions_by_upload.get(str(upload["id"]), {}).get("biomarkers")
                 or grouped.get(upload["id"], [])
             ),
-            "measurement_date": (
-                frozen_versions_by_upload.get(str(upload["id"]), {}).get("measurement_date")
-                or choose_measurement_date(upload)
+            "measurement_date": choose_report_measurement_date(
+                upload,
+                frozen_versions_by_upload.get(str(upload["id"]), {}).get("measurement_date"),
             ),
         }
         for upload in rows
