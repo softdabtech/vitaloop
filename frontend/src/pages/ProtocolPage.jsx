@@ -1351,12 +1351,6 @@ export default function ProtocolPage() {
         </p>
       )}
 
-      {/* P31d: reserved space so the fixed floating support-chat button
-          (App.jsx's FloatingSupportChat, bottom-right) never sits on top
-          of the closing CTA above once the user scrolls all the way
-          down -- see P31c QA finding. Purely a page-bottom spacer; does
-          not touch the widget itself. */}
-      <div aria-hidden="true" className="h-28" />
     </div>
   )
 }

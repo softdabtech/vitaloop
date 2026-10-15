@@ -256,13 +256,6 @@ button[aria-label].inline-icon {
     z-index: 50;
   }
 
-  .vtl-support-chat-panel {
-    right: 12px !important;
-    bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 12px) !important;
-    width: calc(100vw - 24px) !important;
-    max-height: calc(100svh - var(--vtl-bottom-bar-height) - env(safe-area-inset-bottom) - 24px) !important;
-    z-index: 30 !important;
-  }
 }
 
 .vtl-shell {

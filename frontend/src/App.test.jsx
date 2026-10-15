@@ -21,13 +21,11 @@ vi.mock('./pages/HealthProfile.jsx', () => ({
 beforeEach(() => {
   apiMock.get.mockReset()
   window.scrollTo = vi.fn()
-  globalThis.Element.prototype.scrollIntoView = vi.fn()
   window.history.replaceState({}, '', '/health-profile')
 })
 
 afterEach(() => {
   cleanup()
-  delete globalThis.Element.prototype.scrollIntoView
   window.history.replaceState({}, '', '/')
 })
 
@@ -44,37 +42,6 @@ describe('cabinet route classification', () => {
 })
 
 describe('EndUserFlowRoute onboarding error recovery', () => {
-  it('keeps the Results chat launcher in document flow to avoid covering clinical content', async () => {
-    apiMock.get.mockResolvedValue({ data: [] })
-    window.history.replaceState({}, '', '/lab-results/')
-
-    render(<App />)
-
-    const launcher = await screen.findByRole('button', { name: 'Open support chat' })
-    expect(launcher.className).toContain('relative')
-    expect(launcher.className).toContain('md:fixed')
-    expect(launcher.className).not.toMatch(/(^|\s)fixed(\s|$)/)
-  })
-
-  it('opens SupportChat accessibly and restores launcher focus after Escape', async () => {
-    apiMock.get.mockResolvedValue({ data: { requires_onboarding: false } })
-
-    render(<App />)
-    const launcher = await screen.findByRole('button', { name: 'Open support chat' })
-    expect(launcher.className).toContain('fixed')
-    expect(launcher.className).toContain('bottom-24')
-    fireEvent.click(launcher)
-
-    expect(await screen.findByRole('dialog', { name: 'VITALOOP Support' })).toBeTruthy()
-    const input = screen.getByRole('textbox', { name: 'Message' })
-    await waitFor(() => expect(document.activeElement).toBe(input))
-
-    fireEvent.keyDown(window, { key: 'Escape' })
-
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'VITALOOP Support' })).toBeNull())
-    await waitFor(() => expect(document.activeElement).toBe(launcher))
-  })
-
   it('shows the error screen, retries, recovers to the protected route, and does not redirect', async () => {
     apiMock.get
       .mockRejectedValueOnce(new Error('Onboarding service unavailable'))

@@ -8,7 +8,7 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import { gaPageView, gaPurchase, gaSetUserId } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
@@ -47,7 +47,6 @@ const UaHealthHubCluster = lazy(() => import('./pages/UaHealthHub.jsx').then(m =
 const UaHealthHubArticle = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubArticle })))
 
 // UI components — lazy
-const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
 const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
 // CookieConsent is handled by vanilla JS in index.html (loads before React bundle).
 // const CookieConsent = lazy(() => import('./components/CookieConsent.jsx'))
@@ -257,67 +256,15 @@ export function isCabinetRoutePath(pathname) {
   return CABINET_ROUTE_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))
 }
 
-function getSupportChatLauncherPosition(pathname, isCabinetRoute) {
-  let normalizedPath = pathname
-  while (normalizedPath.length > 1 && normalizedPath.endsWith('/')) {
-    normalizedPath = normalizedPath.slice(0, -1)
-  }
-
-  if (normalizedPath === '/lab-results') {
-    return {
-      className: 'relative ml-auto mr-4 mb-4 md:fixed md:right-6 md:bottom-6 md:mr-0 md:mb-0',
-      style: undefined,
-    }
-  }
-
-  if (isCabinetRoute) {
-    return {
-      className: 'fixed right-6 bottom-24 md:bottom-6',
-      style: { bottom: 'calc(env(safe-area-inset-bottom) + var(--vtl-bottom-bar-height) + 12px)' },
-    }
-  }
-
-  return {
-    className: 'fixed right-6 bottom-6',
-    style: { bottom: 'max(24px, calc(env(safe-area-inset-bottom) + 12px))' },
-  }
-}
-
-function FloatingSupportChat() {
+function FloatingFerriAssistant() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [chatOpen, setChatOpen] = useState(false)
-  const [mobileSubnavOpen, setMobileSubnavOpen] = useState(false)
-  const chatLauncherRef = useRef(null)
-  const chatCloseReasonRef = useRef('user')
-  const wasChatOpenRef = useRef(false)
   const [ferriOpen, setFerriOpen] = useState(false)
   const [ferriInvestigating, setFerriInvestigating] = useState(false)
   const [ferriGreetingVisible, setFerriGreetingVisible] = useState(false)
   const [ferriAction, setFerriAction] = useState('idle')
 
   const isCabinetRoute = isCabinetRoutePath(location.pathname)
-  const chatLauncherPosition = getSupportChatLauncherPosition(location.pathname, isCabinetRoute)
-
-  useEffect(() => {
-    if (!chatOpen && wasChatOpenRef.current && chatCloseReasonRef.current !== 'navigation') {
-      chatLauncherRef.current?.focus()
-    }
-    wasChatOpenRef.current = chatOpen
-  }, [chatOpen])
-
-  useEffect(() => {
-    const handleMobileSubnavChange = (event) => {
-      const openSubnav = event.detail?.openSubnav || null
-      setMobileSubnavOpen(Boolean(openSubnav))
-      if (openSubnav) {
-        chatCloseReasonRef.current = 'navigation'
-        setChatOpen(false)
-      }
-    }
-    window.addEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
-    return () => window.removeEventListener('vtl-mobile-subnav-change', handleMobileSubnavChange)
-  }, [])
 
   useEffect(() => {
     if (isCabinetRoute) return undefined
@@ -671,36 +618,7 @@ function FloatingSupportChat() {
     )
   }
 
-  return (
-    <>
-      <button
-        ref={chatLauncherRef}
-        onClick={() => setChatOpen((v) => {
-          chatCloseReasonRef.current = 'user'
-          return !v
-        })}
-        aria-label={chatOpen ? 'Close support chat' : 'Open support chat'}
-        className={`${chatLauncherPosition.className} ${isCabinetRoute ? 'z-[41]' : 'z-[2999]'} flex h-[52px] w-[52px] items-center justify-center rounded-full border-0 bg-[var(--teal-800,#085041)] shadow-[0_4px_20px_rgba(8,80,65,0.35)] transition hover:bg-[var(--teal-600,#0F6E56)] ${mobileSubnavOpen ? 'hidden' : ''}`}
-        style={chatLauncherPosition.style}
-      >
-        {chatOpen
-          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="white" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke="white" strokeWidth="2" strokeLinecap="round">
-            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-          </svg>
-        }
-      </button>
-
-      {chatOpen && <Suspense fallback={null}><SupportChat onClose={(reason) => {
-        chatCloseReasonRef.current = reason || 'user'
-        setChatOpen(false)
-      }} /></Suspense>}
-    </>
-  )
+  return null
 }
 
 const SYMPTOM_PROMPT_STORAGE_KEY = 'vitaloop_symptom_prompt_seen'
@@ -999,7 +917,7 @@ export default function App() {
         </Routes>
       </Suspense>
       {!isUaLandingShell && <PublicSymptomPrompt disabled={isUaLandingShell} />}
-      {!isUaLandingShell && <FloatingSupportChat />}
+      {!isUaLandingShell && <FloatingFerriAssistant />}
     </BrowserRouter>
   )
 }
