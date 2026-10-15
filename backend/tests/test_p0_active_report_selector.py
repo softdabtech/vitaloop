@@ -152,6 +152,9 @@ async def test_progress_exposes_upload_lifecycle_status(monkeypatch):
         def in_(self, *_args, **_kwargs):
             return self
 
+        def order(self, *_args, **_kwargs):
+            return self
+
         def execute(self):
             return Response(self.rows)
 
@@ -171,6 +174,8 @@ async def test_progress_exposes_upload_lifecycle_status(monkeypatch):
                     }
                 ])
             if name == "biomarkers":
+                return Query([])
+            if name == "report_versions":
                 return Query([])
             raise AssertionError(name)
 

@@ -59,15 +59,18 @@ class _Query:
 
 
 class _FakeSupabase:
-    def __init__(self, lab_uploads, biomarkers):
+    def __init__(self, lab_uploads, biomarkers, report_versions=None):
         self._lab_uploads = lab_uploads
         self._biomarkers = biomarkers
+        self._report_versions = report_versions or []
 
     def table(self, name):
         if name == "lab_uploads":
             return _Query(self._lab_uploads)
         if name == "biomarkers":
             return _Query(self._biomarkers)
+        if name == "report_versions":
+            return _Query(self._report_versions)
         raise AssertionError(f"unexpected table requested in this fixture: {name!r}")
 
 
