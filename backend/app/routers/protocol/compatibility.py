@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request
 
 from app.dependencies import get_current_user, require_active_subscription
 from app.services.assignment_service import AssignmentService
+from app.services.lab_date_extraction import choose_measurement_date
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
@@ -60,6 +61,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     user_id = current_user.get("sub")
 
     upload = await assert_upload_belongs_to_user(upload_id, user_id)
+    upload_measurement_date = choose_measurement_date(upload or {})
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = (protocol_row or {}).get("recommendations") or []
@@ -95,7 +97,10 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
             user_profile=user_profile,
             locale=locale,
         )
-        response["upload"] = {"lab_name": (upload or {}).get("lab_name")}
+        response["upload"] = {
+            "lab_name": (upload or {}).get("lab_name"),
+            "measurement_date": upload_measurement_date,
+        }
         response["final_analysis"] = dict(response)
         return response
 
@@ -148,7 +153,10 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
 
     return {
         "upload_id": upload_id,
-        "upload": {"lab_name": (upload or {}).get("lab_name")},
+        "upload": {
+            "lab_name": (upload or {}).get("lab_name"),
+            "measurement_date": upload_measurement_date,
+        },
         "report_source": report_source,
         "biomarkers": biomarkers or [],
         "protocol": protocol_recommendations,
@@ -166,5 +174,11 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         # non-frozen/legacy upload. Purely additive -- same value already
         # present in final_analysis, just aliased at the top level too.
         "doctor_escalation_precision": pipeline_result.get("doctor_escalation_precision"),
-        "final_analysis": {**pipeline_result, "upload": {"lab_name": (upload or {}).get("lab_name")}},
+        "final_analysis": {
+            **pipeline_result,
+            "upload": {
+                "lab_name": (upload or {}).get("lab_name"),
+                "measurement_date": upload_measurement_date,
+            },
+        },
     }

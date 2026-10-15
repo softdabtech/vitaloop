@@ -8,6 +8,10 @@ function arrayBufferToBase64(buffer) {
   return globalThis.btoa(binary)
 }
 
+export function formatPdfComparisonOperators(text) {
+  return String(text).replaceAll('≤', '<=').replaceAll('≥', '>=')
+}
+
 export async function embedReportFonts(pdf, fetchFont = fetch) {
   const fontFiles = [
     ['NotoSans-Regular.ttf', 'normal'],
