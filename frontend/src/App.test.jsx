@@ -61,6 +61,8 @@ describe('EndUserFlowRoute onboarding error recovery', () => {
 
     render(<App />)
     const launcher = await screen.findByRole('button', { name: 'Open support chat' })
+    expect(launcher.className).toContain('fixed')
+    expect(launcher.className).toContain('bottom-24')
     fireEvent.click(launcher)
 
     expect(await screen.findByRole('dialog', { name: 'VITALOOP Support' })).toBeTruthy()
