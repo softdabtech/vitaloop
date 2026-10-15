@@ -1529,6 +1529,21 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         label="get_user_progress_biomarkers",
     )
 
+    report_versions_resp = await _run_supabase_read(
+        lambda: supabase.table("report_versions")
+        .select(
+            "upload_id, "
+            "biomarkers:input_snapshot->biomarkers, "
+            "measurement_date:input_snapshot->metadata->>measurement_date, "
+            "created_at"
+        )
+        .eq("user_id", user_id)
+        .in_("upload_id", upload_ids)
+        .order("created_at", desc=True)
+        .execute(),
+        label="get_user_progress_report_snapshots",
+    )
+
     grouped: Dict[str, List[Dict[str, Any]]] = {}
     for biomarker in biomarker_rows_resp.data or []:
         upload_id = biomarker.get("upload_id")
@@ -1546,13 +1561,33 @@ async def get_user_progress(user_id: str) -> List[Dict]:
             }
         )
 
+    frozen_versions_by_upload: Dict[str, Dict[str, Any]] = {}
+    seen_report_versions = set()
+    for report_version in report_versions_resp.data or []:
+        upload_id = report_version.get("upload_id")
+        upload_key = str(upload_id) if upload_id else None
+        if not upload_key or upload_key in seen_report_versions:
+            continue
+        seen_report_versions.add(upload_key)
+        frozen_biomarkers = report_version.get("biomarkers")
+        frozen_versions_by_upload[upload_key] = {
+            "biomarkers": frozen_biomarkers if isinstance(frozen_biomarkers, list) else None,
+            "measurement_date": report_version.get("measurement_date"),
+        }
+
     result = [
         {
             **{key: value for key, value in upload.items() if key != "data_origin"},
-            "biomarkers": grouped.get(upload["id"], []),
-            # Resolved via the same test_date -> collected_at -> reported_at
-            # priority the extraction pipeline uses; None means genuinely undated.
-            "measurement_date": choose_measurement_date(upload),
+            # Match the report page's immutable source. Legacy uploads with no
+            # frozen biomarker snapshot continue to use the persisted table.
+            "biomarkers": (
+                frozen_versions_by_upload.get(str(upload["id"]), {}).get("biomarkers")
+                or grouped.get(upload["id"], [])
+            ),
+            "measurement_date": (
+                frozen_versions_by_upload.get(str(upload["id"]), {}).get("measurement_date")
+                or choose_measurement_date(upload)
+            ),
         }
         for upload in rows
     ]

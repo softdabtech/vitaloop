@@ -126,7 +126,12 @@ describe('Results persisted retest presentation', () => {
       expect(normalizeBiomarkerStatus({ value: 12, status: 'OPTIMAL', ref_high: 10 })).toBe('ELEVATED')
       expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 'bad', ref_high: 10 })).toBe('UNKNOWN')
       expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 10, ref_high: 1 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ status: 'DEFICIENT' })).toBe('DEFICIENT')
+      expect(normalizeBiomarkerStatus({ status: 'BORDERLINE' })).toBe('BORDERLINE')
+      expect(normalizeBiomarkerStatus({ status: 'OPTIMAL' })).toBe('UNKNOWN')
       expect(formatRange({ ref_low: null, ref_high: null })).toBe('Reference range could not be verified')
+      expect(formatRange({ ref_low: 5, ref_high: null, unit: 'µmol/L' })).toBe('≥ 5 µmol/L')
+      expect(formatRange({ ref_low: null, ref_high: 10, unit: 'µmol/L' })).toBe('≤ 10 µmol/L')
     })
 
     it('normalizes status aliases while preserving borderline as a separate category', () => {
@@ -151,9 +156,9 @@ describe('Results persisted retest presentation', () => {
         total: 8,
         optimal: 1,
         borderline: 1,
-        deficient: 1,
+        deficient: 2,
         elevated: 1,
-        unknown: 4,
+        unknown: 3,
       })
     })
 
