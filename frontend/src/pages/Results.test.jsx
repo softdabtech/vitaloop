@@ -8,6 +8,7 @@ import {
   normalizeBiomarkerStatus,
   reportContext,
   safetyStatusLabel,
+  summarizeBiomarkerStatuses,
 } from './Results.jsx'
 import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
 import { reliableClinicalDate } from '../lib/retest.js'
@@ -116,7 +117,39 @@ describe('Results persisted retest presentation', () => {
   describe('Results uncertainty and narrative presentation', () => {
     it('keeps missing or unevaluated biomarkers fail-closed with clear wording', () => {
       expect(normalizeBiomarkerStatus({ value: 4, status: 'UNEVALUATED', ref_low: null, ref_high: null })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'UNKNOWN', ref_low: 1, ref_high: 10 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'UNRECOGNIZED', ref_low: 1, ref_high: 10 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 1 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'DEFICIENT', ref_low: null, ref_high: 10 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: '', ref_high: 10 })).toBe('UNKNOWN')
       expect(formatRange({ ref_low: null, ref_high: null })).toBe('Reference range could not be verified')
+    })
+
+    it('normalizes status aliases while preserving borderline as a separate category', () => {
+      expect(normalizeBiomarkerStatus({ status: 'NORMAL', ref_low: 1, ref_high: 10 })).toBe('OPTIMAL')
+      expect(normalizeBiomarkerStatus({ status: 'IN_RANGE', ref_low: 1, ref_high: 10 })).toBe('OPTIMAL')
+      expect(normalizeBiomarkerStatus({ status: 'LOW NORMAL', ref_low: 1, ref_high: 10 })).toBe('BORDERLINE')
+      expect(normalizeBiomarkerStatus({ status: 'L', ref_low: 1, ref_high: 10 })).toBe('DEFICIENT')
+      expect(normalizeBiomarkerStatus({ status: 'CRITICAL', ref_low: 1, ref_high: 10 })).toBe('ELEVATED')
+    })
+
+    it('counts unknown and borderline separately from in-range biomarkers', () => {
+      expect(summarizeBiomarkerStatuses([
+        { status: 'DEFICIENT' },
+        { status: 'ELEVATED', ref_low: 1, ref_high: 10 },
+        { status: 'BORDERLINE', ref_low: 1, ref_high: 10 },
+        { status: 'NORMAL', ref_low: 1, ref_high: 10 },
+        { status: 'UNKNOWN', ref_low: 1, ref_high: 10 },
+        { status: 'UNEVALUATED', ref_low: 1, ref_high: 10 },
+        { status: 'OPTIMAL', ref_low: 1 },
+      ])).toEqual({
+        total: 7,
+        optimal: 1,
+        borderline: 1,
+        deficient: 0,
+        elevated: 1,
+        unknown: 4,
+      })
     })
 
     it('translates safety states instead of exposing internal enum values', () => {

@@ -118,6 +118,61 @@ describe('buildResultOverview', () => {
     assert.match(result.consultation[0].text, /follow-up testing/)
   })
 
+  it('replaces legacy persisted count headlines with status-derived text', () => {
+    const result = buildResultOverview({
+      knowledgeReport: {
+        summary: { headline: '8 biomarkers found. 7 need review, 1 are currently in range.' },
+        what_was_found: {
+          headline: '8 biomarkers found. 7 need review, 1 are currently in range.',
+          counts: { total: 8, deficient: 2, elevated: 3, borderline: 2, optimal: 1, unknown: 0 },
+        },
+      },
+      biomarkerSummaryText: '8 biomarkers found. 3 need review, 2 are currently in range, 3 could not be classified.',
+    })
+
+    assert.deepEqual(result.results.map((item) => item.text), [
+      '8 biomarkers found. 3 need review, 2 are currently in range, 3 could not be classified.',
+    ])
+  })
+
+  it('does not display saved counts when classifications and biomarker rows are unavailable', () => {
+    const result = buildResultOverview({
+      knowledgeReport: {
+        what_was_found: {
+          headline: '8 biomarkers found. 7 need review, 1 are currently in range.',
+          counts: { total: 8, deficient: 2, elevated: 3, borderline: 2, optimal: 1, unknown: 0 },
+        },
+      },
+      biomarkerSummaryText: 'Biomarker classification is unavailable.',
+    })
+
+    assert.deepEqual(result.results.map((item) => item.text), ['Biomarker classification is unavailable.'])
+  })
+
+  it('recognizes legacy count headlines when their structured counts are absent', () => {
+    const result = buildResultOverview({
+      knowledgeReport: {
+        summary: { headline: '8 biomarkers found. 7 need review, 1 are currently in range.' },
+      },
+      biomarkerSummaryText: 'Biomarker classification is unavailable.',
+    })
+
+    assert.deepEqual(result.results.map((item) => item.text), ['Biomarker classification is unavailable.'])
+  })
+
+  it('recognizes legacy count summaries in the what-was-found field', () => {
+    const result = buildResultOverview({
+      knowledgeReport: {
+        what_was_found: {
+          summary: '8 markers: 7 abnormal, 1 normal.',
+        },
+      },
+      biomarkerSummaryText: 'Biomarker classification is unavailable.',
+    })
+
+    assert.deepEqual(result.results.map((item) => item.text), ['Biomarker classification is unavailable.'])
+  })
+
   it('exposes deterministic fallback metadata for an explicit UI disclosure', () => {
     const result = buildResultOverview({
       groundedNarrative: {

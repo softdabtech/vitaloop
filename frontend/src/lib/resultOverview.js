@@ -155,6 +155,36 @@ function legacyReportItems(knowledgeReport, field) {
   }).filter(Boolean)
 }
 
+export function isBiomarkerCountSummary(value) {
+  return typeof value === 'string'
+    && (/^\s*\d+\s+(?:biomarkers?|markers?)\b/i.test(value)
+      || /\b\d+\s+(?:need review|in range|out of range|normal|abnormal|borderline|unknown)\b/i.test(value))
+}
+
+function hasLegacyCountHeadline(knowledgeReport) {
+  const headlines = [
+    knowledgeReport?.summary?.headline,
+    knowledgeReport?.what_was_found?.headline,
+    knowledgeReport?.what_was_found?.summary,
+  ]
+  return headlines.some(isBiomarkerCountSummary)
+}
+
+function hasPersistedBiomarkerCounts(knowledgeReport) {
+  return [
+    knowledgeReport?.what_was_found?.counts,
+    knowledgeReport?.summary?.counts,
+    knowledgeReport?.counts,
+    knowledgeReport?.what_was_found,
+    knowledgeReport?.summary,
+  ].some((counts) => (
+    counts
+    && typeof counts === 'object'
+    && !Array.isArray(counts)
+    && Object.keys(counts).some((key) => /^(?:total|optimal|normal|borderline|deficient|elevated|abnormal|unknown|review|in_range|out_of_range)(?:_|$)/i.test(key))
+  )) || hasLegacyCountHeadline(knowledgeReport)
+}
+
 function legacyMarkerItems(priorityMarkers) {
   return validObjects(priorityMarkers).map((marker) => {
     const label = cleanText(marker.name_en || marker.canonical_name || marker.name || marker.source_name)
@@ -180,6 +210,7 @@ export function buildResultOverview({
   knowledgeReport,
   protocol,
   priorityMarkers,
+  biomarkerSummaryText,
 } = {}) {
   const evidenceById = new Map(
     validObjects(groundedNarrative?.evidence_links)
@@ -192,9 +223,14 @@ export function buildResultOverview({
     ...narrativeItems(groundedNarrative, 'key_connections', evidenceById),
   ]
   const synthesisResults = synthesisItems(caseSynthesis, 'main_conclusion', 'what_was_found')
+  const storedCounts = hasPersistedBiomarkerCounts(knowledgeReport)
   const legacyResults = dedupeItems([
-    ...legacyReportItems(knowledgeReport, 'summary'),
-    ...legacyReportItems(knowledgeReport, 'what_was_found'),
+    ...(storedCounts
+      ? [plainItem(biomarkerSummaryText, 'biomarker_status_summary')]
+      : [
+          ...legacyReportItems(knowledgeReport, 'summary'),
+          ...legacyReportItems(knowledgeReport, 'what_was_found'),
+        ]),
     ...legacyMarkerItems(priorityMarkers),
   ])
 
