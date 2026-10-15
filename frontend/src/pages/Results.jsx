@@ -662,19 +662,26 @@ function inferStatusFromRange(biomarker) {
 }
 
 export function normalizeBiomarkerStatus(biomarker) {
-  const low = Number(biomarker?.ref_low)
-  const high = Number(biomarker?.ref_high)
-  if (
-    biomarker?.ref_low == null
-    || biomarker?.ref_high == null
-    || String(biomarker.ref_low).trim() === ''
-    || String(biomarker.ref_high).trim() === ''
-    || !Number.isFinite(low)
-    || !Number.isFinite(high)
-    || high <= low
-  ) return 'UNKNOWN'
+  const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
+  const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
+  const low = hasLow ? Number(biomarker.ref_low) : null
+  const high = hasHigh ? Number(biomarker.ref_high) : null
+  const hasInvalidBounds = (hasLow && !Number.isFinite(low))
+    || (hasHigh && !Number.isFinite(high))
+    || (hasLow && hasHigh && high <= low)
+  if (hasInvalidBounds || (!hasLow && !hasHigh)) return 'UNKNOWN'
+
   const raw = String(biomarker?.status || '').trim().toUpperCase()
   if (raw === 'UNKNOWN' || raw === 'UNEVALUATED') return 'UNKNOWN'
+
+  const value = Number(biomarker?.value)
+  if (hasLow !== hasHigh) {
+    if (!Number.isFinite(value)) return 'UNKNOWN'
+    if (hasLow && value < low) return 'DEFICIENT'
+    if (hasHigh && value > high) return 'ELEVATED'
+    return 'UNKNOWN'
+  }
+
   if (Object.hasOwn(STATUS_ALIAS_MAP, raw)) return STATUS_ALIAS_MAP[raw]
   return raw ? 'UNKNOWN' : inferStatusFromRange(biomarker)
 }

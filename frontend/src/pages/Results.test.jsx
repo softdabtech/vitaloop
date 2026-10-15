@@ -122,6 +122,10 @@ describe('Results persisted retest presentation', () => {
       expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 1 })).toBe('UNKNOWN')
       expect(normalizeBiomarkerStatus({ value: 4, status: 'DEFICIENT', ref_low: null, ref_high: 10 })).toBe('UNKNOWN')
       expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: '', ref_high: 10 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 5 })).toBe('DEFICIENT')
+      expect(normalizeBiomarkerStatus({ value: 12, status: 'OPTIMAL', ref_high: 10 })).toBe('ELEVATED')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 'bad', ref_high: 10 })).toBe('UNKNOWN')
+      expect(normalizeBiomarkerStatus({ value: 4, status: 'OPTIMAL', ref_low: 10, ref_high: 1 })).toBe('UNKNOWN')
       expect(formatRange({ ref_low: null, ref_high: null })).toBe('Reference range could not be verified')
     })
 
@@ -142,11 +146,12 @@ describe('Results persisted retest presentation', () => {
         { status: 'UNKNOWN', ref_low: 1, ref_high: 10 },
         { status: 'UNEVALUATED', ref_low: 1, ref_high: 10 },
         { status: 'OPTIMAL', ref_low: 1 },
+        { status: 'OPTIMAL', ref_low: 5, value: 4 },
       ])).toEqual({
-        total: 7,
+        total: 8,
         optimal: 1,
         borderline: 1,
-        deficient: 0,
+        deficient: 1,
         elevated: 1,
         unknown: 4,
       })

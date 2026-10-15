@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List
 
 
@@ -190,9 +191,38 @@ def _status(value: Any) -> str:
 
 def _number(value: Any) -> float | None:
     try:
-        return float(value)
+        number = float(value)
     except (TypeError, ValueError):
         return None
+    return number if math.isfinite(number) else None
+
+
+def _report_status(item: Dict[str, Any]) -> str:
+    status = _status(item.get("status"))
+    if status == "UNKNOWN":
+        return "UNKNOWN"
+
+    low = _number(item.get("ref_low"))
+    high = _number(item.get("ref_high"))
+    value = _number(item.get("value"))
+    has_low = item.get("ref_low") not in (None, "")
+    has_high = item.get("ref_high") not in (None, "")
+
+    if (has_low and low is None) or (has_high and high is None):
+        return "UNKNOWN"
+    if low is not None and high is not None and low >= high:
+        return "UNKNOWN"
+    if low is None and high is None:
+        return "UNKNOWN"
+    if low is None or high is None:
+        if value is None:
+            return "UNKNOWN"
+        if low is not None and value < low:
+            return "DEFICIENT"
+        if high is not None and value > high:
+            return "ELEVATED"
+        return "UNKNOWN"
+    return status
 
 
 def _format_value(item: Dict[str, Any]) -> str:
@@ -213,7 +243,7 @@ def _sort_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(
         biomarkers,
         key=lambda item: (
-            STATUS_PRIORITY.get(_status(item.get("status")), 9),
+            STATUS_PRIORITY.get(_report_status(item), 9),
             str(item.get("category") or ""),
             str(item.get("name") or ""),
         ),
@@ -262,7 +292,7 @@ def _what_found(biomarkers: List[Dict[str, Any]], locale: str = "en") -> Dict[st
     flagged: List[Dict[str, Any]] = []
 
     for item in _sort_biomarkers(biomarkers):
-        status = _status(item.get("status"))
+        status = _report_status(item)
         if status == "OPTIMAL":
             counts["optimal"] += 1
         elif status == "UNKNOWN":
