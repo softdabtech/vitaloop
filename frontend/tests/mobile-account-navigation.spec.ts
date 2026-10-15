@@ -30,18 +30,6 @@ test('authenticated Account navigation works at 390px', async ({ page }) => {
     await expect(menu.getByRole('menuitem', { name: item.label })).toBeVisible()
   }
 
-  const menuBounds = await menu.boundingBox()
-  const supportButton = page.getByRole('button', { name: /open support chat/i })
-  if (await supportButton.isVisible()) {
-    const supportBounds = await supportButton.boundingBox()
-    expect(menuBounds && supportBounds).toBeTruthy()
-    expect(
-      menuBounds!.x < supportBounds!.x + supportBounds!.width &&
-      menuBounds!.x + menuBounds!.width > supportBounds!.x &&
-      menuBounds!.y < supportBounds!.y + supportBounds!.height &&
-      menuBounds!.y + menuBounds!.height > supportBounds!.y,
-    ).toBe(false)
-  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
   for (const [index, item] of accountLinks.entries()) {

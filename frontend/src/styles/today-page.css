@@ -982,13 +982,6 @@
   }
 }
 
-body:has(.cockpit-page) button[aria-label="Open support chat"] {
-  right: 2px !important;
-  width: 38px !important;
-  height: 38px !important;
-  opacity: 0.82;
-}
-
 .cockpit-row__text {
   min-width: 0;
 }
