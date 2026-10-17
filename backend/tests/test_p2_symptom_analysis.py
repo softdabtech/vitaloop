@@ -290,6 +290,7 @@ def test_unmapped_text_cannot_trigger_legacy_symptom_matching_when_p2_contract_e
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("stub_post_report_persistence")
 async def test_pipeline_exposes_and_freezes_p2_contract(monkeypatch):
     from app.services import lab_analysis_pipeline
     from app.services import supabase_service as svc
@@ -301,7 +302,7 @@ async def test_pipeline_exposes_and_freezes_p2_contract(monkeypatch):
 
     async def save_report_version(**kwargs):
         saved.update(kwargs)
-        return {"id": "report-p2", **kwargs}
+        return {**kwargs, "id": kwargs["report_version_id"]}
 
     monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", no_history)
     monkeypatch.setattr(svc, "save_report_version", save_report_version)

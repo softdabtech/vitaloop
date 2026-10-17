@@ -203,12 +203,36 @@ jobs:
           npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
 
   # ─────────────────────────────────────────────────────────
-  # JOB 3: Deploy to production (only on push to main)
+  # JOB 4: Read-only production schema gate (only on push to main)
+  # The environment must be protected in GitHub settings. Its service-role key
+  # is used only to invoke the migration's no-data schema preflight RPC.
+  # ─────────────────────────────────────────────────────────
+  database-schema-preflight:
+    name: Production — atomic-finalization schema preflight
+    runs-on: ubuntu-latest
+    needs: [backend-test, crm-test, frontend-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 5
+    environment:
+      name: production
+      url: https://vitaloop.today
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify production database contract
+        env:
+          SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}
+        run: bash scripts/verify-atomic-finalization-schema.sh
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 5: Deploy to production (only after schema gate)
   # ─────────────────────────────────────────────────────────
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    needs: [backend-test, crm-test, frontend-build]
+    needs: [backend-test, crm-test, frontend-build, database-schema-preflight]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 20
 

@@ -7,6 +7,8 @@ const AUTH_STORAGE_KEY = 'sb-bfjxkzydonhwmafnyktt-auth-token'
 const SCREENSHOT_DIR = process.env.RESULTS_VISUAL_ARTIFACT_DIR || 'test-results/results-status'
 const VIEWPORTS = [
   { name: '390px', width: 390, height: 844 },
+  { name: '768px', width: 768, height: 1024 },
+  { name: '1024px', width: 1024, height: 900 },
   { name: 'desktop', width: 1440, height: 1000 },
 ]
 
@@ -241,7 +243,9 @@ for (const report of REPORTS) {
       )).join(' ')
       expect(pdfText).toContain('Not evaluated')
       expect(pdfText).toMatch(/[µμ]mol\/L/)
-      expect(pdfText).toContain('Report date: 2026-10-01')
+      // English PDF output localizes the preserved frozen date for patients;
+      // accept either the older ISO rendering or the current localized form.
+      expect(pdfText).toMatch(/Report date: (2026-10-01|Oct 1, 2026)/)
       expect(pdfText).toContain('not a status classification')
       expect(pdfText).toContain('All reported markers were optimal.')
     }
@@ -273,4 +277,58 @@ test('Results History uses the same snapshot classifications as each report', as
     expect(externalRequests).toEqual([])
     expect(pageErrors).toEqual([])
   }
+})
+
+test('Results History cards keep source, status summary and action in separate rows', async ({ page }) => {
+  const externalRequests: string[] = []
+  await mockLocalApis(page, REPORTS[0].fixture, externalRequests)
+  await mockAuthenticatedUser(page)
+
+  for (const viewport of VIEWPORTS) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await page.goto(`${LOCAL_BASE}/lab-results`, { waitUntil: 'domcontentloaded' })
+    const card = page.locator('.lab-result-card').filter({ hasText: 'Historical latest-unknown' })
+    const source = card.locator('.lab-result-card__identity')
+    const badges = card.locator('.lab-result-card__badges')
+    const action = card.locator('.lab-result-card__action')
+    await expect(card).toBeVisible()
+    await expect(source).toBeVisible()
+    await expect(badges).toBeVisible()
+    await expect(action).toBeVisible()
+    const boxes = await Promise.all([source.boundingBox(), badges.boundingBox(), action.boundingBox()])
+    expect(boxes.every(Boolean)).toBe(true)
+    expect(boxes[0]!.y + boxes[0]!.height).toBeLessThanOrEqual(boxes[1]!.y + 1)
+    expect(boxes[1]!.y + boxes[1]!.height).toBeLessThanOrEqual(boxes[2]!.y + 1)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+  }
+  expect(externalRequests).toEqual([])
+})
+
+test('Cookie banner stays above mobile navigation and leaves the last history action reachable', async ({ page }) => {
+  const externalRequests: string[] = []
+  await mockLocalApis(page, REPORTS[0].fixture, externalRequests)
+  await mockAuthenticatedUser(page)
+  await page.addInitScript(() => window.localStorage.removeItem('vitaloop-cookie-consent'))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`${LOCAL_BASE}/lab-results`, { waitUntil: 'domcontentloaded' })
+  const banner = page.locator('#vl-cookie-banner > div')
+  const nav = page.locator('.vtl-mobile-bottom-nav')
+  const lastAction = page.locator('.lab-result-card__action').last()
+  await expect(banner).toBeVisible()
+  await expect(nav).toBeVisible()
+  await lastAction.scrollIntoViewIfNeeded()
+  const [bannerBox, navBox, actionBox] = await Promise.all([banner.boundingBox(), nav.boundingBox(), lastAction.boundingBox()])
+  expect(bannerBox && navBox && actionBox).toBeTruthy()
+  expect(bannerBox!.y + bannerBox!.height).toBeLessThanOrEqual(navBox!.y + 1)
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(bannerBox!.y + 1)
+  await page.getByRole('button', { name: 'Reject Non-Essential' }).click()
+  await expect(page.locator('#vl-cookie-banner')).toHaveCount(0)
+  await expect(nav.getByRole('button', { name: 'Upload' })).toBeVisible()
+  await nav.getByRole('button', { name: 'Upload' }).click()
+  await expect(page).toHaveURL(/\/upload$/)
+  await nav.getByRole('button', { name: 'Home' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await nav.getByRole('button', { name: 'Results' }).click()
+  await expect(page).toHaveURL(/\/lab-results$/)
+  expect(externalRequests).toEqual([])
 })

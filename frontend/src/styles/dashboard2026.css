@@ -200,6 +200,63 @@
   }
 }
 
+/* Upload history is deliberately a three-row card at every width.  Keeping
+ * identity, status summary and action in separate rows prevents status pills
+ * from shrinking long source names into one-character columns at tablet and
+ * desktop widths. */
+.lab-result-card__body {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.lab-result-card__identity,
+.lab-result-card__badges,
+.lab-result-card__state,
+.lab-result-card__action {
+  min-width: 0;
+  width: 100%;
+}
+
+.lab-result-card__identity {
+  display: block;
+  min-height: 44px;
+}
+
+.lab-result-card__source,
+.lab-results-summary-source {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.lab-result-card__badges {
+  align-items: flex-start;
+}
+
+.lab-result-card__action {
+  justify-content: flex-start;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  padding-top: 10px;
+}
+
+.lab-result-card__action button {
+  min-height: 44px;
+}
+
+/* The consent banner is fixed. Reserve enough scrollable space for it while
+ * it is visible, and keep it above the cabinet's mobile navigation. */
+@media (max-width: 767px) {
+  body[data-vtl-cookie-banner="open"] .vtl-cabinet-content {
+    padding-bottom: calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 252px);
+  }
+}
+
+@media (min-width: 768px) {
+  body[data-vtl-cookie-banner="open"] .vtl-cabinet-content {
+    padding-bottom: 252px;
+  }
+}
+
 /* Smooth momentum scrolling on iOS */
 html {
   -webkit-overflow-scrolling: touch;

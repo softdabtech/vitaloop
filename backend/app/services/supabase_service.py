@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -11,6 +12,12 @@ import httpx
 from supabase import create_client, Client
 from app.config import settings
 from app.services.lab_date_extraction import choose_measurement_date, choose_report_measurement_date
+from app.services.analysis_input_digest import (
+    PROJECTION_FIELDS,
+    build_persisted_projection,
+    canonical_input_digest,
+    DigestInputError,
+)
 from app.services.lab_normalization.biomarker_mapping import (
     is_metadata_field,
     to_known_canonical_name,
@@ -34,6 +41,32 @@ _RELIABLE_RETEST_DATE_SOURCES = frozenset({
     "extracted_done_date",
     "user_provided",
 })
+
+# These names are inserted by finalize_lab_analysis in the same transaction as
+# report_versions. They are a durable recovery contract, not permission for a
+# caller to invent a follow-up effect.
+FOLLOWUP_EFFECT_TYPES = (
+    "retest_obligations",
+    "retest_fulfillment",
+    "lab_plan_fulfillment",
+    "safety_events",
+    "intelligence_artifacts",
+    "protocol",
+    "timeline",
+    "audit",
+)
+_FOLLOWUP_STATUSES = frozenset({"pending", "processing", "completed", "failed", "retryable"})
+
+
+def analysis_effect_key(report_version_id: str | None, effect_type: str, sub_key: str = "") -> str | None:
+    """Return a non-identifying stable key for one persisted downstream effect."""
+    if not report_version_id:
+        return None
+    report_id = _require_uuid(report_version_id, field="report_version_id")
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    material = f"vitaloop-downstream-effect-v1:{report_id}:{effect_type}:{sub_key}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
 
 TRUSTED_DATA_ORIGINS = frozenset({
     "clinical",
@@ -375,12 +408,277 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
             ref_high=b.get("ref_high"),
         )
     ]
-    # Delete any existing biomarkers for this upload before inserting
-    # (handles re-analysis retries; unique constraint on upload_id+lower(name) would fail otherwise)
+    # Idempotent retry: when the stored rows already equal the new rows, keep
+    # them untouched instead of deleting and reinserting (an ambiguous retry must
+    # never destroy data). Only genuinely different content is replaced.
+    existing = await _run(
+        lambda: supabase.table("biomarkers").select("*").eq("upload_id", upload_id).eq("user_id", user_id).execute()
+    )
+    existing_rows = list(getattr(existing, "data", None) or [])
+    if existing_rows and _biomarker_rows_equal(existing_rows, rows):
+        return existing_rows
+    # Replace on re-analysis (unique constraint on upload_id+lower(name) would fail otherwise).
+    # Not atomic: delete and insert are separate calls; true atomicity needs a DB RPC.
     await _run(lambda: supabase.table("biomarkers").delete().eq("upload_id", upload_id).execute())
     resp = await _run(lambda: supabase.table("biomarkers").insert(rows).execute())
-    await _run(lambda: supabase.table("lab_uploads").update({"status": "done"}).eq("id", upload_id).execute())
     return resp.data
+
+
+class AtomicFinalizationError(RuntimeError):
+    """A fail-closed error returned by the atomic report-finalization boundary."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def _replay_projection_matches_snapshot(report_version: Dict[str, Any], projection: List[Dict[str, Any]]) -> bool:
+    """Require the stored projection and immutable input snapshot to agree.
+
+    The report is the authority on a replay; current pipeline data is deliberately
+    not consulted. Comparison is field-exact after applying the shared persisted
+    projection boundary to both sources.
+    """
+    snapshot = report_version.get("input_snapshot")
+    rows = snapshot.get("biomarkers") if isinstance(snapshot, dict) else None
+    try:
+        snapshot_projection = build_persisted_projection(rows)
+    except (DigestInputError, TypeError, ValueError):
+        return False
+    if len(snapshot_projection) != len(projection):
+        return False
+    fields = tuple(PROJECTION_FIELDS)
+    canonical = lambda values: sorted(
+        tuple(repr(row.get(field)) for field in fields) for row in values
+    )
+    return canonical(snapshot_projection) == canonical(projection)
+
+
+def _followup_summary(rows: List[Dict[str, Any]]) -> str:
+    statuses = {str(row.get("status") or "") for row in rows}
+    if statuses == {"completed"}:
+        return "completed"
+    if "processing" in statuses:
+        return "processing"
+    if statuses & {"failed", "retryable"}:
+        return "retryable"
+    return "pending"
+
+
+async def load_authoritative_finalization_replay(
+    *, user_id: str, upload_id: str, report_version_id: str
+) -> Dict[str, Any]:
+    """Load and validate the immutable report returned by an RPC replay.
+
+    This function is intentionally owner-scoped and never takes report data from
+    a request or from the newly run pipeline. Missing work rows are a hard error:
+    a replay must not claim a completed finalization without recoverable work.
+    """
+    report_id = _require_uuid(report_version_id, field="report_version_id")
+    expected_upload_id = _require_uuid(upload_id, field="upload_id")
+    report = await get_report_version_for_user(user_id, report_id)
+    if not isinstance(report, dict):
+        raise AtomicFinalizationError("replay_report_unavailable")
+    if (
+        str(report.get("id") or "") != report_id
+        or str(report.get("user_id") or "") != str(user_id)
+        or str(report.get("upload_id") or "") != expected_upload_id
+        or report.get("status") not in {"completed", "blocked"}
+        or not isinstance(report.get("version"), str)
+        or not isinstance(report.get("knowledge_report"), dict)
+        or not isinstance(report.get("safety_result"), dict)
+        or not isinstance(report.get("explainability"), dict)
+        or not isinstance(report.get("protocol"), (dict, list))
+    ):
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    biomarkers = await get_biomarkers_by_upload(expected_upload_id, user_id)
+    try:
+        projection = build_persisted_projection(biomarkers)
+    except (DigestInputError, TypeError, ValueError) as exc:
+        raise AtomicFinalizationError("replay_report_inconsistent") from exc
+    if not projection or not _replay_projection_matches_snapshot(report, projection):
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    # Frozen evidence must remain structurally valid. The explicit non-authorizing
+    # state is safe for a persisted report but never authorizes an action.
+    from app.services.protocol_pipeline_evidence import (
+        NON_AUTHORIZING_READ_REASON,
+        verify_persisted_frozen_evidence,
+    )
+
+    evidence = verify_persisted_frozen_evidence(report, report_version_id=report_id)
+    if isinstance(evidence, str) and evidence != NON_AUTHORIZING_READ_REASON:
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    supabase = _get_supabase()
+    try:
+        response = await _run(
+            lambda: supabase.table("analysis_followup_work")
+            .select("effect_type,status,attempt_count")
+            .eq("user_id", user_id)
+            .eq("upload_id", expected_upload_id)
+            .eq("report_version_id", report_id)
+            .execute()
+        )
+        work = list(getattr(response, "data", None) or [])
+    except Exception as exc:
+        raise AtomicFinalizationError("followup_work_unavailable") from exc
+    effects = [str(row.get("effect_type") or "") for row in work if isinstance(row, dict)]
+    statuses = [str(row.get("status") or "") for row in work if isinstance(row, dict)]
+    if (
+        len(work) != len(FOLLOWUP_EFFECT_TYPES)
+        or set(effects) != set(FOLLOWUP_EFFECT_TYPES)
+        or len(set(effects)) != len(effects)
+        or any(status not in _FOLLOWUP_STATUSES for status in statuses)
+    ):
+        raise AtomicFinalizationError("followup_work_inconsistent")
+
+    return {
+        "report_version": report,
+        "biomarkers": projection,
+        "followup_work": work,
+        "downstream_status": _followup_summary(work),
+    }
+
+
+def _require_uuid(value: str, *, field: str) -> str:
+    try:
+        return str(UUID(str(value)))
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise AtomicFinalizationError(f"invalid_{field}") from exc
+
+
+def _atomic_error_code(exc: Exception) -> str:
+    """Map the RPC's public error classes without logging report/patient payloads."""
+    message = str(exc).lower()
+    if "stale_operation" in message:
+        return "stale_operation"
+    if "idempotency_conflict" in message:
+        return "idempotency_conflict"
+    return "finalization_storage_error"
+
+
+async def finalize_lab_analysis(
+    *,
+    user_id: str,
+    upload_id: str,
+    operation_key: str,
+    report_version_id: str,
+    locale: str,
+    pipeline_version: str,
+    biomarkers: List[Dict[str, Any]],
+    report: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Commit canonical biomarkers, frozen report, and upload completion in one RPC.
+
+    This is deliberately the only clinical persistence path for a pipeline run that
+    replaces biomarkers.  An RPC failure is surfaced to the caller; it never falls
+    back to separate REST writes.
+    """
+    user_id = _require_uuid(user_id, field="user_id")
+    upload_id = _require_uuid(upload_id, field="upload_id")
+    operation_key = _require_uuid(operation_key, field="operation_key")
+    report_version_id = _require_uuid(report_version_id, field="report_version_id")
+    if not isinstance(report, dict):
+        raise AtomicFinalizationError("invalid_report_payload")
+
+    try:
+        projection = build_persisted_projection(biomarkers)
+        input_hash = canonical_input_digest(
+            upload_id=upload_id,
+            locale=locale,
+            pipeline_version=pipeline_version,
+            projection=projection,
+        )
+    except DigestInputError as exc:
+        raise AtomicFinalizationError(f"invalid_biomarker_projection:{exc}") from exc
+
+    supabase = _get_supabase()
+    try:
+        upload_response = await _run(
+            lambda: supabase.table("lab_uploads")
+            .select("id,user_id,analysis_generation")
+            .eq("id", upload_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        upload_rows = list(getattr(upload_response, "data", None) or [])
+        upload = upload_rows[0] if len(upload_rows) == 1 else None
+        generation = upload.get("analysis_generation") if isinstance(upload, dict) else None
+        if not isinstance(generation, int) or isinstance(generation, bool) or generation < 0:
+            raise AtomicFinalizationError("upload_not_finalizable")
+
+        response = await _run(
+            lambda: supabase.rpc(
+                "finalize_lab_analysis",
+                {
+                    "p_user_id": user_id,
+                    "p_upload_id": upload_id,
+                    "p_operation_key": operation_key,
+                    "p_input_hash": input_hash,
+                    "p_base_generation": generation,
+                    "p_report_version_id": report_version_id,
+                    "p_locale": locale,
+                    "p_pipeline_version": pipeline_version,
+                    "p_biomarkers": projection,
+                    "p_report": report,
+                },
+            ).execute()
+        )
+    except AtomicFinalizationError:
+        raise
+    except Exception as exc:
+        raise AtomicFinalizationError(_atomic_error_code(exc)) from exc
+
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    generation = payload.get("generation") if isinstance(payload, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("status") != "committed"
+        or not isinstance(payload.get("replay"), bool)
+        or not isinstance(generation, int)
+        or isinstance(generation, bool)
+        or generation < 0
+    ):
+        raise AtomicFinalizationError("invalid_finalization_response")
+    persisted_id = payload.get("report_version_id")
+    try:
+        persisted_id = str(UUID(str(persisted_id)))
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise AtomicFinalizationError("invalid_finalization_response") from exc
+    return {
+        "report_version_id": persisted_id,
+        "replay": payload["replay"],
+        "generation": generation,
+        "biomarkers": projection,
+        "input_hash": input_hash,
+    }
+
+
+_BIOMARKER_COMPARE_FIELDS = (
+    "name", "value", "unit", "ref_low", "ref_high", "status", "category",
+    "canonical_name", "reference_source", "unevaluated_reason",
+)
+
+
+def _biomarker_rows_equal(existing: List[Dict], rows: List[Dict]) -> bool:
+    def key(row: Dict) -> tuple:
+        return tuple(repr(row.get(f)) for f in _BIOMARKER_COMPARE_FIELDS)
+
+    return sorted(map(key, existing)) == sorted(map(key, rows))
+
+
+async def mark_lab_upload_done(upload_id: str, user_id: str) -> None:
+    """Marks the upload done. Called only after the authoritative report version
+    is confirmed persisted (or when no report persistence was requested)."""
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads").update({"status": "done"}).eq("id", upload_id).eq("user_id", user_id).execute()
+    )
 
 
 async def save_biomarker_extraction_candidates(
@@ -672,19 +970,31 @@ async def save_safety_events(
         return []
 
     supabase = _get_supabase()
-    rows = [
-        {
+    rows = []
+    occurrences: Dict[str, int] = {}
+    for event in safety_events:
+        canonical_event = json.dumps(event if isinstance(event, dict) else {}, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        occurrence = occurrences.get(canonical_event, 0)
+        occurrences[canonical_event] = occurrence + 1
+        row = {
             "user_id": user_id,
             "upload_id": upload_id,
             "report_version_id": report_version_id,
-            "rule_key": event.get("key"),
-            "severity": event.get("severity") or "medium",
-            "action": event.get("action") or "warn",
-            "input_snapshot": event,
+            "rule_key": event.get("key") if isinstance(event, dict) else None,
+            "severity": (event.get("severity") or "medium") if isinstance(event, dict) else "medium",
+            "action": (event.get("action") or "warn") if isinstance(event, dict) else "warn",
+            "input_snapshot": event if isinstance(event, dict) else {},
         }
-        for event in safety_events
-    ]
-    resp = await _run(lambda: supabase.table("safety_events").insert(rows).execute())
+        if report_version_id:
+            row["analysis_effect_key"] = analysis_effect_key(
+                report_version_id, "safety_events", f"{canonical_event}:{occurrence}"
+            )
+        rows.append(row)
+    write = supabase.table("safety_events")
+    resp = await _run(
+        lambda: write.upsert(rows, on_conflict="analysis_effect_key").execute()
+        if report_version_id else write.insert(rows).execute()
+    )
     return resp.data or []
 
 
@@ -692,6 +1002,7 @@ async def save_analysis_intelligence_artifacts(
     *,
     user_id: str,
     upload_id: str,
+    report_version_id: str | None = None,
     analysis_input_quality_gate: Dict[str, Any] | None = None,
     clinical_data_integrity: Dict[str, Any] | None = None,
     evidence_gaps: Dict[str, Any] | None = None,
@@ -725,7 +1036,11 @@ async def save_analysis_intelligence_artifacts(
             "gate_version": gate.get("version"),
             "status": "recorded",
         }
-        resp = await _run(lambda: supabase.table("analysis_quality_gates").insert(payload).execute())
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "analysis_quality_gate")
+        table = supabase.table("analysis_quality_gates")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
         persisted["analysis_quality_gate"] = (resp.data or [{}])[0]
 
     if clinical_data_integrity:
@@ -740,7 +1055,11 @@ async def save_analysis_intelligence_artifacts(
             "profile": integrity.get("profile") or {},
             "markers": integrity.get("markers") or [],
         }
-        resp = await _run(lambda: supabase.table("clinical_data_integrity_events").insert(payload).execute())
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "clinical_data_integrity")
+        table = supabase.table("clinical_data_integrity_events")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
         persisted["clinical_data_integrity"] = (resp.data or [{}])[0]
 
     if evidence_gaps:
@@ -753,7 +1072,11 @@ async def save_analysis_intelligence_artifacts(
             "summary": gaps.get("summary") or {},
             "status": "recorded",
         }
-        resp = await _run(lambda: supabase.table("evidence_gaps").insert(payload).execute())
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "evidence_gaps")
+        table = supabase.table("evidence_gaps")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
         persisted["evidence_gaps"] = (resp.data or [{}])[0]
 
     if health_states:
@@ -768,7 +1091,11 @@ async def save_analysis_intelligence_artifacts(
             "summary": states.get("summary") or {},
             "status": "recorded",
         }
-        resp = await _run(lambda: supabase.table("health_state_versions").insert(payload).execute())
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "health_states")
+        table = supabase.table("health_state_versions")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
         persisted["health_states"] = (resp.data or [{}])[0]
 
     return persisted
@@ -1074,23 +1401,49 @@ async def save_protocol(
     upload_id: str,
     recommendations: List[Dict],
     prompt_version: Optional[str] = None,
+    report_version_id: str | None = None,
 ) -> Dict:
     supabase = _get_supabase()
+
+    if report_version_id:
+        # The report version carries the immutable protocol and its frozen flat
+        # projection. Never accept this invocation's freshly generated list as
+        # authority for a recovery-capable write.
+        report_id = _require_uuid(report_version_id, field="report_version_id")
+        response = await _run(
+            lambda: supabase.rpc(
+                "project_report_protocol",
+                {
+                    "p_user_id": _require_uuid(user_id, field="user_id"),
+                    "p_upload_id": _require_uuid(upload_id, field="upload_id"),
+                    "p_report_version_id": report_id,
+                },
+            ).execute()
+        )
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if len(payload) == 1 else None
+        if (
+            not isinstance(payload, dict)
+            or payload.get("status") not in {"applied", "already_projected", "newer_projection"}
+            or not isinstance(payload.get("recommendations"), list)
+        ):
+            raise AtomicFinalizationError("invalid_protocol_projection_response")
+        return payload
 
     existing_protocol = await get_protocol_by_upload(user_id, upload_id)
 
     payload: Dict[str, Any] = {"recommendations": recommendations}
     if prompt_version:
         payload["prompt_version"] = prompt_version
+    effect_key = analysis_effect_key(report_version_id, "protocol") if report_version_id else None
+    if effect_key:
+        payload["analysis_effect_key"] = effect_key
+        payload["source_report_version_id"] = report_version_id
 
     if existing_protocol:
         protocol_id = existing_protocol["id"]
-        updated = await _run(
-            lambda: supabase.table("protocols")
-            .update(payload)
-            .eq("id", protocol_id)
-            .execute()
-        )
+        updated = await _run(lambda: supabase.table("protocols").update(payload).eq("id", protocol_id).execute())
         return updated.data[0]
 
     create_payload: Dict[str, Any] = {
@@ -1100,6 +1453,9 @@ async def save_protocol(
     }
     if prompt_version:
         create_payload["prompt_version"] = prompt_version
+    if effect_key:
+        create_payload["analysis_effect_key"] = effect_key
+        create_payload["source_report_version_id"] = report_version_id
 
     resp = await _run(lambda: supabase.table("protocols").insert(create_payload).execute())
     await _emit_timeline(
@@ -1107,8 +1463,141 @@ async def save_protocol(
         "protocol_generated",
         "Protocol generated from uploaded lab",
         metadata={"upload_id": upload_id, "recommendation_count": len(recommendations)},
+        analysis_effect_key=(
+            analysis_effect_key(report_version_id, "timeline", "protocol_generated")
+            if report_version_id else None
+        ),
     )
     return resp.data[0]
+
+
+async def load_frozen_followup_payload(
+    *, user_id: str, report_version_id: str, effect_type: str
+) -> Dict[str, Any]:
+    """Load one hash-verified recovery payload through the owner-scoped RPC.
+
+    This is deliberately the only future worker input boundary. It neither
+    accepts a payload from the worker nor re-evaluates report/KB/AI content.
+    """
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "load_analysis_followup_work_payload",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema") != "analysis_recovery_work_payload_v1"
+        or payload.get("effect_type") != effect_type
+        or not isinstance(payload.get("data"), dict)
+    ):
+        raise AtomicFinalizationError("invalid_followup_payload_response")
+    return payload
+
+
+async def list_recoverable_followup_report_ids(*, user_id: str, limit: int = 4) -> List[str]:
+    """Return a bounded owner-scoped set of reports with durable retryable work.
+
+    This is an internal dispatcher trigger, never a public API. It returns only
+    report identities after validating them as UUIDs; the dispatcher still loads
+    the authoritative report and hash-verified payload for every item.
+    """
+    owner = _require_uuid(user_id, field="user_id")
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 16:
+        raise AtomicFinalizationError("invalid_followup_recovery_limit")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("analysis_followup_work")
+        .select("report_version_id,status,created_at")
+        .eq("user_id", owner)
+        .in_("status", ["pending", "retryable"])
+        .order("created_at")
+        .limit(limit * len(FOLLOWUP_EFFECT_TYPES))
+        .execute()
+    )
+    rows = list(getattr(response, "data", None) or [])
+    report_ids: List[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise AtomicFinalizationError("invalid_followup_recovery_row")
+        report_id = _require_uuid(row.get("report_version_id"), field="report_version_id")
+        if report_id not in seen:
+            seen.add(report_id)
+            report_ids.append(report_id)
+        if len(report_ids) >= limit:
+            break
+    return report_ids
+
+
+async def claim_frozen_followup_work(
+    *, user_id: str, report_version_id: str, effect_type: str, lease_token: str
+) -> Dict[str, Any]:
+    """Atomically claim one owner-scoped recovery item; no payload is accepted."""
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "claim_analysis_followup_work",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+                "p_lease_token": _require_uuid(lease_token, field="lease_token"),
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("claimed"), bool)
+        or payload.get("status") not in _FOLLOWUP_STATUSES
+        or not isinstance(payload.get("attempt_count"), int)
+    ):
+        raise AtomicFinalizationError("invalid_followup_claim_response")
+    return payload
+
+
+async def complete_frozen_followup_work(
+    *, user_id: str, report_version_id: str, effect_type: str, lease_token: str,
+    status: str, error_code: str | None = None,
+) -> Dict[str, Any]:
+    """Complete or release the exact claimed item; stale leases are rejected by SQL."""
+    if effect_type not in FOLLOWUP_EFFECT_TYPES or status not in {"completed", "failed", "retryable"}:
+        raise AtomicFinalizationError("invalid_followup_completion")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "complete_analysis_followup_work",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+                "p_lease_token": _require_uuid(lease_token, field="lease_token"),
+                "p_status": status,
+                "p_error_code": (error_code or None),
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if not isinstance(payload, dict) or payload.get("status") != status:
+        raise AtomicFinalizationError("invalid_followup_completion_response")
+    return payload
 
 
 async def invalidate_user_protocols(user_id: str) -> None:
@@ -2620,7 +3109,13 @@ async def persist_retest_obligations(
                 "priority": item.get("priority"),
             },
         }
-        response = await _run(lambda payload=payload: supabase.table("intervention_events").insert(payload).execute())
+        payload["analysis_effect_key"] = analysis_effect_key(
+            str(report_version_id), "retest_obligations", target_key
+        )
+        response = await _run(
+            lambda payload=payload: supabase.table("intervention_events")
+            .upsert(payload, on_conflict="analysis_effect_key").execute()
+        )
         created.extend(response.data or [])
         seen_targets.add(target_key)
     return created
@@ -3773,8 +4268,9 @@ async def calculate_health_score(user_id: str) -> Dict[str, Any]:
 # ──────────────────────────────────────────────
 
 async def _emit_timeline(user_id: str, event_type: str, summary: str,
-                          source: Optional[str] = None, metadata: Optional[Dict] = None) -> None:
-    supabase = _get_supabase()
+                          source: Optional[str] = None, metadata: Optional[Dict] = None,
+                          analysis_effect_key: Optional[str] = None,
+                          require_durable: bool = False) -> None:
     payload = {
         "user_id": user_id,
         "event_type": event_type,
@@ -3782,15 +4278,27 @@ async def _emit_timeline(user_id: str, event_type: str, summary: str,
         "source": source or "system",
         "metadata": metadata or {},
     }
+    if analysis_effect_key:
+        payload["analysis_effect_key"] = analysis_effect_key
     try:
-        await _run(lambda: supabase.table("timeline_events").insert(payload).execute())
+        supabase = _get_supabase()
+        table = supabase.table("timeline_events")
+        await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                   if analysis_effect_key else table.insert(payload).execute())
     except Exception:
-        pass
+        # Ordinary product timeline telemetry remains best-effort. Recovery
+        # ledger items must instead retain their lease until the idempotent
+        # database write is confirmed.
+        if require_durable:
+            raise AtomicFinalizationError("timeline_effect_write_failed") from None
 
 
 async def save_timeline_event(user_id: str, event_type: str, summary: str,
-                              source: Optional[str] = None, metadata: Optional[Dict] = None) -> None:
-    await _emit_timeline(user_id, event_type, summary, source=source, metadata=metadata)
+                              source: Optional[str] = None, metadata: Optional[Dict] = None,
+                              analysis_effect_key: Optional[str] = None,
+                              require_durable: bool = False) -> None:
+    await _emit_timeline(user_id, event_type, summary, source=source, metadata=metadata,
+                         analysis_effect_key=analysis_effect_key, require_durable=require_durable)
 
 
 async def get_user_timeline(user_id: str, limit: int = 30) -> List[Dict]:
@@ -3965,8 +4473,10 @@ async def write_audit_log(
     old_value: Optional[Dict[str, Any]] = None,
     new_value: Optional[Dict[str, Any]] = None,
     organization_id: Optional[str] = None,
+    analysis_effect_key: Optional[str] = None,
+    require_durable: bool = False,
 ) -> None:
-    """Best-effort audit logging helper that never raises."""
+    """Best-effort audit helper, with an explicit durable recovery mode."""
     try:
         supabase = _get_supabase()
         payload_full = {
@@ -3979,6 +4489,8 @@ async def write_audit_log(
             "organization_id": organization_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        if analysis_effect_key:
+            payload_full["analysis_effect_key"] = analysis_effect_key
 
         payload_minimal = {
             "user_id": user_id,
@@ -4007,9 +4519,15 @@ async def write_audit_log(
         }
 
         try:
-            await _run(lambda: supabase.table("audit_logs").insert(payload_full).execute())
+            table = supabase.table("audit_logs")
+            await _run(lambda: table.upsert(payload_full, on_conflict="analysis_effect_key").execute()
+                       if analysis_effect_key else table.insert(payload_full).execute())
             return
         except Exception:
+            if analysis_effect_key:
+                # A recovery effect may never downgrade to a legacy insert that
+                # lacks its database-enforced identity.
+                raise
             # Fallback for partially migrated schemas where extended audit columns are absent.
             try:
                 await _run(lambda: supabase.table("audit_logs").insert(payload_minimal).execute())
@@ -4018,6 +4536,10 @@ async def write_audit_log(
                 # Final fallback for legacy constraints: action/entity_type/check-limited schema.
                 await _run(lambda: supabase.table("audit_logs").insert(payload_legacy).execute())
     except Exception as ex:
+        if require_durable:
+            # Do not surface provider exception text; recovery records a stable
+            # code and leaves the ledger item retryable.
+            raise AtomicFinalizationError("audit_effect_write_failed") from None
         _logger.warning("audit_log_write_failed action=%s entity_type=%s error=%s", action, entity_type, ex)
 
 

@@ -42,6 +42,9 @@ const UPLOAD_COPY = {
     profileIncomplete: 'Complete profile first',
     uploading: (name, kb) => `Uploading ${name}… (${kb}KB)`,
     analysisComplete: 'Analysis complete!',
+    analysisReplayed: 'Your existing report is ready.',
+    analysisFollowupPending: 'Your report is saved. Some follow-up items are still being completed.',
+    analysisPartial: 'Your report was saved, but follow-up processing needs attention. You can review the confirmed results.',
     longerWarning: 'This is taking longer than usual. Large files may take 1-2 minutes.',
     validationNoFile: 'No file selected. Please choose a lab report.',
     validationUnsupported: 'Unsupported file type. Please upload a PDF, image, XLS/XLSX, or CSV file.',
@@ -88,6 +91,9 @@ const UPLOAD_COPY = {
     profileIncomplete: 'Спочатку заповніть профіль',
     uploading: (name, kb) => `Завантажуємо ${name}… (${kb}KB)`,
     analysisComplete: 'Аналіз готовий!',
+    analysisReplayed: 'Ваш попередньо збережений звіт готовий.',
+    analysisFollowupPending: 'Звіт збережено. Частина наступних кроків ще виконується.',
+    analysisPartial: 'Звіт збережено, але подальша обробка потребує уваги. Можна переглянути підтверджені результати.',
     longerWarning: 'Обробка триває довше, ніж зазвичай. Великі файли можуть займати 1-2 хвилини.',
     validationNoFile: 'Файл не обрано. Завантажте файл з аналізами.',
     validationUnsupported: 'Непідтримуваний тип файлу. Завантажте PDF, зображення, XLS/XLSX або CSV.',
@@ -263,6 +269,24 @@ function resolveUploadId(data) {
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 }
 
+// The backend can confirm a report while derived follow-up work is pending.
+// Keep this small and data-only so every upload path makes the same navigation
+// decision without exposing server error codes to the patient.
+export function classifyAnalysisResponse(data) {
+  const status = typeof data?.analysis_status === 'string' ? data.analysis_status : 'completed'
+  const hasConfirmedReport = Boolean(data?.report_version?.id)
+  if (status === 'needs_confirmation') return { kind: 'needs_confirmation', canNavigate: false }
+  if (status === 'failed') return { kind: 'failed', canNavigate: false }
+  if (status === 'partial' || data?.post_persistence_status === 'partial') {
+    return { kind: 'partial', canNavigate: hasConfirmedReport }
+  }
+  if (data?.finalization_replay) return { kind: 'replay', canNavigate: true }
+  if (data?.downstream_status && data.downstream_status !== 'completed') {
+    return { kind: 'followup_pending', canNavigate: true }
+  }
+  return { kind: 'completed', canNavigate: true }
+}
+
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -366,6 +390,14 @@ export default function Upload() {
       }, { oncePerSession: true })
       gaLabUpload()
 
+      const outcome = classifyAnalysisResponse(data)
+      if (outcome.kind === 'failed') {
+        const info = describeAnalysisError({ status: 500, copy }, copy)
+        setErrorInfo(info)
+        toast.error(info.message)
+        return
+      }
+
       // Quality Gate completion (cabinet reconciliation): a decision other
       // than auto_continue means run_lab_analysis_pipeline took its early
       // needs_confirmation return — no canonical biomarkers were persisted
@@ -376,7 +408,7 @@ export default function Upload() {
       // POST /{upload_id}/confirm-candidates (Stage 2B) — no new endpoint, no
       // gate semantics change. Populates the review UI that already existed
       // in this file but nothing ever triggered.
-      if (data.analysis_status && data.analysis_status !== 'completed') {
+      if (outcome.kind === 'needs_confirmation') {
         try {
           const { data: reviewData } = await api.get(`/analyze/${uploadId}/candidates`)
           const candidates = Array.isArray(reviewData?.candidates) ? reviewData.candidates : []
@@ -387,10 +419,20 @@ export default function Upload() {
           }
         } catch (reviewErr) {
           console.error('Failed to load candidates for review:', reviewErr)
-          // Fall through to the results navigation below — the empty state
-          // there still degrades safely (no biomarkers yet), and the user is
-          // not stuck with no feedback at all.
+          // The candidate-review request failed; the report is not confirmed,
+          // so never present an empty result as a completed analysis.
         }
+        const info = describeAnalysisError({ status: 500, copy }, copy)
+        setErrorInfo(info)
+        toast.error(info.message)
+        return
+      }
+
+      if (!outcome.canNavigate) {
+        const info = describeAnalysisError({ status: 500, copy }, copy)
+        setErrorInfo(info)
+        toast.error(info.message)
+        return
       }
 
       void Promise.allSettled([
@@ -402,7 +444,15 @@ export default function Upload() {
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
 
-      toast.success(copy.analysisComplete)
+      if (outcome.kind === 'partial') {
+        toast(copy.analysisPartial, { icon: '⚠️' })
+      } else if (outcome.kind === 'replay') {
+        toast(copy.analysisReplayed, { icon: '↻' })
+      } else if (outcome.kind === 'followup_pending') {
+        toast(copy.analysisFollowupPending, { icon: '⏳' })
+      } else {
+        toast.success(copy.analysisComplete)
+      }
       navigate(`/results/${uploadId}`)
     } catch (err) {
       const info = handleAnalysisError(err, copy)
@@ -426,6 +476,13 @@ export default function Upload() {
   }
 
   const handleAnalyzeManual = (result) => {
+    const outcome = classifyAnalysisResponse(result)
+    if (outcome.kind === 'failed' || outcome.kind === 'needs_confirmation' || !outcome.canNavigate) {
+      const info = describeAnalysisError({ status: 500, copy }, copy)
+      setErrorInfo(info)
+      toast.error(info.message)
+      return
+    }
     // Same behavior as PDF upload - navigate to results with analysis
     trackFunnelEvent('funnel_first_upload_completed', 'User completed first manual biomarker entry', {
       upload_id: result.upload_id,
@@ -441,7 +498,15 @@ export default function Upload() {
       queryClient.invalidateQueries({ queryKey: ['insights'] }),
       queryClient.invalidateQueries({ queryKey: ['health-score'] }),
     ]).finally(() => {
-      toast.success(copy.analysisComplete)
+      if (outcome.kind === 'partial') {
+        toast(copy.analysisPartial, { icon: '⚠️' })
+      } else if (outcome.kind === 'replay') {
+        toast(copy.analysisReplayed, { icon: '↻' })
+      } else if (outcome.kind === 'followup_pending') {
+        toast(copy.analysisFollowupPending, { icon: '⏳' })
+      } else {
+        toast.success(copy.analysisComplete)
+      }
       navigate(`/results/${result.upload_id}`)
     })
   }
