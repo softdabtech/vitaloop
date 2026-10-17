@@ -203,14 +203,76 @@ jobs:
           npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
 
   # ─────────────────────────────────────────────────────────
-  # JOB 3: Deploy to production (only on push to main)
+  # ─────────────────────────────────────────────────────────
+  # Production schema gate. This is deliberately a main-only job: service-role
+  # credentials must never be available to pull-request workflows. The protected
+  # Environment is an operator-configured release boundary; an unconfigured
+  # Environment provides no protection and must block release approval.
+  # ─────────────────────────────────────────────────────────
+  production-schema-preflight:
+    name: Production — atomic schema preflight
+    runs-on: ubuntu-latest
+    needs: [backend-test, crm-test, frontend-build]
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+    env:
+      SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Verify the required atomic-finalization schema contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing production schema endpoint secret}"
+          : "${SUPABASE_SERVICE_ROLE_KEY:?Missing production service-role secret}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status="$(curl --request POST --silent --show-error \
+            --output "$response_file" --write-out '%{http_code}' --max-time 20 \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/atomic_finalization_schema_preflight")"
+          if [[ "$status" != "200" ]]; then
+            echo "Production schema preflight RPC did not return HTTP 200."
+            exit 1
+          fi
+
+          python - "$response_file" <<'PY'
+          import json
+          import sys
+
+          expected = {
+              "schema_ready": True,
+              "migration_contract": "20261016120000_atomic_lab_analysis_finalization",
+          }
+          try:
+              with open(sys.argv[1], encoding="utf-8") as response:
+                  payload = json.load(response)
+          except (OSError, json.JSONDecodeError):
+              raise SystemExit("Production schema preflight returned an invalid response.")
+          if payload != expected:
+              raise SystemExit("Production schema contract is absent, incomplete, or incompatible.")
+          PY
+          echo "Production atomic schema contract verified."
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 4: Deploy to production (only on push to main)
   # ─────────────────────────────────────────────────────────
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    needs: [backend-test, crm-test, frontend-build]
+    needs: [backend-test, crm-test, frontend-build, production-schema-preflight]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 20
+    environment:
+      name: production
 
     steps:
       - uses: actions/checkout@v4
