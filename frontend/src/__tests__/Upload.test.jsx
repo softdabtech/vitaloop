@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import Upload from '../pages/Upload.jsx'
+import Upload, { classifyAnalysisResponse } from '../pages/Upload.jsx'
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn(), post: vi.fn() },
@@ -38,6 +38,18 @@ beforeEach(() => {
 afterEach(() => cleanup())
 
 describe('Upload page', () => {
+  it.each([
+    [{ analysis_status: 'failed', upload_id: 'u' }, 'failed', false],
+    [{ analysis_status: 'needs_confirmation', upload_id: 'u' }, 'needs_confirmation', false],
+    [{ analysis_status: 'partial', upload_id: 'u', report_version: { id: 'r' } }, 'partial', true],
+    [{ analysis_status: 'partial', upload_id: 'u' }, 'partial', false],
+    [{ analysis_status: 'completed', finalization_replay: true, upload_id: 'u' }, 'replay', true],
+    [{ analysis_status: 'completed', downstream_status: 'retryable', upload_id: 'u' }, 'followup_pending', true],
+    [{ analysis_status: 'completed', upload_id: 'u' }, 'completed', true],
+  ])('classifies API persistence state safely', (response, kind, canNavigate) => {
+    expect(classifyAnalysisResponse(response)).toEqual({ kind, canNavigate })
+  })
+
   it.each([
     ['PDF', '.pdf'],
     ['PNG', '.png'],

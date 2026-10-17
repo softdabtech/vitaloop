@@ -523,6 +523,12 @@ async def _load_recommendations(recommendation_keys: List[str]) -> Dict[str, Dic
     if not recommendation_keys:
         return {}
 
+    requested_keys = {
+        key.strip() for key in recommendation_keys if isinstance(key, str) and key.strip()
+    }
+    if len(requested_keys) != len(recommendation_keys):
+        raise ValueError("Recommendation lookup keys must be unique non-empty strings")
+
     client = supabase._get_supabase()
     response = await supabase._run(
         lambda: client.table("recommendations")
@@ -531,12 +537,19 @@ async def _load_recommendations(recommendation_keys: List[str]) -> Dict[str, Dic
         .execute()
     )
     rows = response.data or []
-    cleaned_rows: List[Dict[str, Any]] = []
+    recommendations: Dict[str, Dict[str, Any]] = {}
     for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Recommendation catalog returned a malformed row")
         cleaned = dict(row)
+        key = cleaned.get("key")
+        if not isinstance(key, str) or key not in requested_keys:
+            raise ValueError("Recommendation catalog returned an inconsistent key")
+        if key in recommendations:
+            raise ValueError(f"Recommendation catalog key is ambiguous: {key}")
         cleaned["evidence_level"] = _public_evidence_level(cleaned.get("evidence_level"))
-        cleaned_rows.append(cleaned)
-    return {str(row.get("key")): row for row in cleaned_rows}
+        recommendations[key] = cleaned
+    return recommendations
 
 
 async def _persist_rule_evaluation(user_id: str | None, rule_match: Dict[str, Any], input_snapshot: Dict[str, Any]) -> str | None:

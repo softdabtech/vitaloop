@@ -7,6 +7,7 @@ import tempfile
 from collections import deque
 from datetime import date, datetime, timezone
 from time import monotonic
+from uuid import UUID, uuid4, uuid5
 
 from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form, Request
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ from app.dependencies import get_current_user
 from app.services.ai.openai_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
 from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
+    analysis_effect_key,
     assert_upload_belongs_to_user,
     calculate_health_score,
     get_biomarker_extraction_candidates,
@@ -92,6 +94,7 @@ _ANALYSIS_PROFILE_REQUIRED_EN = (
 
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
+_ATOMIC_FINALIZATION_NAMESPACE = UUID("c6549ad7-5243-4f47-9df9-963c8e7cc2d3")
 _ALLOWED_BIOMARKER_STATUSES = {"OPTIMAL", "BORDERLINE", "DEFICIENT", "ELEVATED"}
 _BIOMARKER_STATUS_ALIASES = {
     "NORMAL": "OPTIMAL",
@@ -186,7 +189,18 @@ class AnalyzeResponse(BaseModel):
     # POST "" compatibility route, POST /manual, and
     # POST /{upload_id}/regenerate were. Optional with a
     # default so no existing client that ignores these fields breaks.
+    # completed | partial | failed | needs_confirmation. `partial` = report
+    # version confirmed persisted but follow-up writes failed (see error_code).
     analysis_status: Optional[str] = None
+    error: Optional[str] = None
+    error_code: Optional[str] = None
+    post_persistence_status: Optional[str] = None
+    # True means the report was loaded from the first committed atomic
+    # finalization, not regenerated for this request.
+    finalization_replay: Optional[bool] = None
+    # Durable follow-up ledger summary; completed report persistence alone does
+    # not imply all derived artifacts have been processed.
+    downstream_status: Optional[str] = None
     report_source: Optional[str] = None
     safety_notice: Optional[str] = None
     case_synthesis: Optional[dict] = None
@@ -194,6 +208,15 @@ class AnalyzeResponse(BaseModel):
     symptom_analysis: Optional[dict] = None
     grounded_ai_narrative: Optional[dict] = None
     semantic_acceptance: Optional[dict] = None
+
+
+def _persistence_contract(pipeline_result: dict) -> dict:
+    """Machine-readable persistence outcome fields; absent on plain completed runs."""
+    return {
+        key: pipeline_result[key]
+        for key in ("error", "error_code", "post_persistence_status", "finalization_replay", "downstream_status")
+        if pipeline_result.get(key) is not None
+    }
 
 
 class CandidateDecision(BaseModel):
@@ -608,6 +631,7 @@ async def analyze_lab_file(
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
+            operation_key=_atomic_operation_key(user_id=user_id, upload_id=str(upload_id), idempotency_key=normalized_key),
             source_metadata={
                 "source": "b2c_file",
                 "file_type": file_ext,
@@ -626,13 +650,15 @@ async def analyze_lab_file(
         knowledge_report = pipeline_result.get("knowledge_report")
 
         protocol = pipeline_result.get("protocol", {})
-        if protocol and analysis_status == "completed":
+        if (protocol and analysis_status == "completed" and not pipeline_result.get("finalization_replay")
+                and not pipeline_result.get("downstream_dispatch_invoked")):
             try:
                 await save_protocol(
                     user_id=user_id,
                     upload_id=upload_id,
                     recommendations=pipeline_result.get("recommendations") or [],
                     prompt_version=prompt_version,
+                    report_version_id=(pipeline_result.get("report_version") or {}).get("id"),
                 )
             except Exception as exc:
                 logger.warning(
@@ -643,7 +669,8 @@ async def analyze_lab_file(
                     exc_info=True,
                 )
 
-        if analysis_status == "completed":
+        if (analysis_status == "completed" and not pipeline_result.get("finalization_replay")
+                and not pipeline_result.get("downstream_dispatch_invoked")):
             try:
                 await save_timeline_event(
                     user_id=user_id,
@@ -656,6 +683,11 @@ async def analyze_lab_file(
                         "file_type": file_ext,
                         **_date_payload_from_extraction(lab_date_extraction),
                     },
+                    analysis_effect_key=analysis_effect_key(
+                        (pipeline_result.get("report_version") or {}).get("id"),
+                        "timeline",
+                        "lab_analyzed",
+                    ),
                 )
             except Exception as exc:
                 logger.warning("analyze_file_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
@@ -663,6 +695,7 @@ async def analyze_lab_file(
         result = {
             "upload_id": upload_id,
             "analysis_status": analysis_status,
+            **_persistence_contract(pipeline_result),
             "biomarkers": saved_biomarkers,
             "top_priority": pipeline_result.get("prioritized_biomarkers", []),
             "protocol": protocol,
@@ -832,6 +865,14 @@ def _normalize_idempotency_key(idempotency_key: Optional[str]) -> Optional[str]:
     return normalized_key
 
 
+def _atomic_operation_key(*, user_id: str, upload_id: str, idempotency_key: Optional[str]) -> str:
+    """Return the durable RPC key for this logical request, independent of RAM cache."""
+    if idempotency_key:
+        return str(uuid5(_ATOMIC_FINALIZATION_NAMESPACE, f"{user_id}:{upload_id}:{idempotency_key}"))
+    # Requests without an idempotency key are deliberately new analyses.
+    return str(uuid4())
+
+
 async def _get_idempotency_cached_response(
     *,
     user_id: str,
@@ -925,6 +966,7 @@ async def analyze_lab(
         filename = (getattr(file, "filename", "") or "").lower()
         if filename.endswith(".pdf"):
             user_id: str = current_user["sub"]
+            normalized_key = _normalize_idempotency_key(idempotency_key)
             user_profile = await _require_analysis_profile_context(user_id, _resolve_response_locale(request))
             quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
             if not quota_ok:
@@ -977,6 +1019,7 @@ async def analyze_lab(
                     user_profile=user_profile,
                     user_id=user_id,
                     analysis_id=str(upload_id),
+                    operation_key=_atomic_operation_key(user_id=user_id, upload_id=str(upload_id), idempotency_key=normalized_key),
                     source_metadata={
                         "source": "legacy_multipart_pdf",
                         "analysis_method": "legacy_pdf",
@@ -989,7 +1032,8 @@ async def analyze_lab(
                 )
                 analysis_status = pipeline_result.get("analysis_status", "completed")
                 saved_biomarkers = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
-                if analysis_status == "completed":
+                if (analysis_status == "completed" and not pipeline_result.get("finalization_replay")
+                        and not pipeline_result.get("downstream_dispatch_invoked")):
                     await save_timeline_event(
                         user_id=user_id,
                         event_type="lab_analyzed",
@@ -1000,11 +1044,17 @@ async def analyze_lab(
                             "analysis_method": "legacy_pdf",
                             **_date_payload_from_extraction(lab_date_extraction),
                         },
+                        analysis_effect_key=analysis_effect_key(
+                            (pipeline_result.get("report_version") or {}).get("id"),
+                            "timeline",
+                            "lab_analyzed",
+                        ),
                     )
 
                 return {
                     "upload_id": upload_id,
                     "analysis_status": analysis_status,
+                    **_persistence_contract(pipeline_result),
                     "biomarkers": saved_biomarkers,
                     "analysis_source": _stable_analysis_source("fallback"),
                     "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
@@ -1208,6 +1258,7 @@ async def analyze_lab(
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
+            operation_key=_atomic_operation_key(user_id=user_id, upload_id=str(upload_id), idempotency_key=normalized_key),
             source_metadata={
                 "source": "b2c_text",
                 "lab_name": normalized_lab_name,
@@ -1222,13 +1273,18 @@ async def analyze_lab(
         analysis_status = pipeline_result.get("analysis_status", "completed")
         saved = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
 
-        if analysis_status == "completed":
+        if analysis_status == "completed" and not pipeline_result.get("finalization_replay"):
             await write_audit_log(
                 user_id=user_id,
                 action="create",
                 entity_type="biomarkers",
                 entity_id=str(upload_id),
                 new_value={"count": len(saved)},
+                analysis_effect_key=analysis_effect_key(
+                    (pipeline_result.get("report_version") or {}).get("id"),
+                    "audit",
+                    "biomarker_persisted",
+                ),
             )
             try:
                 await save_timeline_event(
@@ -1240,6 +1296,11 @@ async def analyze_lab(
                         "biomarker_count": len(saved),
                         **_date_payload_from_extraction(lab_date_extraction),
                     },
+                    analysis_effect_key=analysis_effect_key(
+                        (pipeline_result.get("report_version") or {}).get("id"),
+                        "timeline",
+                        "lab_uploaded",
+                    ),
                 )
             except Exception as exc:
                 # Timeline should not fail the request after successful biomarker persistence.
@@ -1249,6 +1310,7 @@ async def analyze_lab(
         result = {
             "upload_id": upload_id,
             "analysis_status": analysis_status,
+            **_persistence_contract(pipeline_result),
             "biomarkers": saved,
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
@@ -1431,13 +1493,15 @@ async def confirm_upload_candidates(
     analysis_status = pipeline_result.get("analysis_status", "completed")
     saved = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
     protocol = pipeline_result.get("protocol", {})
-    if protocol and analysis_status == "completed":
+    if (protocol and analysis_status == "completed" and not pipeline_result.get("finalization_replay")
+            and not pipeline_result.get("downstream_dispatch_invoked")):
         try:
             await save_protocol(
                 user_id=user_id,
                 upload_id=upload_id,
                 recommendations=pipeline_result.get("recommendations") or [],
                 prompt_version="candidate_confirmation_v1",
+                report_version_id=(pipeline_result.get("report_version") or {}).get("id"),
             )
         except Exception as exc:
             logger.warning("confirm_candidates_save_protocol_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
@@ -1448,7 +1512,7 @@ async def confirm_upload_candidates(
     # actually persists new canonical biomarkers on every normal upload,
     # never did. Same fail-open pattern as the delete path: a stale score is
     # a UX annoyance, not a reason to fail an otherwise-successful analysis.
-    if analysis_status == "completed" and saved:
+    if analysis_status == "completed" and saved and not pipeline_result.get("finalization_replay"):
         try:
             await calculate_health_score(user_id)
         except Exception as exc:
@@ -1471,6 +1535,7 @@ async def confirm_upload_candidates(
     return {
         "upload_id": upload_id,
         "analysis_status": analysis_status,
+        **_persistence_contract(pipeline_result),
         "biomarkers": saved,
         "candidates": updated,
         "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
@@ -1607,27 +1672,10 @@ async def get_results(
 
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
-        if locale_mismatch:
-            # Transient only — do not overwrite the other locale's protocols
-            # row (see docstring above).
-            protocol_recommendations = generated_recommendations
-        else:
-            try:
-                protocol = await save_protocol(
-                    user_id=user_id,
-                    upload_id=upload_id,
-                    recommendations=generated_recommendations,
-                    prompt_version="results_read_v2",
-                )
-                protocol_recommendations = protocol.get("recommendations", [])
-            except Exception as exc:
-                logger.warning(
-                    "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
-                    upload_id,
-                    user_id,
-                    repr(exc),
-                    exc_info=True,
-                )
+        # Transient only: this read path has no authoritative frozen report
+        # version (persist_report_version is off), so personalized flat
+        # recommendations are never written to `protocols` from here.
+        protocol_recommendations = generated_recommendations
 
     # Stage 2G: this branch only runs when no frozen report_versions row was
     # found for the requested locale. `locale_mismatch` distinguishes "a
@@ -1667,6 +1715,7 @@ async def get_results(
         # block_or_confirm — no special-casing needed here, the same gate logic
         # that governs write time governs this read).
         "analysis_status": pipeline_result.get("analysis_status", "completed"),
+        **_persistence_contract(pipeline_result),
         "biomarkers": biomarkers,
         "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
         "protocol": protocol_recommendations,
@@ -1747,6 +1796,7 @@ async def regenerate_results(
     return {
         "upload_id": upload_id,
         "analysis_status": pipeline_result.get("analysis_status", "completed"),
+        **_persistence_contract(pipeline_result),
         "biomarkers": biomarkers,
         "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
         "protocol": protocol_recommendations or pipeline_result.get("recommendations") or [],
@@ -1942,7 +1992,7 @@ async def analyze_manual_biomarkers(
         protocol = pipeline_result.get("protocol", {})
         legacy_manual_recommendations = []
         protocol_response = protocol
-        if analysis_status == "completed":
+        if analysis_status == "completed" and not pipeline_result.get("finalization_replay"):
             legacy_manual_recommendations = (
                 []
                 if response_locale == "uk"
@@ -1951,11 +2001,17 @@ async def analyze_manual_biomarkers(
             recommendations_to_save = legacy_manual_recommendations or pipeline_result.get("recommendations") or []
             protocol_response = legacy_manual_recommendations or protocol
             if recommendations_to_save:
-                await save_protocol_for_upload(user_id, upload_id, recommendations_to_save)
+                await save_protocol_for_upload(
+                    user_id,
+                    upload_id,
+                    recommendations_to_save,
+                    report_version_id=(pipeline_result.get("report_version") or {}).get("id"),
+                )
 
         return {
             "upload_id": upload_id,
             "analysis_status": analysis_status,
+            **_persistence_contract(pipeline_result),
             "biomarkers": saved_biomarkers,
             "analysis_source": _stable_analysis_source("llm" if is_llm_configured() else "fallback"),
             "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
@@ -1982,7 +2038,13 @@ async def analyze_manual_biomarkers(
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
-async def save_protocol_for_upload(user_id: str, upload_id: str, recommendations: List[dict]):
+async def save_protocol_for_upload(
+    user_id: str,
+    upload_id: str,
+    recommendations: List[dict],
+    *,
+    report_version_id: str | None = None,
+):
     """Save generated protocol to database.
 
     Hotfix 1 — post-release: this used to build its own insert payload with
@@ -2001,12 +2063,21 @@ async def save_protocol_for_upload(user_id: str, upload_id: str, recommendations
     no duplicated insert logic.
     """
     try:
-        await save_protocol(
+        save_kwargs = dict(
             user_id=user_id,
             upload_id=upload_id,
             recommendations=recommendations,
             prompt_version="manual_entry_v1",
         )
+        # A confirmed atomic report ID is a UUID. Compatibility fixtures and
+        # legacy non-atomic callers can retain the historical insert path.
+        if report_version_id:
+            try:
+                UUID(str(report_version_id))
+                save_kwargs["report_version_id"] = report_version_id
+            except (ValueError, TypeError, AttributeError):
+                pass
+        await save_protocol(**save_kwargs)
     except Exception as e:
         logger.error(f"Failed to save protocol: {e}")
         # Don't fail the entire request if protocol save fails

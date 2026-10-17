@@ -55,7 +55,7 @@ def _stub_persistence(monkeypatch):
         return [{"id": f"bm-{i}", **b} for i, b in enumerate(biomarkers)]
 
     async def _fake_save_report_version(**kwargs):
-        return {"id": "report-v-fake", **kwargs}
+        return {**kwargs, "id": kwargs["report_version_id"]}
 
     async def _fake_save_safety_events(**_kwargs):
         return []

@@ -899,7 +899,7 @@ async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypa
         }
 
     async def fake_save_report_version(**kwargs):
-        return {"id": "report-version-1"}
+        return {"id": kwargs["report_version_id"]}
 
     async def fake_save_safety_events(**kwargs):
         return []
@@ -940,7 +940,7 @@ async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypa
     )
 
     assert result["status"] == "completed"
-    assert result["report_version"]["id"] == "report-version-1"
+    assert result["report_version"]["id"]
     assert result["analysis_intelligence_artifacts"]["persisted"] is False
     assert alerts[0]["code"] == "ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED"
     assert alerts[0]["details"]["upload_id"] == "22222222-2222-2222-2222-222222222222"

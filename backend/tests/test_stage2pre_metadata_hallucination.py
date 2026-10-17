@@ -110,6 +110,9 @@ class _BiomarkersTableSpy:
     def __init__(self, capture: dict):
         self._capture = capture
 
+    def select(self, *_args, **_kwargs):
+        return self
+
     def delete(self):
         return self
 

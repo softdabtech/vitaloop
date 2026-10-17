@@ -67,6 +67,9 @@ from app.services.clinical_engine.normalizer import normalize_biomarkers as _eng
 from app.services.clinical_engine import prioritize_biomarkers as _engine_prioritize_biomarkers
 from app.services.clinical_engine import build_risk_flags as _engine_build_risk_flags
 from app.services.protocol_enrichment import enrich_protocol
+from app.services.protocol_action_adapter import adapt_protocol_actions_from_frozen_evidence
+from app.services.protocol_pipeline_evidence import FROZEN_EVIDENCE_KEY, build_pipeline_frozen_evidence
+from app.services.recovery_dispatcher import recover_pending_report_followups, recover_report_followups
 from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report, detect_patterns
 from app.services.safety import (
     sanitize_knowledge_evaluation_for_safety,
@@ -874,6 +877,18 @@ def _shopping_links(
     return links[:8]
 
 
+async def _resolve_ambiguous_report_insert(supabase, user_id: str, report_version_id: str | None):
+    """Owner-scoped lookup by the server-generated id after an insert error.
+    Returns the persisted row only on an exact id match; None when unresolved."""
+    try:
+        row = await supabase.get_report_version_for_user(user_id, report_version_id)
+    except Exception:
+        return None
+    if isinstance(row, dict) and row.get("id") == report_version_id:
+        return row
+    return None
+
+
 async def run_lab_analysis_pipeline(
     *,
     biomarkers: List[Dict[str, Any]],
@@ -884,6 +899,7 @@ async def run_lab_analysis_pipeline(
     user_profile: Optional[Dict[str, Any]] = None,
     user_id: Optional[str] = None,
     analysis_id: Optional[str] = None,
+    operation_key: Optional[str] = None,
     source_metadata: Optional[Dict[str, Any]] = None,
     persist_knowledge: bool = False,
     persist_report_version: bool = False,
@@ -898,6 +914,9 @@ async def run_lab_analysis_pipeline(
         if persist_report_version and user_id and analysis_id
         else None
     )
+    # For a biomarker-replacing run the database operation key, not the
+    # process-local response cache, is the durable idempotency authority.
+    atomic_operation_key = operation_key or (str(uuid4()) if persist_report_version and user_id and analysis_id else None)
     # Capture the newest completed interview at analysis-generation time. The
     # detached value below is persisted into this report version and is never
     # reloaded when the frozen report is read later.
@@ -1018,7 +1037,7 @@ async def run_lab_analysis_pipeline(
         }
 
     saved_biomarkers: List[Dict[str, Any]] | None = None
-    if persist_biomarkers and user_id and analysis_id:
+    if persist_biomarkers and user_id and analysis_id and not persist_report_version:
         from app.services import supabase_service as supabase
 
         saved_biomarkers = await supabase.save_biomarkers(
@@ -1026,6 +1045,8 @@ async def run_lab_analysis_pipeline(
             user_id=user_id,
             biomarkers=normalized_biomarkers,
         )
+        if report_version_id is None:
+            await supabase.mark_lab_upload_done(analysis_id, user_id)
 
     knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
         biomarkers=normalized_biomarkers,
@@ -1037,6 +1058,15 @@ async def run_lab_analysis_pipeline(
         persist=persist_knowledge,
     )
     knowledge_evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
+    # Frozen once from this exact evaluation, before URL stripping, safety
+    # sanitization and localization. Persisted only inside the report_versions
+    # explainability JSONB; not used by generation or flat protocols yet.
+    frozen_protocol_evidence = build_pipeline_frozen_evidence(
+        report_version_id=report_version_id,
+        normalized_biomarkers=normalized_biomarkers,
+        symptom_snapshot=symptom_snapshot,
+        knowledge_evaluation=knowledge_evaluation,
+    )
     knowledge_report = build_knowledge_report(
         biomarkers=normalized_biomarkers,
         knowledge_evaluation=knowledge_evaluation,
@@ -1225,32 +1255,58 @@ async def run_lab_analysis_pipeline(
             clinical_context=clinical_context,
         )
         ai_protocol = ai_orchestration.get("items") or []
-    ai_protocol = sanitize_protocol_for_safety(ai_protocol, profile=user_profile, locale=locale)
-    if isinstance(ai_orchestration, dict):
-        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
-    recommendations = [
-        *rule_recommendations,
-        *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
-    ]
-    # Stage 2C: `recommendations` is a separate flat list from `protocol` (both
-    # are built from the same rule/AI items, but shaped differently) and is what
-    # gets persisted into the `protocols` table (see supabase_service.save_protocol
-    # call sites in analyze.py) — that table's content is what GET /{upload_id}
-    # actually serves as "protocol" to a returning user. Previously only
-    # `protocol` was sanitized, leaving `recommendations`/`protocols.recommendations`
-    # to serve unsanitized content even after this exact same safety engine had
-    # already flagged it. Sanitizing both, using the identical function/detectors,
-    # closes that gap without a second sanitization implementation.
-    recommendations = sanitize_protocol_for_safety(recommendations, profile=user_profile, locale=locale)
+    # Every candidate is adapted from the complete original action before any
+    # safety sanitization or presentation enrichment can remove unsafe fields.
+    # The adapter gets only the evidence built above from this evaluation; no
+    # request/AI report context can grant grounding. It deliberately does not
+    # add fallback actions to empty sections.
     protocol = _protocol_sections_from_ai_and_rules(rule_actions=rule_recommendations, ai_protocol=ai_protocol)
-    protocol = _fill_protocol_section_fallbacks(
-        protocol,
-        biomarkers=normalized_biomarkers,
-        prioritized=prioritized,
-    )
     for section, actions in protocol.items():
         protocol[section] = assign_action_ids(actions, f"protocol-{section}")
+
+    adapted_actions = adapt_protocol_actions_from_frozen_evidence(
+        protocol=protocol,
+        frozen_evidence=frozen_protocol_evidence,
+        report_version_id=report_version_id,
+    )
+    protocol = adapted_actions["protocol"]
+    # Protocol sections and the flat projection must carry the same grounding
+    # decision. Retained AI items remain identifiable only through their
+    # allowlisted presentation source; unsupported items are absent everywhere.
+    recommendations = [
+        item
+        for actions in protocol.values()
+        for item in actions
+        if isinstance(item, dict)
+    ]
+    rule_recommendations = [
+        item for item in recommendations if item.get("source") != "ai_protocol"
+    ]
+    ai_protocol = [
+        item for item in recommendations if item.get("source") == "ai_protocol"
+    ]
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
+
+    # Safety remains the last line of defence and runs after canonical
+    # adaptation on both shapes that can be returned or persisted.
     protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
+    recommendations = [
+        item
+        for actions in protocol.values()
+        for item in actions
+        if isinstance(item, dict)
+    ]
+    rule_recommendations = [
+        item for item in recommendations if item.get("source") != "ai_protocol"
+    ]
+    ai_protocol = [
+        item for item in recommendations if item.get("source") == "ai_protocol"
+    ]
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
@@ -1926,10 +1982,13 @@ async def run_lab_analysis_pipeline(
     }
 
     if persist_report_version and user_id and analysis_id:
+        report_version_saved = False
+        persistence_state = "insert_unconfirmed"
+        atomic_replay = False
         try:
             from app.services import supabase_service as supabase
 
-            report_version = await supabase.save_report_version(
+            insert_kwargs = dict(
                 user_id=user_id,
                 upload_id=analysis_id,
                 report_version_id=report_version_id,
@@ -1937,6 +1996,10 @@ async def run_lab_analysis_pipeline(
                 locale=locale,
                 input_snapshot={
                     "biomarkers": normalized_biomarkers,
+                    # The upload-scoped `protocols` row is only a projection.
+                    # Freeze its exact flat representation with this historical
+                    # report so recovery never runs AI/KB generation again.
+                    "protocol_projection": deepcopy(recommendations),
                     "symptoms": normalized_symptoms,
                     "symptom_snapshot": deepcopy(symptom_snapshot),
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
@@ -2005,18 +2068,181 @@ async def run_lab_analysis_pipeline(
                     # frozen GET can serve it without recomputing — see
                     # app/services/report_history.py::frozen_knowledge_evaluation().
                     "knowledge_evaluation": output_knowledge_evaluation,
+                    # Separate frozen payload built before any presentation
+                    # transformation; never derived from knowledge_evaluation.
+                    **(
+                        {FROZEN_EVIDENCE_KEY: frozen_protocol_evidence["payload"]}
+                        if frozen_protocol_evidence.get("status") in ("BUILT", "NON_AUTHORIZING")
+                        else {}
+                    ),
                 },
                 interpreted_report=interpreted_report,
                 status="completed" if safety_result.get("status") != "blocked" else "blocked",
             )
-            await supabase.persist_retest_obligations(
-                user_id=user_id,
-                report_version=report_version,
-                retest_plan=knowledge_report.get("retest_plan") or [],
-            )
+            if persist_biomarkers:
+                # The single SQL transaction owns replacement of the persisted
+                # projection, frozen report insertion, and upload completion.
+                # Never fall back to the old multi-request REST write sequence.
+                atomic_report = {
+                    "version": insert_kwargs["version"],
+                    "locale": insert_kwargs["locale"],
+                    "input_snapshot": insert_kwargs["input_snapshot"],
+                    "knowledge_report": {
+                        **(insert_kwargs["knowledge_report"] or {}),
+                        **(
+                            {"interpreted_report": insert_kwargs["interpreted_report"]}
+                            if insert_kwargs.get("interpreted_report") else {}
+                        ),
+                    },
+                    "protocol": insert_kwargs["protocol"] or {},
+                    "safety_result": insert_kwargs["safety_result"] or {},
+                    "explainability": insert_kwargs["explainability"] or {},
+                    "status": insert_kwargs["status"],
+                }
+                try:
+                    finalized = await supabase.finalize_lab_analysis(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        operation_key=atomic_operation_key,
+                        report_version_id=report_version_id,
+                        locale=locale,
+                        pipeline_version=LAB_ANALYSIS_PIPELINE_VERSION,
+                        biomarkers=normalized_biomarkers,
+                        report=atomic_report,
+                    )
+                except supabase.AtomicFinalizationError as exc:
+                    persistence_state = exc.code
+                    raise
+                report_version = {
+                    "id": finalized["report_version_id"],
+                    "status": insert_kwargs["status"],
+                    "version": insert_kwargs["version"],
+                }
+                atomic_replay = finalized["replay"]
+                saved_biomarkers = finalized["biomarkers"]
+                result["saved_biomarkers"] = saved_biomarkers
+                result["finalization_replay"] = atomic_replay
+            else:
+                try:
+                    report_version = await supabase.save_report_version(**insert_kwargs)
+                except Exception:
+                    # Ambiguous outcome: the insert may have committed. Resolve by the
+                    # server-generated id before concluding anything; never re-insert.
+                    report_version = await _resolve_ambiguous_report_insert(supabase, user_id, report_version_id)
+                    if report_version is None:
+                        raise
+            returned_id = report_version.get("id") if isinstance(report_version, dict) else None
+            # A replay deliberately returns the identity of the first committed
+            # report, not the fresh provisional UUID generated for this attempt.
+            if not isinstance(returned_id, str) or (not atomic_replay and returned_id != report_version_id):
+                persistence_state = "mismatch"
+                raise RuntimeError("report_version_id_mismatch")
+            report_version_saved = True
+            if atomic_replay:
+                # A replay is an acknowledgement of the earlier transaction, not
+                # permission to present a second run's clinical output as saved.
+                # Rehydrate only the owner-scoped frozen report and its persisted
+                # biomarker projection; fail closed if either side is incomplete.
+                try:
+                    replay = await supabase.load_authoritative_finalization_replay(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        report_version_id=returned_id,
+                    )
+                except supabase.AtomicFinalizationError as exc:
+                    persistence_state = exc.code
+                    raise
+                persisted = replay["report_version"]
+                report_version = {
+                    "id": persisted["id"],
+                    "status": persisted["status"],
+                    "version": persisted["version"],
+                }
+                saved_biomarkers = replay["biomarkers"]
+                result.update({
+                    "saved_biomarkers": saved_biomarkers,
+                    "normalized_biomarkers": saved_biomarkers,
+                    "knowledge_report": persisted["knowledge_report"],
+                    "interpreted_report": (persisted["knowledge_report"] or {}).get("interpreted_report"),
+                    "protocol": persisted["protocol"],
+                    "safety_result": persisted["safety_result"],
+                    "explainability": {
+                        key: value for key, value in persisted["explainability"].items()
+                        if key != FROZEN_EVIDENCE_KEY
+                    },
+                    "analysis_status": "completed",
+                    "finalization_replay": True,
+                    "downstream_status": replay["downstream_status"],
+                    # These values were produced above for this request. They have
+                    # no persisted authority on a replay and must not escape.
+                    "health_summary": {}, "trend_analysis": {}, "health_states": {},
+                    "prioritized_biomarkers": [], "risks_flags": [], "recommendations": [],
+                    "ai_protocol": {}, "ai_orchestration": {}, "shopping_links": [],
+                    "retest_suggestions": [], "doctor_summary": "",
+                    "knowledge_evaluation": {}, "analysis_input_quality_gate": {},
+                    "clinical_data_integrity": {}, "evidence_gaps": {},
+                    "clinical_priority_planner": {}, "next_best_tests": {}, "clinical_story": {},
+                    "clinical_reasoning_traces": {}, "clinical_hypotheses": {},
+                    "clinical_contradictions": {}, "confidence_calibration": {},
+                    "negative_evidence": {}, "intervention_memory": {},
+                    "outcome_attribution": {}, "evidence_debt": {}, "report_quality_audit": {},
+                    "population_profile_overlays": {}, "population_profile_selection": {},
+                    "doctor_escalation_precision": {}, "symptom_analysis": {},
+                    "case_synthesis": {}, "unified_personal_narrative": {},
+                    "grounded_ai_narrative": {}, "semantic_acceptance": {},
+                    "progress_intelligence": {}, "personal_baseline": {},
+                    "action_plan_by_role": {}, "next_test_funnel": {},
+                    "quality_snapshot": {}, "health_context": {}, "symptom_snapshot": {},
+                    "metadata": {"replay": True, "report_version_id": persisted["id"]},
+                })
+            else:
+                if not persist_biomarkers:
+                    # The legacy non-atomic/report-only path has no recovery
+                    # ledger. Preserve its existing writers until it is retired.
+                    result["downstream_status"] = "pending"
+                else:
+                    # The durable ledger was created in the finalization transaction.
+                    # Invoke only its fixed, owner-scoped dispatcher: no request data
+                    # selects a handler or supplies an effect payload. Failed effects
+                    # stay retryable in the ledger and do not invalidate the report.
+                    try:
+                        outcomes = await recover_report_followups(
+                            authenticated_user_id=user_id,
+                            report_version_id=returned_id,
+                        )
+                        result["downstream_status"] = (
+                            "completed"
+                            if outcomes and set(outcomes.values()) == {"completed"}
+                            else "retryable"
+                        )
+                    except Exception:
+                        # Preserve the confirmed immutable report and its pending
+                        # work. Never fall back to the legacy independent writers.
+                        result["downstream_status"] = "retryable"
+                    result["downstream_dispatch_invoked"] = True
+                    # A bounded, owner-scoped sweep makes prior interrupted
+                    # finalizations retryable on the next trusted analysis
+                    # request. It cannot select handlers or regenerate report
+                    # content, and it never changes this report's status.
+                    try:
+                        await recover_pending_report_followups(
+                            authenticated_user_id=user_id,
+                            max_reports=4,
+                            exclude_report_version_id=returned_id,
+                        )
+                    except Exception as exc:
+                        logger.error("pending_recovery_trigger_failed exception_type=%s", type(exc).__name__)
+            if saved_biomarkers is not None and not persist_biomarkers:
+                await supabase.mark_lab_upload_done(analysis_id, user_id)
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.persist_retest_obligations(
+                    user_id=user_id,
+                    report_version=report_version,
+                    retest_plan=knowledge_report.get("retest_plan") or [],
+                )
             reliable_test_date = supabase.resolve_reliable_retest_date(source_metadata)
             fulfilled_retest_obligations = []
-            if reliable_test_date is not None:
+            if not atomic_replay and not result.get("downstream_dispatch_invoked") and reliable_test_date is not None:
                 fulfilled_retest_obligations = await supabase.reconcile_retest_fulfillment(
                     user_id=user_id,
                     report_version=report_version,
@@ -2025,62 +2251,73 @@ async def run_lab_analysis_pipeline(
                     date_source=(source_metadata or {}).get("date_source"),
                     date_confidence=(source_metadata or {}).get("date_confidence"),
                 )
-            await supabase.reconcile_lab_plan_fulfillment(
-                user_id=user_id,
-                report_version=report_version,
-                biomarkers=normalized_biomarkers,
-                fulfilled_retest_obligations=fulfilled_retest_obligations,
-            )
-            record_lab_analysis_snapshot(
-                source=str((source_metadata or {}).get("source") or "unknown"),
-                snapshot=symptom_snapshot,
-            )
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.reconcile_lab_plan_fulfillment(
+                    user_id=user_id,
+                    report_version=report_version,
+                    biomarkers=normalized_biomarkers,
+                    fulfilled_retest_obligations=fulfilled_retest_obligations,
+                )
+                record_lab_analysis_snapshot(
+                    source=str((source_metadata or {}).get("source") or "unknown"),
+                    snapshot=symptom_snapshot,
+                )
             result["report_version"] = redact_report_version_symptom_snapshot(report_version)
-            await supabase.save_safety_events(
-                user_id=user_id,
-                upload_id=analysis_id,
-                report_version_id=report_version.get("id"),
-                safety_events=safety_result.get("safety_events") or [],
-            )
-            try:
-                result["analysis_intelligence_artifacts"] = await supabase.save_analysis_intelligence_artifacts(
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.save_safety_events(
                     user_id=user_id,
                     upload_id=analysis_id,
-                    analysis_input_quality_gate=analysis_input_quality_gate,
-                    clinical_data_integrity=clinical_integrity,
-                    evidence_gaps=evidence_gaps,
-                    health_states=health_states,
+                    report_version_id=report_version.get("id"),
+                    safety_events=safety_result.get("safety_events") or [],
                 )
-            except Exception as exc:
-                result["analysis_intelligence_artifacts"] = {
-                    "persisted": False,
-                    "error": type(exc).__name__,
-                }
                 try:
-                    from app.services.ops_alerts import send_ops_alert
-
-                    await send_ops_alert(
-                        code="ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED",
-                        title="Analysis intelligence artifact persistence failed",
-                        severity="error",
-                        source="backend.analysis",
-                        details={
-                            "user_id": user_id,
-                            "upload_id": analysis_id,
-                            "error_type": type(exc).__name__,
-                            "error": str(exc)[:500],
-                            "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
-                            "quality_gate_decision": analysis_input_quality_gate.get("decision"),
-                            "clinical_integrity_status": clinical_integrity.get("status"),
-                            "evidence_gap_count": (evidence_gaps.get("summary") or {}).get("gap_count"),
-                            "health_state_count": len(health_states.get("states") or []),
-                        },
+                    result["analysis_intelligence_artifacts"] = await supabase.save_analysis_intelligence_artifacts(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        report_version_id=report_version.get("id"),
+                        analysis_input_quality_gate=analysis_input_quality_gate,
+                        clinical_data_integrity=clinical_integrity,
+                        evidence_gaps=evidence_gaps,
+                        health_states=health_states,
                     )
                 except Exception:
-                    pass
+                    result["analysis_intelligence_artifacts"] = {"persisted": False, "error": "persistence_failed"}
         except Exception:
-            # Report-version persistence must not break the existing analysis flow.
-            result["report_version"] = None
+            if report_version_saved and atomic_replay:
+                # The original transaction may still exist, but its owner-scoped
+                # authoritative report could not be verified. Never fall back to
+                # this request's newly generated clinical presentation.
+                result["report_version"] = None
+                result["analysis_status"] = "failed"
+                result["error"] = "replay_authoritative_load_failed"
+                result["error_code"] = persistence_state if persistence_state.startswith("replay_") or persistence_state.startswith("followup_") else "replay_authoritative_load_failed"
+                result["protocol"] = {}
+                result["recommendations"] = []
+                result["saved_biomarkers"] = []
+                result["normalized_biomarkers"] = []
+                result["finalization_replay"] = True
+            elif report_version_saved:
+                # The insert was confirmed (exact id match). Keep its identity and
+                # the completed status; flag the failed follow-up work instead of
+                # erasing the report or retrying the insert.
+                result["report_version"] = {"id": report_version_id, "status": report_version.get("status"), "version": report_version.get("version")}
+                result["analysis_status"] = "partial"
+                result["post_persistence_status"] = "partial"
+                result["error_code"] = "report_post_persistence_failed"
+            else:
+                # Not confirmed: either the insert raised (outcome ambiguous) or the
+                # returned id did not match. Never present as a saved report, and
+                # never let callers persist flat personalized recommendations.
+                result["report_version"] = None
+                result["analysis_status"] = "failed"
+                result["error"] = "report_persistence_failed"
+                result["error_code"] = (
+                    persistence_state
+                    if persistence_state in {"stale_operation", "idempotency_conflict", "upload_not_finalizable", "invalid_finalization_response", "finalization_storage_error"}
+                    else ("report_persistence_failed" if persistence_state == "mismatch" else "report_persistence_unconfirmed")
+                )
+                result["protocol"] = {}
+                result["recommendations"] = []
             try:
                 from app.services.ops_alerts import send_ops_alert
 

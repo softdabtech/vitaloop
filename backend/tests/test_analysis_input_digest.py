@@ -139,11 +139,11 @@ def test_sql_projection_fields_match_python():
 
 
 def test_sql_accepts_explicit_non_authorizing_frozen_state():
+    from app.services import protocol_pipeline_evidence as ppe
     sql = (Path(__file__).resolve().parents[1] / "migrations" /
            "20261016120000_atomic_lab_analysis_finalization.sql").read_text()
-    assert "protocol_frozen_evidence_nonauthorizing_v1" in sql
-    assert "no_action_authorizing_rules" in sql
-    for k in ("schema", "report_version_id", "reason", "input_context_hash"):
+    assert ppe.NON_AUTHORIZING_SCHEMA in sql and ppe.NON_AUTHORIZING_REASON in sql
+    for k in ppe._NON_AUTHORIZING_FIELDS:
         assert f"'{k}'" in sql
 
 
