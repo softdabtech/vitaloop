@@ -40,8 +40,10 @@ class _Client:
 ])
 def test_effect_key_is_stable_report_scoped_and_subkey_scoped(effect, sub_key):
     report_id = str(uuid4())
-    assert svc.analysis_effect_key(report_id, effect, sub_key) == svc.analysis_effect_key(report_id, effect, sub_key)
-    assert svc.analysis_effect_key(report_id, effect, sub_key) != svc.analysis_effect_key(str(uuid4()), effect, sub_key)
+    key = svc.analysis_effect_key(report_id, effect, sub_key)
+    assert key == svc.analysis_effect_key(report_id, effect, sub_key)
+    assert key != svc.analysis_effect_key(str(uuid4()), effect, sub_key)
+    assert key != svc.analysis_effect_key(report_id, effect, f"{sub_key}-other")
 
 
 def test_effect_key_rejects_unknown_effect_or_non_uuid_report_id():

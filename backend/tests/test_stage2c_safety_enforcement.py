@@ -86,6 +86,14 @@ def _stub_history(monkeypatch):
 
 
 def _mock_common(monkeypatch, action_plan):
+    # These cases exercise the safety layer *after* authorization. Canonical
+    # authorization has its own adversarial suite; an intentionally raw
+    # protocol here ensures safety redaction remains a defence in depth for
+    # every ingestion source, rather than pretending the test supplies trusted
+    # frozen evidence.
+    def _post_authorization_protocol(*, protocol, **_kwargs):
+        return {"protocol": protocol, "classifications": [], "summary": {}}
+
     async def _fake_eval(**_kwargs):
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
 
@@ -94,6 +102,7 @@ def _mock_common(monkeypatch, action_plan):
 
     monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarkers_with_knowledge", _fake_eval)
     monkeypatch.setattr(lab_analysis_pipeline, "build_knowledge_report", _fake_build_knowledge_report)
+    monkeypatch.setattr(lab_analysis_pipeline, "adapt_protocol_actions_from_frozen_evidence", _post_authorization_protocol)
 
 
 # --- E1: warning verdict --------------------------------------------------------
@@ -227,7 +236,10 @@ async def test_e3_normal_safe_analysis_unchanged(monkeypatch):
     assert result["safety_result"]["status"] == "approved"
     assert result["safety_result"]["blocked_items"] == []
     assert result.get("safety_notice") is None
-    assert result["recommendations"] == [SAFE_UNRELATED_ITEM], "no redaction markers on already-safe content"
+    assert len(result["recommendations"]) == 1
+    assert {key: value for key, value in result["recommendations"][0].items() if key != "action_id"} == SAFE_UNRELATED_ITEM, (
+        "no redaction markers on already-safe content"
+    )
 
 
 # --- E4: persisted protocol and report_version safety content consistent --------
@@ -395,6 +407,9 @@ SAFE_REPORT_HEADLINE = "3 of 5 biomarkers reviewed, 2 need attention"
 
 
 def _mock_report_level_diagnosis(monkeypatch):
+    def _post_authorization_protocol(*, protocol, **_kwargs):
+        return {"protocol": protocol, "classifications": [], "summary": {}}
+
     async def _fake_eval(**_kwargs):
         return {
             "matched_rules": [dict(REPORT_LEVEL_DIAGNOSIS_RULE)],
@@ -433,6 +448,7 @@ def _mock_report_level_diagnosis(monkeypatch):
 
     monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarkers_with_knowledge", _fake_eval)
     monkeypatch.setattr(lab_analysis_pipeline, "build_knowledge_report", _fake_build_knowledge_report)
+    monkeypatch.setattr(lab_analysis_pipeline, "adapt_protocol_actions_from_frozen_evidence", _post_authorization_protocol)
 
 
 def _contains_raw_diagnosis_text(obj) -> bool:

@@ -80,11 +80,12 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     async def fake_extract_biomarkers(**kwargs):
         raise AssertionError("extract_biomarkers should not be called from the manual-entry protocol path")
 
-    async def fake_save_protocol_for_upload(user_id, upload_id, recommendations):
+    async def fake_save_protocol_for_upload(user_id, upload_id, recommendations, *, report_version_id=None):
         state["saved_protocol"] = {
             "user_id": user_id,
             "upload_id": upload_id,
             "recommendations": recommendations,
+            "report_version_id": report_version_id,
         }
 
     async def fake_save_biomarker_extraction_candidates(upload_id, user_id, candidates):

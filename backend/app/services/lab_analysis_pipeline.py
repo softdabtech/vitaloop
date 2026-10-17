@@ -1289,8 +1289,19 @@ async def run_lab_analysis_pipeline(
     if isinstance(ai_orchestration, dict):
         ai_orchestration = {**ai_orchestration, "items": ai_protocol}
 
-    # Safety remains the last line of defence and runs after canonical
-    # adaptation on both shapes that can be returned or persisted.
+    # Capture the safety verdict from the complete adapted protocol *before*
+    # redaction. Otherwise a diagnosis-like action could be hidden successfully
+    # yet erase the blocked status and user-facing clinician-review notice.
+    pre_redaction_safety_result = validate_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        protocol=protocol,
+        profile=user_profile,
+        locale=locale,
+    )
+    safety_result = pre_redaction_safety_result
+    # The response and all persistence projections receive only the sanitized
+    # presentation. The already-recorded verdict retains the reason for it.
     protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     recommendations = [
         item
@@ -1307,13 +1318,6 @@ async def run_lab_analysis_pipeline(
     knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
     if isinstance(ai_orchestration, dict):
         ai_orchestration = {**ai_orchestration, "items": ai_protocol}
-    safety_result = validate_report(
-        biomarkers=normalized_biomarkers,
-        knowledge_report=knowledge_report,
-        protocol=protocol,
-        profile=user_profile,
-        locale=locale,
-    )
     retest_suggestions = knowledge_report.get("retest_plan") or []
     protocol = enrich_protocol(
         protocol,
@@ -1334,6 +1338,17 @@ async def run_lab_analysis_pipeline(
         profile=user_profile,
         locale=locale,
     )
+    if pre_redaction_safety_result.get("status") == "blocked":
+        # Redaction must never downgrade a prior safety block. Preserve only
+        # structured safety output; sanitize_safety_result_for_output below
+        # removes the original diagnosis-like presentation from it.
+        safety_result = {
+            **safety_result,
+            "status": "blocked",
+            "blocked_items": pre_redaction_safety_result.get("blocked_items") or [],
+            "safety_events": pre_redaction_safety_result.get("safety_events") or [],
+            "doctor_discussion_required": True,
+        }
     safety_result = sanitize_safety_result_for_output(safety_result, locale=locale) or safety_result
     symptom_assessment = (symptom_snapshot or {}).get("assessment") or {}
     if symptom_assessment.get("urgent_warning") == "present":
@@ -2215,6 +2230,24 @@ async def run_lab_analysis_pipeline(
                             if outcomes and set(outcomes.values()) == {"completed"}
                             else "retryable"
                         )
+                        artifact_status = outcomes.get("intelligence_artifacts") if isinstance(outcomes, dict) else None
+                        if artifact_status not in (None, "completed"):
+                            # The report is durable, but its observability payload remains
+                            # pending in the recovery ledger. Emit only stable identifiers;
+                            # never expose the handler exception or clinical payload.
+                            result["analysis_intelligence_artifacts"] = {"persisted": False, "error": "persistence_failed"}
+                            try:
+                                from app.services.ops_alerts import send_ops_alert
+
+                                await send_ops_alert(
+                                    code="ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED",
+                                    title="Analysis intelligence artifact persistence failed",
+                                    severity="error",
+                                    source="backend.analysis",
+                                    details={"upload_id": analysis_id, "report_version_id": returned_id},
+                                )
+                            except Exception:
+                                pass
                     except Exception:
                         # Preserve the confirmed immutable report and its pending
                         # work. Never fall back to the legacy independent writers.

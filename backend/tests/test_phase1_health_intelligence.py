@@ -898,14 +898,22 @@ async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypa
             "metadata": {"prompt_version": "protocol_test_v1", "model": "gpt-test"},
         }
 
-    async def fake_save_report_version(**kwargs):
-        return {"id": kwargs["report_version_id"]}
+    async def fake_finalize_lab_analysis(**kwargs):
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": [dict(item) for item in kwargs["biomarkers"]],
+            "input_hash": "0" * 64,
+        }
 
-    async def fake_save_safety_events(**kwargs):
-        return []
-
-    async def failing_save_artifacts(**kwargs):
-        raise RuntimeError("stage25 table unavailable")
+    async def retryable_recovery(**_kwargs):
+        return {
+            "retest_obligations": "completed", "retest_fulfillment": "completed",
+            "lab_plan_fulfillment": "completed", "safety_events": "completed",
+            "intelligence_artifacts": "retryable", "protocol": "completed",
+            "timeline": "completed", "audit": "completed",
+        }
 
     async def fake_send_ops_alert(**kwargs):
         alerts.append(kwargs)
@@ -922,9 +930,8 @@ async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypa
     monkeypatch.setattr(lab_analysis_pipeline, "generate_ai_protocol_orchestrated", fake_ai_protocol)
     monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", fake_load_historical_biomarkers)
     monkeypatch.setattr(lab_analysis_pipeline, "record_analysis_cost", lambda **kwargs: None)
-    monkeypatch.setattr(supabase_service, "save_report_version", fake_save_report_version)
-    monkeypatch.setattr(supabase_service, "save_safety_events", fake_save_safety_events)
-    monkeypatch.setattr(supabase_service, "save_analysis_intelligence_artifacts", failing_save_artifacts)
+    monkeypatch.setattr(supabase_service, "finalize_lab_analysis", fake_finalize_lab_analysis)
+    monkeypatch.setattr(lab_analysis_pipeline, "recover_report_followups", retryable_recovery)
     monkeypatch.setattr("app.services.ops_alerts.send_ops_alert", fake_send_ops_alert)
 
     result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
@@ -937,6 +944,7 @@ async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypa
         locale="en",
         persist_knowledge=False,
         persist_report_version=True,
+        persist_biomarkers=True,
     )
 
     assert result["status"] == "completed"

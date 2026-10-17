@@ -216,10 +216,25 @@ async def test_free_user_complete_flow(monkeypatch):
     # (gated on the quality-gate decision), not directly from analyze.py.
     monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
 
-    async def fake_save_report_version(**kwargs):
-        return {"id": kwargs.get("report_version_id") or "report-fake", "status": "completed"}
 
-    monkeypatch.setattr(svc, "save_report_version", fake_save_report_version)
+    async def fake_finalize_lab_analysis(**kwargs):
+        rows = []
+        for item in kwargs["biomarkers"]:
+            rows.append({
+                "id": str(uuid.uuid4()),
+                "upload_id": kwargs["upload_id"],
+                "user_id": kwargs["user_id"],
+                **item,
+            })
+        biomarkers_db[kwargs["upload_id"]] = rows
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": rows,
+            "input_hash": "0" * 64,
+        }
+    monkeypatch.setattr(svc, "finalize_lab_analysis", fake_finalize_lab_analysis)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(protocol_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
