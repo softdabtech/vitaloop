@@ -15,6 +15,7 @@ from app.dependencies import get_current_user, require_freemium_analyze, require
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("stub_post_report_persistence")
 async def test_free_user_complete_flow(monkeypatch):
     """
     Test complete flow for Free user:
@@ -214,6 +215,26 @@ async def test_free_user_complete_flow(monkeypatch):
     # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
     # (gated on the quality-gate decision), not directly from analyze.py.
     monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
+
+
+    async def fake_finalize_lab_analysis(**kwargs):
+        rows = []
+        for item in kwargs["biomarkers"]:
+            rows.append({
+                "id": str(uuid.uuid4()),
+                "upload_id": kwargs["upload_id"],
+                "user_id": kwargs["user_id"],
+                **item,
+            })
+        biomarkers_db[kwargs["upload_id"]] = rows
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": rows,
+            "input_hash": "0" * 64,
+        }
+    monkeypatch.setattr(svc, "finalize_lab_analysis", fake_finalize_lab_analysis)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(protocol_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)

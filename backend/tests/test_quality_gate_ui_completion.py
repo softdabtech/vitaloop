@@ -54,8 +54,14 @@ def _stub_persistence(monkeypatch):
     async def _fake_save_biomarkers(upload_id, user_id, biomarkers):
         return [{"id": f"bm-{i}", **b} for i, b in enumerate(biomarkers)]
 
-    async def _fake_save_report_version(**kwargs):
-        return {"id": "report-v-fake", **kwargs}
+    async def _fake_finalize_lab_analysis(**kwargs):
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": [{"id": f"bm-{i}", **item} for i, item in enumerate(kwargs["biomarkers"])],
+            "input_hash": "0" * 64,
+        }
 
     async def _fake_save_safety_events(**_kwargs):
         return []
@@ -64,7 +70,7 @@ def _stub_persistence(monkeypatch):
         return []
 
     monkeypatch.setattr(svc, "save_biomarkers", _fake_save_biomarkers)
-    monkeypatch.setattr(svc, "save_report_version", _fake_save_report_version)
+    monkeypatch.setattr(svc, "finalize_lab_analysis", _fake_finalize_lab_analysis)
     monkeypatch.setattr(svc, "save_safety_events", _fake_save_safety_events)
     monkeypatch.setattr(svc, "reconcile_lab_plan_fulfillment", _fake_reconcile_lab_plan_fulfillment)
 

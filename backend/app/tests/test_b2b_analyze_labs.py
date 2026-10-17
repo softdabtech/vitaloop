@@ -410,7 +410,7 @@ async def test_output_contains_disclaimer(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_pipeline_fills_empty_protocol_sections_for_flagged_markers(monkeypatch):
+async def test_pipeline_does_not_fabricate_fallback_actions_for_flagged_markers(monkeypatch):
     async def fake_eval(**kwargs):
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
 
@@ -427,13 +427,10 @@ async def test_pipeline_fills_empty_protocol_sections_for_flagged_markers(monkey
         generate_ai_protocol=False,
     )
     assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
-    assert result["protocol"]["nutrition"]
-    assert result["protocol"]["training_recovery"]
-    assert result["protocol"]["training_recovery"][0]["source"] == "vitaloop_analysis_core"
-    assert result["protocol"]["training_recovery"][0]["based_on"]["biomarkers"]
-    assert result["protocol"]["training_recovery"][0]["expected_timeline"]
-    assert result["protocol"]["training_recovery"][0]["retest_markers"]
-    assert result["protocol"]["training_recovery"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
+    # With no frozen recommendation-bearing KB evidence, empty sections are
+    # intentional: the pipeline must not invent personalized fallback actions.
+    assert result["protocol"]["nutrition"] == []
+    assert result["protocol"]["training_recovery"] == []
     assert result["ai_orchestration"]["status"] == "skipped"
     assert result["shopping_links"]
     assert any("iherb.com/search" in item["url"] for item in result["shopping_links"])
@@ -572,14 +569,14 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["trend_analysis"]["available"] is True
     assert result["health_summary"]["trend_overview"]["version"] == "trend_engine_v1"
     assert result["health_summary"]["health_state_overview"]["version"] == "health_state_engine_v1"
-    assert result["protocol"]["supplements"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
-    assert result["protocol"]["supplements"][0]["knowledge_domain_registry_version"] == "knowledge_domain_registry_v1"
-    assert result["protocol"]["supplements"][0]["knowledge_domain_context"][0]["label"] == "Managed metabolic health"
+    # The model fixture is an incomplete supplement instruction with no frozen
+    # canonical action, so it cannot be silently enriched or published.
+    assert result["protocol"]["supplements"] == []
     assert result["ai_orchestration"]["version"] == "ai_orchestration_v1"
     assert result["metadata"]["ai_orchestration_version"] == "ai_orchestration_v1"
     assert result["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"
     assert result["metadata"]["quality_snapshot_version"] == "analysis_quality_snapshot_v1"
-    assert result["quality_snapshot"]["coverage"]["protocol_item_count"] >= 1
+    assert result["quality_snapshot"]["coverage"]["protocol_item_count"] == 0
     assert result["metadata"]["health_context_version"] == "health_context_v1"
     assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True
     assert captured["kwargs"]["health_context"]["readiness"]["has_safety_context"] is True
@@ -605,7 +602,7 @@ async def test_pipeline_persists_core_artifacts_in_report_version(monkeypatch):
 
     async def fake_save_report_version(**kwargs):
         captured["report_version"] = kwargs
-        return {"id": "report-1"}
+        return {"id": kwargs["report_version_id"]}
 
     async def fake_save_safety_events(**kwargs):
         captured["safety_events"] = kwargs
@@ -633,7 +630,7 @@ async def test_pipeline_persists_core_artifacts_in_report_version(monkeypatch):
     assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
 
     snapshot = captured["report_version"]["input_snapshot"]
-    assert result["report_version"] == {"id": "report-1"}
+    assert result["report_version"] == {"id": captured["report_version"]["report_version_id"]}
     assert snapshot["health_context"]["version"] == "health_context_v1"
     assert snapshot["health_states"]["version"] == "health_state_engine_v1"
     assert snapshot["trend_analysis"]["version"] == "trend_engine_v1"
