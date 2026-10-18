@@ -852,6 +852,25 @@ end;
 $$;
 
 -- ---------------------------------------------------------------- ownership and ACLs
+-- Supabase default function privileges apply when functions are created by postgres.
+-- Revoke implicit EXECUTE grants before transferring ownership to vitaloop_finalizer;
+-- the dedicated owner must never leave callable helpers exposed to API roles.
+revoke all on function public.lab_analysis_enc(text) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_canon_numeric(jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_num_eq(jsonb, jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_validate_projection(jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_input_digest(uuid, text, text, jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_validate_report(jsonb, uuid, text, jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.lab_analysis_recovery_payload_hash(jsonb) from public, anon, authenticated, service_role;
+revoke all on function public.finalize_lab_analysis(uuid, uuid, uuid, text, bigint, uuid, text, text, jsonb, jsonb)
+  from public, anon, authenticated;
+revoke all on function public.claim_analysis_followup_work(uuid, uuid, text, uuid) from public, anon, authenticated;
+revoke all on function public.complete_analysis_followup_work(uuid, uuid, text, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.load_analysis_followup_work_payload(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function public.project_report_protocol(uuid, uuid, uuid) from public, anon, authenticated;
+revoke all on function public.atomic_finalization_schema_preflight() from public, anon, authenticated;
+
+-- Ownership transfer after REVOKE is required for the Supabase ACL contract.
 alter function public.lab_analysis_enc(text) owner to vitaloop_finalizer;
 alter function public.lab_analysis_canon_numeric(jsonb) owner to vitaloop_finalizer;
 alter function public.lab_analysis_num_eq(jsonb, jsonb) owner to vitaloop_finalizer;
@@ -867,20 +886,6 @@ alter function public.load_analysis_followup_work_payload(uuid, uuid, text) owne
 alter function public.project_report_protocol(uuid, uuid, uuid) owner to vitaloop_finalizer;
 alter function public.atomic_finalization_schema_preflight() owner to vitaloop_finalizer;
 
-revoke all on function public.lab_analysis_enc(text) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_canon_numeric(jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_num_eq(jsonb, jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_validate_projection(jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_input_digest(uuid, text, text, jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_validate_report(jsonb, uuid, text, jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.lab_analysis_recovery_payload_hash(jsonb) from public, anon, authenticated, service_role;
-revoke all on function public.finalize_lab_analysis(uuid, uuid, uuid, text, bigint, uuid, text, text, jsonb, jsonb)
-  from public, anon, authenticated;
-revoke all on function public.claim_analysis_followup_work(uuid, uuid, text, uuid) from public, anon, authenticated;
-revoke all on function public.complete_analysis_followup_work(uuid, uuid, text, uuid, text, text) from public, anon, authenticated;
-revoke all on function public.load_analysis_followup_work_payload(uuid, uuid, text) from public, anon, authenticated;
-revoke all on function public.project_report_protocol(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function public.atomic_finalization_schema_preflight() from public, anon, authenticated;
 grant execute on function public.finalize_lab_analysis(uuid, uuid, uuid, text, bigint, uuid, text, text, jsonb, jsonb)
   to service_role;
 grant execute on function public.claim_analysis_followup_work(uuid, uuid, text, uuid) to service_role;
