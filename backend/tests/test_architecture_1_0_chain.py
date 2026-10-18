@@ -123,19 +123,20 @@ async def test_chain_3_confirmed_valid_data_becomes_canonical_and_creates_frozen
     """Stages 2B + 2G chained: valid, well-formed, confirmed candidates ->
     gate=auto_continue -> canonical biomarkers persisted AND a report_versions
     row created in the same pipeline run (invariant 5)."""
-    saved_biomarkers_calls = []
-    saved_report_versions = []
+    finalization_calls = []
 
-    async def _fake_save_biomarkers(upload_id, user_id, biomarkers):
-        saved_biomarkers_calls.append(biomarkers)
-        return [{"id": f"bm-{i}", **b} for i, b in enumerate(biomarkers)]
+    async def _fake_finalize_lab_analysis(**kwargs):
+        finalization_calls.append(kwargs)
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": [{"id": f"bm-{i}", **b} for i, b in enumerate(kwargs["biomarkers"])],
+            "input_hash": "0" * 64,
+        }
 
     async def _fake_history(_user_id):
         return []
-
-    async def _fake_save_report_version(**kwargs):
-        saved_report_versions.append(kwargs)
-        return {"id": "report-chain-3", **{k: v for k, v in kwargs.items() if k in ("status", "locale", "version")}}
 
     async def _fake_save_safety_events(**_kwargs):
         return None
@@ -143,9 +144,8 @@ async def test_chain_3_confirmed_valid_data_becomes_canonical_and_creates_frozen
     async def _fake_save_artifacts(**_kwargs):
         return {"persisted": True}
 
-    monkeypatch.setattr(svc, "save_biomarkers", _fake_save_biomarkers)
+    monkeypatch.setattr(svc, "finalize_lab_analysis", _fake_finalize_lab_analysis)
     monkeypatch.setattr("app.services.lab_analysis_pipeline._load_historical_biomarkers", _fake_history)
-    monkeypatch.setattr(svc, "save_report_version", _fake_save_report_version)
     monkeypatch.setattr(svc, "save_safety_events", _fake_save_safety_events)
     monkeypatch.setattr(svc, "save_analysis_intelligence_artifacts", _fake_save_artifacts)
 
@@ -167,8 +167,11 @@ async def test_chain_3_confirmed_valid_data_becomes_canonical_and_creates_frozen
     )
 
     assert result["analysis_input_quality_gate"]["decision"] == "auto_continue"
-    assert len(saved_biomarkers_calls) == 1, "invariant 3: confirmed valid data must become canonical exactly once"
-    assert len(saved_report_versions) == 1, "invariant 5: a completed analysis must create exactly one frozen report_version"
+    assert len(finalization_calls) == 1, "confirmed valid data must atomically finalize exactly once"
+    finalized = finalization_calls[0]
+    assert [item["name"] for item in finalized["biomarkers"]] == [item["name"] for item in clean_biomarkers]
+    assert finalized["report"]["status"] == "completed"
+    assert result["report_version"]["id"] == finalized["report_version_id"]
 
 
 # --- 4: Safety blocked content cannot leak ---------------------------------------

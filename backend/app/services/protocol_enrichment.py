@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from typing import Any, Dict, List, Mapping
 
-from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, get_domain_definition
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION
 
 PROTOCOL_ENRICHMENT_VERSION = "protocol_enrichment_v1"
 
@@ -102,66 +103,54 @@ def _slug(value: str) -> str:
     return slug[:80] or "protocol_item"
 
 
-def _matched_biomarkers(item: Dict[str, Any], biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    haystack = " ".join(str(item.get(key) or "") for key in ("key", "title", "body", "supplement", "rationale")).lower()
-    matched: List[Dict[str, Any]] = []
-    for biomarker in biomarkers or []:
-        name = str(biomarker.get("name") or "").lower()
-        canonical = str(biomarker.get("canonical_name") or "").replace("canonical_", "").replace("_", " ").lower()
-        if (name and name in haystack) or (canonical and canonical in haystack):
-            matched.append(
-                {
-                    "name": biomarker.get("name"),
-                    "canonical_name": biomarker.get("canonical_name"),
-                    "status": biomarker.get("status"),
-                }
-            )
-    return matched[:5]
+_UNCONFIRMED_STATUSES = {"UNKNOWN", "UNEVALUATED", "NEEDS_CONFIRMATION"}
 
 
-def _fallback_based_on(
-    *,
-    section: str,
-    item: Dict[str, Any],
-    biomarkers: List[Dict[str, Any]],
-    prioritized: List[Dict[str, Any]],
-    health_states: Dict[str, Any],
-    trend_analysis: Dict[str, Any],
-) -> Dict[str, Any]:
-    matched_biomarkers = _matched_biomarkers(item, biomarkers) or [
-        {
-            "name": biomarker.get("name"),
-            "canonical_name": biomarker.get("canonical_name"),
-            "status": biomarker.get("status"),
-        }
-        for biomarker in (prioritized or [])[:3]
-    ]
-    domains = [
-        {
-            "domain": state.get("domain"),
-            "score": state.get("score"),
-            "risk_level": state.get("risk_level"),
-            "confidence": state.get("confidence"),
-        }
-        for state in (health_states.get("top_priorities") or [])[:3]
-        if isinstance(state, dict)
-    ]
-    trend_changes = [
-        {
-            "name": trend.get("name"),
-            "direction": trend.get("direction"),
-            "percent_change": trend.get("percent_change"),
-            "interpretation": trend.get("interpretation"),
-        }
-        for trend in (trend_analysis.get("priority_changes") or [])[:3]
-        if isinstance(trend, dict)
-    ]
-    return {
-        "section": section,
-        "biomarkers": matched_biomarkers,
-        "health_domains": domains,
-        "trend_changes": trend_changes,
-    }
+@dataclass(frozen=True)
+class ActionEvidenceBinding:
+    """Evidence bound to one report version and one exact action.
+
+    Not an authentication token: it is honored only by ``_enrich_protocol_impl``,
+    which the public ``enrich_protocol`` never feeds. It is produced by the
+    server-owned ``enrich_protocol_with_authorization`` orchestration.
+    """
+
+    report_version_id: str
+    action_key: str
+    title: str
+    body: str
+    biomarkers: tuple[tuple[str, str, str], ...]
+
+
+def _valid_binding(binding: Any, report_version_id: str | None, key: str, title: str, body: str) -> bool:
+    return (
+        isinstance(binding, ActionEvidenceBinding)
+        and bool(report_version_id)
+        and binding.report_version_id == report_version_id
+        and (binding.action_key, binding.title, binding.body) == (key, title, body)
+    )
+
+
+def _authorized_based_on(section: str, evidence: Any) -> Dict[str, Any]:
+    """Model-supplied, shared and unconfirmed-status data is never promoted."""
+    biomarkers: List[Dict[str, Any]] = []
+    if evidence is not None:
+        for name, canonical, status in evidence.biomarkers:
+            if status.upper() not in _UNCONFIRMED_STATUSES:
+                biomarkers.append({"name": name, "canonical_name": canonical, "status": status})
+    return {"section": section, "biomarkers": biomarkers[:5], "health_domains": [], "trend_changes": []}
+
+
+def _authorized_retest_markers(evidence: Any, retest_suggestions: List[Dict[str, Any]]) -> List[str]:
+    if evidence is None:
+        return []
+    authorized = {name.strip().lower() for name, _, status in evidence.biomarkers if name and status.upper() not in _UNCONFIRMED_STATUSES}
+    markers: List[str] = []
+    for row in retest_suggestions or []:
+        marker = str(row.get("marker") or row.get("name") or "").strip() if isinstance(row, dict) else ""
+        if marker and marker.lower() in authorized and marker not in markers:
+            markers.append(marker)
+    return markers[:4]
 
 
 def _is_uk(locale: str | None) -> bool:
@@ -184,19 +173,6 @@ def _safety_notes(item: Dict[str, Any], safety_result: Dict[str, Any], *, locale
         if hint and hint not in notes:
             notes.append(hint)
     return notes[:6]
-
-
-def _retest_markers(section: str, item: Dict[str, Any], retest_suggestions: List[Dict[str, Any]]) -> List[str]:
-    markers = [
-        str(row.get("marker") or row.get("name") or "").strip()
-        for row in retest_suggestions or []
-        if isinstance(row, dict) and str(row.get("marker") or row.get("name") or "").strip()
-    ]
-    if not markers:
-        markers = _SECTION_RETEST_MARKERS.get(section, [])
-    text_blob = str(item).lower()
-    prioritized = [marker for marker in markers if marker.lower() in text_blob]
-    return (prioritized or markers)[:4]
 
 
 def _domain_context(
@@ -269,6 +245,16 @@ def _domain_retest_markers(section: str, domain_contexts: List[Dict[str, Any]]) 
 
 def enrich_protocol(
     protocol: Dict[str, List[Dict[str, Any]]],
+    **kwargs: Any,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Public enrichment: presentation only, never action-specific evidence."""
+    for forbidden in ("trusted_evidence", "trusted_report_version_id", "authorized_evidence"):
+        kwargs.pop(forbidden, None)
+    return _enrich_protocol_impl(protocol, **kwargs)
+
+
+def _enrich_protocol_impl(
+    protocol: Dict[str, List[Dict[str, Any]]],
     *,
     biomarkers: List[Dict[str, Any]],
     prioritized: List[Dict[str, Any]],
@@ -278,9 +264,10 @@ def enrich_protocol(
     retest_suggestions: List[Dict[str, Any]],
     domain_definitions: List[Dict[str, Any]] | None = None,
     locale: str = "en",
+    trusted_evidence: Mapping[tuple[str, int], ActionEvidenceBinding] | None = None,
+    trusted_report_version_id: str | None = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     enriched: Dict[str, List[Dict[str, Any]]] = {}
-    domain_contexts = _domain_context(health_states, domain_definitions=domain_definitions, locale=locale)
     for section, items in (protocol or {}).items():
         enriched_items: List[Dict[str, Any]] = []
         for index, raw_item in enumerate(items or []):
@@ -289,6 +276,13 @@ def enrich_protocol(
             title = _text(raw_item, "title", "supplement", "key") or f"{section.replace('_', ' ').title()} step"
             body = _text(raw_item, "body", "rationale", "reason", "dosage") or "Use this as educational guidance and personalize with clinical context."
             key = _text(raw_item, "key") or f"{section}_{_slug(title)}_{index + 1}"
+            candidate = (trusted_evidence or {}).get((section, index))
+            evidence = (
+                candidate
+                if _valid_binding(candidate, trusted_report_version_id, key, title, body)
+                and all(raw_item.get(k) == getattr(candidate, a) for k, a in (("key", "action_key"), ("title", "title"), ("body", "body")))
+                else None
+            )
             enriched_items.append(
                 {
                     **raw_item,
@@ -299,21 +293,11 @@ def enrich_protocol(
                     "priority": _priority(raw_item, section),
                     "source": raw_item.get("source") or "vitaloop_analysis_core",
                     "evidence_level": _public_evidence_level(raw_item.get("evidence_level")),
-                    "based_on": raw_item.get("based_on")
-                    or _fallback_based_on(
-                        section=section,
-                        item=raw_item,
-                        biomarkers=biomarkers,
-                        prioritized=prioritized,
-                        health_states=health_states,
-                        trend_analysis=trend_analysis,
-                    ),
+                    "based_on": _authorized_based_on(section, evidence),
                     "safety_notes": raw_item.get("safety_notes") or _safety_notes(raw_item, safety_result, locale=locale),
-                    "expected_timeline": raw_item.get("expected_timeline") or _expected_timeline(section, domain_contexts, locale=locale),
-                    "retest_markers": raw_item.get("retest_markers")
-                    or _domain_retest_markers(section, domain_contexts)
-                    or _retest_markers(section, raw_item, retest_suggestions),
-                    "knowledge_domain_context": domain_contexts,
+                    "expected_timeline": _expected_timeline(section, [], locale=locale),
+                    "retest_markers": _authorized_retest_markers(evidence, retest_suggestions),
+                    "knowledge_domain_context": [],
                     "knowledge_domain_registry_version": DOMAIN_REGISTRY_VERSION,
                     "protocol_enrichment_version": PROTOCOL_ENRICHMENT_VERSION,
                 }

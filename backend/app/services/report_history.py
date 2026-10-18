@@ -87,6 +87,13 @@ def is_frozen_report_version(report_version: Optional[Dict[str, Any]]) -> bool:
     return str(report_version.get("status") or "").lower() in _TERMINAL_STATUSES
 
 
+def _public_explainability(explainability: Any) -> Any:
+    """Frozen protocol evidence is server-internal and never served to clients."""
+    if isinstance(explainability, dict) and "frozen_protocol_evidence" in explainability:
+        return {k: v for k, v in explainability.items() if k != "frozen_protocol_evidence"}
+    return explainability
+
+
 def frozen_knowledge_evaluation(report_version: Dict[str, Any]) -> Any:
     """knowledge_evaluation has no dedicated report_versions column (traced:
     sql/stage-25-analysis-quality-gate-and-report-provenance.sql lists only
@@ -149,7 +156,9 @@ def assemble_frozen_response(
         sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
     )
     sanitized_input_snapshot = sanitize_safety_result_for_output(report_version.get("input_snapshot"), locale=locale)
-    sanitized_explainability = sanitize_safety_result_for_output(report_version.get("explainability"), locale=locale)
+    sanitized_explainability = sanitize_safety_result_for_output(
+        _public_explainability(report_version.get("explainability")), locale=locale
+    )
     frozen_symptom_snapshot = (
         sanitized_input_snapshot.get("symptom_snapshot")
         if isinstance(sanitized_input_snapshot, dict)
@@ -325,7 +334,7 @@ def assemble_frozen_response(
         # no AI/knowledge-rule recomputation involved (see
         # safety_engine.blocked_content_notice's docstring).
         "safety_notice": blocked_content_notice(locale) if is_blocked else None,
-        "explainability": report_version.get("explainability"),
+        "explainability": _public_explainability(report_version.get("explainability")),
         "report_version": {**sanitized_report_version, "safety_result": safety_result},
         "protocol_source_report_version_id": str(report_version.get("id")),
         "report_source": REPORT_SOURCE_FROZEN,

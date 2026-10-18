@@ -559,11 +559,11 @@ export default function LabResultsList() {
                       key={uploadId || `${date}-${index}`}
                       className="lab-result-card vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                     >
-                      <div className="lab-result-card__body flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                      <div className="lab-result-card__body">
                         <button
                           onClick={() => canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
                           disabled={!canViewResults(item) || !uploadId}
-                          className="lab-result-card__identity flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                          className="lab-result-card__identity min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <p className="lab-result-card__source text-sm font-semibold text-slate-800">{patientFacingLabName(item?.lab_name, copy.labResults(sortedItems.length - index))}</p>
                           <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
@@ -581,7 +581,7 @@ export default function LabResultsList() {
                             <span className="vtl-status-pill border border-slate-200 bg-slate-50 text-slate-600">{copy.notEvaluated} {unknown}</span>
                           </div>
                         ) : (
-                          <output className="lab-result-card__state min-w-0 flex-1 text-xs text-slate-600" aria-live="polite">
+                          <output className="lab-result-card__state min-w-0 text-xs text-slate-600" aria-live="polite">
                             <span className="font-semibold">{stateCopy.label}</span>
                             <span className="mt-1 block leading-5">{stateCopy.body}</span>
                           </output>
@@ -593,7 +593,7 @@ export default function LabResultsList() {
                               ? navigate('/upload')
                               : canViewResults(item) && uploadId && navigate(`/results/${uploadId}`)}
                             disabled={state !== 'failed' && (!canViewResults(item) || !uploadId)}
-                            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors disabled:opacity-40"
                           >
                             {lifecycleActionLabel(state, item, copy)}
                             <ChevronRight className="h-4 w-4" />
