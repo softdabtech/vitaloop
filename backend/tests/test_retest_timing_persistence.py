@@ -1,4 +1,5 @@
 from datetime import date
+from uuid import uuid4
 
 import pytest
 
@@ -33,9 +34,11 @@ async def test_persist_retest_obligations_is_idempotent_and_report_scoped(monkey
             self.filters[key] = value
             return self
 
-        def insert(self, payload):
+        def upsert(self, payload, *, on_conflict):
+            assert on_conflict == "analysis_effect_key"
             self.payload = payload
-            rows.append(payload)
+            if not any(row.get("analysis_effect_key") == payload.get("analysis_effect_key") for row in rows):
+                rows.append(payload)
             return self
 
         def execute(self):
@@ -52,7 +55,7 @@ async def test_persist_retest_obligations_is_idempotent_and_report_scoped(monkey
             return FakeQuery()
 
     monkeypatch.setattr(supabase_service, "_get_supabase", lambda: FakeClient())
-    report = {"id": "report-1", "created_at": "2026-10-10T12:00:00+00:00"}
+    report = {"id": str(uuid4()), "created_at": "2026-10-10T12:00:00+00:00"}
     plan = [{"marker": "TSH", "timing": "4-8 weeks", "reason": "Follow-up"}]
 
     first = await supabase_service.persist_retest_obligations(
@@ -63,12 +66,12 @@ async def test_persist_retest_obligations_is_idempotent_and_report_scoped(monkey
     )
     invalid = await supabase_service.persist_retest_obligations(
         user_id="user-1",
-        report_version={"id": "report-invalid", "created_at": "2026-10-10T12:00:00+00:00"},
+        report_version={"id": str(uuid4()), "created_at": "2026-10-10T12:00:00+00:00"},
         retest_plan=[{"marker": "Ferritin", "timing": "as soon as possible"}],
     )
     newer = await supabase_service.persist_retest_obligations(
         user_id="user-1",
-        report_version={"id": "report-2", "created_at": "2026-11-01T12:00:00+00:00"},
+        report_version={"id": str(uuid4()), "created_at": "2026-11-01T12:00:00+00:00"},
         retest_plan=plan,
     )
 
@@ -76,7 +79,7 @@ async def test_persist_retest_obligations_is_idempotent_and_report_scoped(monkey
     assert second == []
     assert invalid == []
     assert len(newer) == 1
-    assert rows[0]["source_report_version_id"] == "report-1"
+    assert rows[0]["source_report_version_id"] == report["id"]
     assert rows[0]["retest_window_start"] == "2026-11-07"
     assert rows[0]["retest_window_end"] == "2026-12-05"
     assert rows[0]["retest_window_start"] != rows[1]["retest_window_start"]

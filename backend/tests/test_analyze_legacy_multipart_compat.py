@@ -10,6 +10,7 @@ from app.services import supabase_service as svc
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("stub_post_report_persistence")
 async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
     user_id = str(uuid.uuid4())
 
@@ -68,6 +69,11 @@ async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
     # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
     # (gated on the quality-gate decision), not directly from analyze.py.
     monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
+
+    async def fake_save_report_version(**kwargs):
+        return {"id": kwargs.get("report_version_id") or "report-fake", "status": "completed"}
+
+    monkeypatch.setattr(svc, "save_report_version", fake_save_report_version)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 

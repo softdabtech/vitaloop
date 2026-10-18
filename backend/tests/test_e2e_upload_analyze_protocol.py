@@ -10,6 +10,7 @@ from app.routers.protocol import protocol as protocol_router
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("stub_post_report_persistence")
 async def test_e2e_upload_analyze_protocol(monkeypatch):
     fake_user_id = "11111111-1111-1111-1111-111111111111"
     state = {
@@ -92,6 +93,16 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             rows.append(row)
         state["biomarkers"][upload_id] = rows
         return rows
+
+    async def fake_finalize_lab_analysis(**kwargs):
+        rows = await fake_save_biomarkers(kwargs["upload_id"], kwargs["user_id"], kwargs["biomarkers"])
+        return {
+            "report_version_id": kwargs["report_version_id"],
+            "replay": False,
+            "generation": 1,
+            "biomarkers": rows,
+            "input_hash": "0" * 64,
+        }
 
     async def fake_get_biomarkers_by_upload(upload_id, user_id):
         return state["biomarkers"].get(upload_id, [])
@@ -193,6 +204,12 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     from app.services import supabase_service as svc
 
     monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
+    monkeypatch.setattr(svc, "finalize_lab_analysis", fake_finalize_lab_analysis)
+
+    async def fake_save_report_version(**kwargs):
+        return {"id": kwargs.get("report_version_id") or "report-fake", "status": "completed"}
+
+    monkeypatch.setattr(svc, "save_report_version", fake_save_report_version)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 

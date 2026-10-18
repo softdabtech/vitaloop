@@ -136,17 +136,9 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     knowledge_report = pipeline_result.get("knowledge_report")
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
-        if locale_mismatch:
-            # Transient only — do not overwrite the other locale's protocols row.
-            protocol_recommendations = generated_recommendations
-        else:
-            protocol_row = await save_protocol(
-                user_id=user_id,
-                upload_id=upload_id,
-                recommendations=generated_recommendations,
-                prompt_version="results_compatibility_v2",
-            )
-            protocol_recommendations = (protocol_row or {}).get("recommendations") or []
+        # Transient only: no frozen report version exists on this read path, so
+        # personalized flat recommendations are never persisted from here.
+        protocol_recommendations = generated_recommendations
 
     # Stage 2G: no frozen report_versions row exists for this locale.
     # `locale_mismatch` distinguishes "frozen version exists in another
