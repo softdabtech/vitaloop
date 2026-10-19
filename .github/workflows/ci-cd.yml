@@ -231,7 +231,8 @@ jobs:
           : "${SUPABASE_SERVICE_ROLE_KEY:?Missing production service-role secret}"
 
           response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
+          recovery_response_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$recovery_response_file"' EXIT
           status="$(curl --request POST --silent --show-error \
             --output "$response_file" --write-out '%{http_code}' --max-time 20 \
             --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
@@ -261,6 +262,36 @@ jobs:
               raise SystemExit("Production schema contract is absent, incomplete, or incompatible.")
           PY
           echo "Production atomic schema contract verified."
+
+          recovery_status="$(curl --request POST --silent --show-error \
+            --output "$recovery_response_file" --write-out '%{http_code}' --max-time 20 \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/autonomous_recovery_schema_preflight")"
+          if [[ "$recovery_status" != "200" ]]; then
+            echo "Production autonomous-recovery schema preflight RPC did not return HTTP 200."
+            exit 1
+          fi
+
+          python - "$recovery_response_file" <<'PY'
+          import json
+          import sys
+
+          expected = {
+              "schema_ready": True,
+              "migration_contract": "20261019090000_autonomous_recovery_worker",
+          }
+          try:
+              with open(sys.argv[1], encoding="utf-8") as response:
+                  payload = json.load(response)
+          except (OSError, json.JSONDecodeError):
+              raise SystemExit("Production autonomous-recovery preflight returned an invalid response.")
+          if payload != expected:
+              raise SystemExit("Production autonomous-recovery schema contract is absent, incomplete, or incompatible.")
+          PY
+          echo "Production autonomous-recovery schema contract verified."
 
   # ─────────────────────────────────────────────────────────
   # JOB 4: Deploy to production (only on push to main)
@@ -351,7 +382,7 @@ jobs:
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
             cd /var/www/VITALOOP &&
-            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend frontend
+            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend
           "
 
       - name: Install and reload nginx routing

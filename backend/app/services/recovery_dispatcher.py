@@ -1,15 +1,20 @@
-"""Explicit, owner-scoped recovery of durable lab-analysis follow-up effects.
+"""Owner-scoped recovery of durable lab-analysis follow-up effects.
 
-This module deliberately has no router, scheduler, daemon, or import-time side
-effect. The analysis pipeline invokes its bounded owner-scoped trigger after a
-confirmed finalization; callers cannot select a handler or supply work data.
+The request-path trigger remains a fast path.  A separate, server-owned worker
+also discovers candidates through the service-role ledger policy, then invokes
+the exact same owner-scoped dispatcher below.  This module has no router,
+scheduler, or import-time side effect.
 """
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import Any, Awaitable, Callable, Dict, List
 from uuid import UUID, uuid4
 
 from app.services import supabase_service as svc
+
+logger = logging.getLogger(__name__)
 
 MAX_RECOVERY_ATTEMPTS = 5
 _EFFECT_ORDER = (
@@ -267,3 +272,36 @@ async def recover_pending_report_followups(
             # Do not log identifiers, payloads, or exception messages here.
             logger.error("pending_recovery_dispatch_failed exception_type=%s", type(exc).__name__)
     return outcomes
+
+
+async def recover_global_pending_report_followups(*, max_reports: int = 8, concurrency: int = 2) -> Dict[str, int]:
+    """Recover a bounded global batch without accepting caller-supplied owners.
+
+    Candidates come only from the server-side ledger query.  The owner/report
+    pair is then passed through the same report, payload, lease and effect-key
+    checks as the authenticated request fast path.  Returned counters contain
+    no patient identifiers or clinical payloads and are safe to log.
+    """
+    if not isinstance(max_reports, int) or isinstance(max_reports, bool) or not 1 <= max_reports <= 32:
+        raise RecoveryDispatchError("invalid_global_recovery_limit")
+    if not isinstance(concurrency, int) or isinstance(concurrency, bool) or not 1 <= concurrency <= 4:
+        raise RecoveryDispatchError("invalid_global_recovery_concurrency")
+
+    candidates = await svc.list_global_recoverable_followup_reports(limit=max_reports)
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def recover_one(candidate: Dict[str, str]) -> bool:
+        async with semaphore:
+            try:
+                await recover_report_followups(
+                    authenticated_user_id=candidate["user_id"],
+                    report_version_id=candidate["report_version_id"],
+                )
+                return True
+            except Exception as exc:
+                # Deliberately omit user/report identifiers and error contents.
+                logger.error("autonomous_recovery_dispatch_failed exception_type=%s", type(exc).__name__)
+                return False
+
+    results = await asyncio.gather(*(recover_one(candidate) for candidate in candidates))
+    return {"discovered": len(candidates), "processed": sum(results), "failed": len(candidates) - sum(results)}

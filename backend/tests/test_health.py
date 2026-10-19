@@ -99,6 +99,29 @@ async def test_readiness_returns_503_when_supabase_unavailable(monkeypatch):
     assert payload["checks"]["supabase"] == "failed"
 
 
+@pytest.mark.asyncio
+async def test_readiness_tolerates_two_transient_supabase_failures(monkeypatch):
+    attempts = 0
+
+    async def flaky_supabase(*_args, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise RuntimeError("temporary edge reset")
+        return object()
+
+    async def no_sleep(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(health.svc, "_run", flaky_supabase)
+    monkeypatch.setattr(health.asyncio, "sleep", no_sleep)
+
+    result = await health._probe_supabase_readiness()
+
+    assert result == {"ok": True, "attempt": 3}
+    assert attempts == 3
+
+
 # ---------------------------------------------------------------------------
 # /ops/llm/synthetic-check tests
 # ---------------------------------------------------------------------------

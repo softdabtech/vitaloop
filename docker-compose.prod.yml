@@ -3,7 +3,7 @@ networks:
     driver: bridge
 services:
   backend:
-    image: vitaloop-backend:${VITALOOP_IMAGE_TAG:-latest}
+    image: vitaloop-backend:${VITALOOP_IMAGE_TAG:?VITALOOP_IMAGE_TAG must be set to an immutable release SHA}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -38,8 +38,30 @@ services:
     volumes:
     - backend-data:/app/data
     - ./backend/logs:/app/logs
+  recovery-worker:
+    image: vitaloop-backend:${VITALOOP_IMAGE_TAG:?VITALOOP_IMAGE_TAG must be set to an immutable release SHA}
+    command: python -m app.workers.autonomous_recovery
+    container_name: vitaloop-recovery-worker
+    env_file:
+    - ./backend/.env
+    environment:
+    - LOG_LEVEL=info
+    - ENVIRONMENT=production
+    - RECOVERY_WORKER_ENABLED=true
+    # Bound every cycle; override only through reviewed production config.
+    - RECOVERY_WORKER_INTERVAL_SECONDS=60
+    - RECOVERY_WORKER_BATCH_SIZE=8
+    - RECOVERY_WORKER_CONCURRENCY=2
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    networks:
+    - vitaloop-network
+    restart: unless-stopped
   frontend:
-    image: vitaloop-frontend:${VITALOOP_IMAGE_TAG:-latest}
+    image: vitaloop-frontend:${VITALOOP_IMAGE_TAG:?VITALOOP_IMAGE_TAG must be set to an immutable release SHA}
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod

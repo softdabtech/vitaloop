@@ -22,7 +22,10 @@ DSN = os.environ.get("VITALOOP_TEST_PG_DSN")
 pytestmark = pytest.mark.skipif(not DSN, reason="VITALOOP_TEST_PG_DSN not set")
 
 HERE = Path(__file__).parent
-MIGRATION = HERE.parents[1] / "migrations" / "20261016120000_atomic_lab_analysis_finalization.sql"
+MIGRATIONS = (
+    HERE.parents[1] / "migrations" / "20261016120000_atomic_lab_analysis_finalization.sql",
+    HERE.parents[1] / "migrations" / "20261019090000_autonomous_recovery_worker.sql",
+)
 TEST_TABLES = (
     "analysis_followup_work", "analysis_operations", "report_versions", "biomarkers", "lab_uploads",
     "intervention_events", "safety_events", "analysis_quality_gates", "clinical_data_integrity_events",
@@ -123,7 +126,8 @@ def db():
 
     try:
         cur.execute((HERE / "bootstrap.sql").read_text())
-        cur.execute(MIGRATION.read_text())
+        for migration in MIGRATIONS:
+            cur.execute(migration.read_text())
         yield conn
     finally:
         # Cleanup: remove test objects only. Do NOT auto-revoke membership.
@@ -141,7 +145,8 @@ def db():
                        "complete_analysis_followup_work(uuid,uuid,text,uuid,text,text)",
                        "load_analysis_followup_work_payload(uuid,uuid,text)",
                        "project_report_protocol(uuid,uuid,uuid)",
-                       "atomic_finalization_schema_preflight()"):
+                       "atomic_finalization_schema_preflight()",
+                       "autonomous_recovery_schema_preflight()"):
                 cur.execute(f"drop function if exists public.{fn}")
         except Exception as e:
             pytest.fail(f"cleanup failed and must be explicit; do not mask: {e}")
@@ -717,6 +722,42 @@ def test_release_preflight_requires_the_full_atomic_contract(db):
             expect_error(lambda: cur.execute("select public.atomic_finalization_schema_preflight()"), "42501")
         finally:
             cur.execute("reset role")
+
+
+def test_autonomous_recovery_preflight_requires_global_indexes_and_service_role(db):
+    cur = db.cursor()
+    cur.execute("select public.autonomous_recovery_schema_preflight()")
+    assert cur.fetchone()[0] == {
+        "schema_ready": True,
+        "migration_contract": "20261019090000_autonomous_recovery_worker",
+    }
+    cur.execute("""select indexname from pg_indexes
+                   where schemaname='public' and indexname in
+                     ('idx_analysis_followup_work_global_retryable',
+                      'idx_analysis_followup_work_global_expired_lease')""")
+    assert {row[0] for row in cur.fetchall()} == {
+        "idx_analysis_followup_work_global_retryable",
+        "idx_analysis_followup_work_global_expired_lease",
+    }
+    cur.execute("""select r.rolname, p.prosecdef, p.proconfig::text,
+                          has_function_privilege('service_role', p.oid, 'execute')
+                   from pg_proc p join pg_roles r on r.oid=p.proowner
+                   where p.oid='public.autonomous_recovery_schema_preflight()'::regprocedure""")
+    owner, definer, config, service_execute = cur.fetchone()
+    assert owner == "vitaloop_finalizer" and definer and service_execute
+    assert "search_path=pg_catalog, public" in config
+    for role in ("anon", "authenticated"):
+        cur.execute(f"set role {role}")
+        try:
+            expect_error(lambda: cur.execute("select public.autonomous_recovery_schema_preflight()"), "42501")
+        finally:
+            cur.execute("reset role")
+    cur.execute("set role service_role")
+    try:
+        cur.execute("select public.autonomous_recovery_schema_preflight()")
+        assert cur.fetchone()[0]["schema_ready"] is True
+    finally:
+        cur.execute("reset role")
 
 
 def test_rpc_works_under_rls_as_finalizer(db):
