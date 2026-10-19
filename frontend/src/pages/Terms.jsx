@@ -37,7 +37,7 @@ export default function Terms() {
         ← Back to VITALOOP
       </button>
       <h1 style={{ fontSize: 34, lineHeight: 1.2, fontWeight: 700, color: 'var(--gray-900, #1d1d1f)', marginBottom: 12 }}>Terms of Service</h1>
-      <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14, marginBottom: 32 }}>Last updated: April 2026</p>
+      <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14, marginBottom: 32 }}>Last updated: October 19, 2026</p>
 
       <section style={{ display: 'grid', gap: 24, fontSize: 15, lineHeight: 1.7, color: 'var(--gray-700, #424245)' }}>
         <div>
@@ -53,8 +53,9 @@ export default function Terms() {
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>3. Subscription</h2>
-          <p>Access to full Premium features may require an active subscription or manual access approval at {PREMIUM_PRICE_LABEL}. VITALOOP does not send symptoms, uploaded lab files, biomarker values, or health reports to billing tools.</p>
-          <p>Subscriptions can be cancelled from the account billing area or by contacting <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a>. Access usually continues until the end of the active paid period after cancellation.</p>
+          <p>Premium is available as a recurring subscription at {PREMIUM_PRICE_LABEL} or $99.99 per year. The subscription renews automatically at the selected interval unless you cancel before renewal. The price, billing interval, applicable taxes, and total due are shown in checkout before you confirm payment.</p>
+          <p>Checkout and self-service subscription management are provided by Creem. We send only the account and transaction metadata needed for billing; we do not send symptoms, uploaded lab files, biomarker values, health reports, or protocol text to Creem.</p>
+          <p>You can cancel through the account billing area or contact <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a>. Access remains available through the end of the paid period unless a different outcome is required by law or confirmed in writing.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. Refunds and billing support</h2>

@@ -1,21 +1,11 @@
-import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
-import { useAuth } from '../hooks/useAuth.js'
-import { requestPremiumAccess } from '../lib/premiumAccess.js'
 
 export default function Paywall() {
-  const [loading, setLoading] = useState(false)
-  const { user } = useAuth()
+  const navigate = useNavigate()
 
-  async function handlePremiumRequest() {
-    setLoading(true)
-    try {
-      await requestPremiumAccess({ userEmail: user?.email, source: 'paywall' })
-    } catch {
-      requestPremiumAccess({ userEmail: user?.email, source: 'paywall_retry' })
-    } finally {
-      setLoading(false)
-    }
+  function handlePremiumRequest() {
+    navigate('/subscription')
   }
 
   return (
@@ -32,10 +22,9 @@ export default function Paywall() {
         <p className="text-gray-400 text-sm mb-4">Subscribe to see priorities, trends, and follow-up guidance.</p>
         <button
           onClick={handlePremiumRequest}
-          disabled={loading}
-          className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition"
+          className="bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-xl transition"
         >
-          {loading ? 'Preparing…' : `Request Premium — ${PREMIUM_PRICE_LABEL}`}
+          {`Choose Premium — ${PREMIUM_PRICE_LABEL}`}
         </button>
       </div>
     </div>

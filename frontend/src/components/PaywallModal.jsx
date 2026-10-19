@@ -8,12 +8,10 @@
  * Or mount with explicit `open` prop for page-level use.
  */
 import { useState, useEffect } from 'react'
-import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
-import { requestPremiumAccess } from '../lib/premiumAccess.js'
-import { useAuth } from '../hooks/useAuth.js'
 import { gaPaywallImpression } from '../lib/analytics.js'
 
 const COPY = {
@@ -35,10 +33,9 @@ const COPY = {
       protocol_follow_through: 'Premium helps you keep this plan moving: repeat checks, progress trends, and doctor discussion prep across reports.',
     },
     fallback: 'See the full reasoning behind your results, and track how things change over time.',
-    accessError: 'Please email info@softdab.tech to activate Premium access.',
-    redirecting: 'Preparing email…',
-    continue: 'Request Premium access',
-    footer: 'Premium access is currently activated manually — requesting it opens an email to our team, and we confirm activation by email. You will not be charged automatically.',
+    redirecting: 'Opening plans…',
+    continue: 'Choose Premium',
+    footer: 'Secure checkout is provided by Creem. Premium activates after payment is confirmed.',
     close: 'Close',
   },
   uk: {
@@ -59,10 +56,9 @@ const COPY = {
       protocol_follow_through: 'Premium допомагає підтримувати цей план: повторні перевірки, динаміка прогресу та підготовка до розмови з лікарем між звітами.',
     },
     fallback: 'Побачте повну логіку своїх результатів і відстежуйте зміни з часом.',
-    accessError: 'Напишіть на info@softdab.tech, щоб активувати Premium.',
-    redirecting: 'Готуємо лист…',
-    continue: 'Запросити Premium доступ',
-    footer: 'Premium зараз активується вручну — запит відкриває лист до нашої команди, і ми підтверджуємо активацію також листом. Автоматичного списання коштів не буде.',
+    redirecting: 'Відкриваємо тарифи…',
+    continue: 'Обрати Premium',
+    footer: 'Безпечне оформлення проводить Creem. Premium активується після підтвердження оплати.',
     close: 'Закрити',
   },
 }
@@ -71,7 +67,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState(null)
   const [loading, setLoading] = useState(false)
-  const { user } = useAuth()
+  const navigate = useNavigate()
   const { data: entitlements } = useUserEntitlements()
   const copy = isUkrainianLocale() ? COPY.uk : COPY.en
 
@@ -109,19 +105,10 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
     onClose?.()
   }
 
-  async function handlePremiumRequest() {
+  function handlePremiumRequest() {
     setLoading(true)
-    try {
-      await requestPremiumAccess({
-        userEmail: user?.email,
-        source: 'paywall_modal',
-        successMessage: copy.accessError,
-      })
-    } catch {
-      toast.error(copy.accessError)
-    } finally {
-      setLoading(false)
-    }
+    handleClose()
+    navigate('/subscription')
   }
 
   if (!isVisible) return null
@@ -161,7 +148,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3.5 transition"
           >
-            {loading ? copy.redirecting : `${copy.continue} — ${PREMIUM_PRICE_LABEL}`}
+              {loading ? copy.redirecting : `${copy.continue} — ${PREMIUM_PRICE_LABEL}`}
           </button>
           <p className="mt-2 text-center text-xs text-slate-400">
             {copy.footer}

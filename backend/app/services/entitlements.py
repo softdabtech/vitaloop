@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.services import supabase_service as svc
@@ -17,12 +18,20 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
     sub_table_plan = str((active_sub or {}).get('plan_name') or '').strip().lower()
     cancel_at_period_end = bool((active_sub or {}).get('cancel_at_period_end', False))
 
+    period_end = (active_sub or {}).get('current_period_end')
+    try:
+        paid_through_current_period = not period_end or datetime.fromisoformat(str(period_end).replace('Z', '+00:00')) > datetime.now(timezone.utc)
+    except ValueError:
+        # Do not revoke a subscription solely because a legacy timestamp is
+        # malformed; provider webhooks will reconcile it on the next event.
+        paid_through_current_period = True
+
     paid_from_sub_table = bool(
         active_sub
         and sub_table_status == 'active'
         and sub_table_plan
         and sub_table_plan != 'free'
-        and not cancel_at_period_end
+        and paid_through_current_period
     )
     paid_from_account = bool(
         subscription_status == 'active'

@@ -4,9 +4,8 @@ import toast from 'react-hot-toast'
 import { CheckCircle2, CreditCard, Mail, ShieldCheck, Sparkles, XCircle } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
-import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { requestPremiumAccess, requestSubscriptionCancellation } from '../lib/premiumAccess.js'
+import { openCreemBillingPortal, openCreemCheckout } from '../lib/creemCheckout.js'
 import { openWayforpayCheckout } from '../lib/wayforpayCheckout.js'
 import api from '../lib/api.js'
 import { gaViewPricing, gaBeginCheckout, gaPurchase } from '../lib/analytics.js'
@@ -61,18 +60,25 @@ function FeatureList({ items }) {
 }
 
 export default function Subscription() {
-  const { user } = useAuth()
   const { isPremium, subStatus, uploadCount, uploadLimit, uploadsRemaining, loading, error, refresh } = useSubscription()
   const isUk = isUkrainianLocale()
   const statusLabel = isPremium ? (isUk ? 'Преміум активний' : 'Premium active') : (isUk ? 'Активний безкоштовний тариф' : 'Free plan active')
   const planLabel = isPremium ? 'Premium' : (isUk ? 'Безкоштовний' : 'Free')
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [cancelling, setCancelling] = useState(false)
-  // P46 -- WayForPay checkout, UA cabinet only (see lib/wayforpayCheckout.js
-  // + backend/app/routers/billing/wayforpay.py). EN cabinet keeps the
-  // existing manual/email flow below unchanged; this state only drives the
-  // isUk checkout buttons.
   const [checkoutPlan, setCheckoutPlan] = useState(null) // 'monthly' | 'yearly' | null while idle
+
+  async function handleCreemCheckout(plan) {
+    if (checkoutPlan) return
+    setCheckoutPlan(plan)
+    gaBeginCheckout(plan === 'yearly' ? '$99.99/year' : '$9.99/month')
+    try {
+      await openCreemCheckout(plan)
+    } catch (err) {
+      toast.error(isUk ? 'Не вдалося відкрити форму оплати. Спробуйте ще раз.' : 'Could not open checkout. Please try again.')
+      setCheckoutPlan(null)
+    }
+  }
 
   async function handleWayforpayCheckout(plan) {
     if (checkoutPlan) return
@@ -82,30 +88,24 @@ export default function Subscription() {
       await openWayforpayCheckout(plan, {
         onApproved: () => {
           gaPurchase(`wayforpay_${plan}_${Date.now()}`, plan === 'yearly' ? 2499 : 249, 'UAH')
-          toast.success(isUk ? 'Оплату прийнято! Активуємо Premium…' : 'Payment received! Activating Premium…')
-          // The webhook that actually activates the subscription is
-          // server-to-server and may land a moment after this client
-          // callback fires -- a few staggered refetches instead of one,
-          // rather than a fixed delay that could still be too short.
+          toast.success('Оплату прийнято! Активуємо Premium…')
           refresh()
           setTimeout(refresh, 3000)
           setTimeout(refresh, 8000)
           setCheckoutPlan(null)
         },
         onDeclined: (reason) => {
-          toast.error(isUk ? `Оплату відхилено: ${reason}` : `Payment declined: ${reason}`)
+          toast.error(`Оплату відхилено: ${reason}`)
           setCheckoutPlan(null)
         },
         onPending: () => {
-          toast(isUk ? 'Оплата обробляється…' : 'Payment is processing…')
+          toast('Оплата обробляється…')
           setCheckoutPlan(null)
         },
-        onClose: () => {
-          setCheckoutPlan(null)
-        },
+        onClose: () => setCheckoutPlan(null),
       })
-    } catch (err) {
-      toast.error(isUk ? 'Не вдалося відкрити форму оплати. Спробуйте ще раз.' : 'Could not open checkout. Please try again.')
+    } catch {
+      toast.error('Не вдалося відкрити форму оплати. Спробуйте ще раз.')
       setCheckoutPlan(null)
     }
   }
@@ -158,38 +158,20 @@ export default function Subscription() {
     )
   }
 
-  async function handlePremiumRequest() {
-    await requestPremiumAccess({ userEmail: user?.email, source: 'subscription_page' })
-  }
-
   async function handleCancelSubscription() {
-    if (!isUk) {
-      await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
-      setShowCancelConfirm(false)
-      return
-    }
-
-    // P46 -- for a WayForPay-billed subscription, cancel it there directly
-    // (stops the next recurring charge; current access is untouched until
-    // the period already paid for ends). /wayforpay/cancel 400s for any
-    // subscription it doesn't manage (manual/email-activated, or the never-
-    // live Stripe path) -- that's the signal to fall back to the existing
-    // email flow rather than a special "which provider am I on" check here.
     setCancelling(true)
     try {
-      await api.post('/wayforpay/cancel')
-      toast.success(isUk
-        ? 'Підписку скасовано. Premium залишиться активним до кінця поточного періоду.'
-        : 'Subscription cancelled. Premium stays active through the end of your current billing period.')
-      refresh()
-    } catch (err) {
-      if (err?.response?.status === 400) {
-        await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
+      if (isUk) {
+        await api.post('/wayforpay/cancel')
+        toast.success('Підписку скасовано. Premium залишиться активним до кінця поточного періоду.')
+        refresh()
       } else {
-        toast.error(isUk
-          ? 'Не вдалося скасувати підписку автоматично. Спробуйте ще раз або напишіть нам.'
-          : 'Could not cancel automatically. Please try again or email us.')
+        await openCreemBillingPortal()
       }
+    } catch (err) {
+      toast.error(isUk
+        ? 'Не вдалося відкрити керування підпискою. Напишіть нам, якщо проблема повториться.'
+        : 'Could not open subscription management. Please contact support if the problem continues.')
     } finally {
       setCancelling(false)
       setShowCancelConfirm(false)
@@ -222,45 +204,29 @@ export default function Subscription() {
                 : 'Your free report shows what VITALOOP found. Premium is for going further: understanding why it was flagged, closing evidence gaps, tracking your baseline over time, and preparing for your next doctor conversation.'}
             </p>
           </div>
-          {!isPremium && isUk && (
+          {!isPremium && (
             <div className="grid w-full gap-3 sm:w-auto sm:min-w-[260px]">
               <button
                 type="button"
-                onClick={() => handleWayforpayCheckout('monthly')}
+                onClick={() => (isUk ? handleWayforpayCheckout('monthly') : handleCreemCheckout('monthly'))}
                 disabled={Boolean(checkoutPlan)}
                 className="cabinet-btn cabinet-btn--primary disabled:opacity-60"
               >
                 <CreditCard className="h-4 w-4" />
-                {checkoutPlan === 'monthly' ? 'Відкриваємо оплату…' : 'Оформити Premium — 249 грн/міс'}
+                {checkoutPlan === 'monthly' ? (isUk ? 'Відкриваємо оплату…' : 'Opening checkout…') : (isUk ? 'Оформити Premium — 249 грн/міс' : 'Get Premium — $9.99/month')}
               </button>
               <button
                 type="button"
-                onClick={() => handleWayforpayCheckout('yearly')}
+                onClick={() => (isUk ? handleWayforpayCheckout('yearly') : handleCreemCheckout('yearly'))}
                 disabled={Boolean(checkoutPlan)}
                 className="cabinet-btn cabinet-btn--secondary disabled:opacity-60"
               >
                 <Sparkles className="h-4 w-4" />
-                {checkoutPlan === 'yearly' ? 'Відкриваємо оплату…' : 'Оформити на рік — 2499 грн/рік'}
+                {checkoutPlan === 'yearly' ? (isUk ? 'Відкриваємо оплату…' : 'Opening checkout…') : (isUk ? 'Оформити на рік — 2499 грн/рік' : 'Get annual Premium — $99.99/year')}
               </button>
               <p className="text-xs leading-5 text-slate-500">
-                <strong className="text-slate-600">Оплата карткою:</strong>{' '}
-                оплата проходить на захищеній сторінці WayForPay — ми не бачимо і не зберігаємо дані вашої картки. Premium активується автоматично одразу після оплати.
-              </p>
-            </div>
-          )}
-          {!isPremium && !isUk && (
-            <div className="grid w-full gap-3 sm:w-auto sm:min-w-[260px]">
-              <button
-                type="button"
-                onClick={handlePremiumRequest}
-                className="cabinet-btn cabinet-btn--primary"
-              >
-                <Mail className="h-4 w-4" />
-                Request Premium activation
-              </button>
-              <p className="text-xs leading-5 text-slate-500">
-                <strong className="text-slate-600">How activation works:</strong>{' '}
-                Premium activation is currently handled by our support team. This opens an email with your account details pre-filled; nothing is charged automatically here.
+                <strong className="text-slate-600">{isUk ? 'Безпечна оплата:' : 'Secure checkout:'}</strong>{' '}
+                {isUk ? 'оплата проходить на захищеній сторінці WayForPay. Ми не бачимо й не зберігаємо дані картки; Premium активується після підтвердження оплати.' : 'payment is completed on Creem’s secure hosted checkout. We do not see or store card details; Premium activates after payment is confirmed.'}
               </p>
             </div>
           )}
@@ -373,18 +339,13 @@ export default function Subscription() {
             <h3 className="text-base font-bold text-blue-950">{isUk ? 'Питання щодо оплати Premium' : 'Premium access support'}</h3>
             <p className="mt-1 text-sm leading-6 text-blue-800">
               {isUk
-                ? 'Оплата Premium проходить через WayForPay і активується автоматично. Ми не передаємо симптоми, завантажені аналізи, біомаркери, звіти чи медичні нотатки платіжним інструментам — лише суму й дані картки, потрібні для оплати.'
-                : 'Premium is $10/month. Activation is currently handled manually by the VITALOOP support team; there is no English checkout on this page. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to billing tools.'}
+                ? 'Оплата Premium проходить через WayForPay і активується автоматично після підтвердження. Ми не передаємо симптоми, завантажені аналізи, біомаркери, звіти чи медичні нотатки платіжному провайдеру.'
+                : 'Premium is billed through Creem and activates automatically after payment is confirmed. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to the payment provider.'}
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button type="button" onClick={handlePremiumRequest} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm min-h-11">
+              <a href="mailto:info@softdab.tech" className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm min-h-11">
                 {isUk ? 'Написати нам' : 'Contact support'}
-              </button>
-              {!isUk && (
-                <a href="mailto:info@softdab.tech" className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm min-h-11">
-                  Email info@softdab.tech
-                </a>
-              )}
+              </a>
             </div>
           </div>
         </div>

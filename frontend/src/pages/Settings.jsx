@@ -378,8 +378,8 @@ export default function Settings() {
                   </div>
                   <p className="text-xs leading-5 text-blue-800">
                     {isUk
-                      ? 'Premium доступ активується вручну. Медичні дані не передаються платіжним інструментам.'
-                      : 'Premium access is activated manually. Medical data is not shared with billing tools.'}
+                      ? 'Premium для українського сервісу оформлюється та керується через WayForPay. Медичні дані не передаються платіжному провайдеру.'
+                      : 'Premium checkout and management are provided through Creem. Medical data is not shared with the payment provider.'}
                   </p>
                   <button type="button" onClick={() => { window.location.href = '/billing-history' }} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm mt-3">
                     {isUk ? 'Переглянути оплату' : 'View billing'}

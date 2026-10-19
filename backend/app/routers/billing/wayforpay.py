@@ -26,14 +26,27 @@ class CheckoutRequest(BaseModel):
     plan: str  # "monthly" | "yearly"
 
 
+def _assert_ua_origin(request: Request) -> None:
+    """WayForPay checkout is exclusive to ua.vitaloop.today.
+
+    Webhooks intentionally do not use this check: they are signed
+    server-to-server calls from WayForPay, not browser requests.
+    """
+    origin = (request.headers.get("origin") or "").lower()
+    if origin and "ua.vitaloop.today" not in origin:
+        raise HTTPException(status_code=403, detail="WayForPay checkout is available only for the Ukrainian service")
+
+
 @router.post("/checkout")
 async def create_checkout(
     body: CheckoutRequest,
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     """Returns the signed field set the UA Subscription page passes to
     wayforpay.run(). The secret key itself never leaves the backend --
     only merchantSignature, already computed with it, goes to the client."""
+    _assert_ua_origin(request)
     user_id = current_user.get("sub")
     email = str(current_user.get("email") or "").strip()
     if not email:
@@ -123,7 +136,7 @@ async def wayforpay_webhook(request: Request):
 
 
 @router.post("/cancel")
-async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+async def cancel_subscription(request: Request, current_user: dict = Depends(get_current_user)):
     """Stops future recurring charges for the caller's WayForPay
     subscription. Never touches current access -- WayForPay's REMOVE call
     only stops the *next* scheduled charge, so this sets
@@ -131,6 +144,7 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
     current_period_end actually passes (same UX the pre-existing
     mailto-cancel flow already promised: "keep Premium through the end of
     your current billing period")."""
+    _assert_ua_origin(request)
     user_id = current_user.get("sub")
     active_sub = await svc.get_user_active_subscription(user_id)
 

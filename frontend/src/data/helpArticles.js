@@ -793,14 +793,14 @@ export const HELP_ARTICLES = {
         type: 'steps',
         items: [
           { title: 'Open the Subscription page', body: 'Go to Settings → Subscription, or click the **"Upgrade"** button that appears when you try to access a Premium feature.' },
-          { title: 'Request access', body: 'Premium is currently activated manually by the VITALOOP team.' },
-          { title: 'Confirm your account', body: 'Email info@softdab.tech from the address connected to your VITALOOP account.' },
-          { title: 'Access unlocks after confirmation', body: 'Premium features become available after support confirms your access.' },
+          { title: 'Choose a plan', body: 'Choose monthly or annual Premium and continue to Creem’s secure checkout.' },
+          { title: 'Confirm payment', body: 'Review the price, billing interval, taxes, and total before you confirm payment.' },
+          { title: 'Access unlocks after confirmation', body: 'Premium features become available automatically after the payment webhook is confirmed.' },
         ],
       },
       {
         type: 'tip',
-        text: 'Support will confirm when Premium access is active and how your current billing arrangement works.',
+        text: 'Use the Creem billing portal from Subscription to manage or cancel an active subscription. Contact support for billing or refund help.',
       },
     ],
   },
