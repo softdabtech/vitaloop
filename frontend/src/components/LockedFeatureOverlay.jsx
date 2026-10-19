@@ -1,8 +1,6 @@
-import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../lib/store.js'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
-import { useAuth } from '../hooks/useAuth.js'
-import { requestPremiumAccess } from '../lib/premiumAccess.js'
 
 const FEATURES = [
   '📈 Full biomarker progress charts',
@@ -14,21 +12,13 @@ const FEATURES = [
 
 export default function LockedFeatureOverlay({ children, locked = true }) {
   const setShowPaywall = useAppStore((s) => s.setShowPaywall)
-  const { user } = useAuth()
+  const navigate = useNavigate()
 
   if (!locked) return <>{children}</>
 
-  async function handlePremiumRequest() {
-    const toastId = toast.loading('Preparing Premium access email…')
-    try {
-      await requestPremiumAccess({ userEmail: user?.email, source: 'locked_feature' })
-      toast.dismiss(toastId)
-    } catch (error) {
-      toast.dismiss(toastId)
-      const message = 'Please contact info@softdab.tech to activate Premium.'
-      toast.error(message)
-    }
+  function handlePremiumRequest() {
     setShowPaywall(false)
+    navigate('/subscription')
   }
 
   return (
@@ -55,7 +45,7 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
         >
           Continue — {PREMIUM_PRICE_LABEL}
         </button>
-        <p className="text-gray-600 text-xs mt-3">Premium access is activated manually.</p>
+        <p className="text-gray-600 text-xs mt-3">Choose a plan and complete secure checkout with Creem.</p>
       </div>
     </div>
   )

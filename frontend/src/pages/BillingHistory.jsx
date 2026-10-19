@@ -2,21 +2,14 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Mail, Receipt } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
-import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { requestPremiumAccess } from '../lib/premiumAccess.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 
 export default function BillingHistory() {
-  const { user } = useAuth()
   const { isPremium, subStatus } = useSubscription()
   const navigate = useNavigate()
   const isUk = isUkrainianLocale()
-
-  async function handlePremiumRequest() {
-    await requestPremiumAccess({ userEmail: user?.email, source: 'billing_history' })
-  }
 
   return (
     <>
@@ -42,7 +35,7 @@ export default function BillingHistory() {
             </span>
             <div>
               <h2 className="cabinet-title-lg text-slate-950">{isUk ? 'Підтримка доступу Premium' : 'Premium access support'}</h2>
-              <p className="text-sm text-slate-500">{isUk ? 'Premium наразі активується вручну командою VITALOOP.' : 'Premium is currently activated manually by the VITALOOP team.'}</p>
+              <p className="text-sm text-slate-500">{isUk ? 'Оформлення та керування Premium доступні через WayForPay.' : 'Premium checkout and management are available through Creem.'}</p>
             </div>
           </div>
 
@@ -59,22 +52,22 @@ export default function BillingHistory() {
 
           <p className="mt-6 max-w-2xl text-sm leading-6 text-slate-600">
             {isUk
-              ? 'Зв’яжіться з нами, щоб активувати або переглянути доступ Premium. VITALOOP не передає симптоми, файли аналізів, біомаркери, звіти чи текст протоколу платіжним інструментам.'
-              : 'Contact us to activate or review Premium access. VITALOOP does not send symptoms, lab files, biomarkers, reports, or protocol text to billing tools.'}
+              ? 'Оформіть або керуйте Premium у розділі підписки. VITALOOP не передає симптоми, файли аналізів, біомаркери, звіти чи текст протоколу платіжному провайдеру.'
+              : 'Choose or manage Premium on the Subscription page. VITALOOP does not send symptoms, lab files, biomarkers, reports, or protocol text to the payment provider.'}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={handlePremiumRequest}
+              onClick={() => navigate('/subscription')}
               className="cabinet-btn cabinet-btn--primary"
             >
               <Mail className="h-4 w-4" />
-              {isUk ? 'Запросити доступ Premium' : 'Request Premium access'}
+              {isUk ? 'Перейти до Premium' : 'View Premium plans'}
             </button>
             <button
               type="button"
-              onClick={handlePremiumRequest}
+              onClick={() => { window.location.href = 'mailto:info@softdab.tech' }}
               className="cabinet-btn cabinet-btn--secondary"
             >
               <Mail className="h-4 w-4" />

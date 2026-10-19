@@ -140,7 +140,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'What payment methods do you accept?',
-        a: 'Premium access is currently activated manually while we configure payment processing. VITALOOP does not send symptoms, lab files, biomarker values, or health reports to billing tools.',
+        a: 'Premium checkout is provided by Creem. VITALOOP does not send symptoms, lab files, biomarker values, or health reports to the payment provider.',
       },
       {
         q: 'When do you bill?',

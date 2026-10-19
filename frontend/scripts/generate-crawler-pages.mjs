@@ -200,7 +200,7 @@ const routes = [
       'VITALOOP offers free access for getting started and Premium access for deeper lab intelligence.',
       'Premium includes full lab analysis, explainable reports, personalized protocols, progress tracking, and weekly check-ins.',
       'VITALOOP is educational software and does not diagnose, treat, prescribe, or replace professional medical care.',
-      'Premium access is currently activated manually. VITALOOP does not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to billing tools.',
+      'Premium checkout and subscription management are provided by Creem. VITALOOP does not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to the payment provider.',
     ],
     links: [
       { href: '/refund-policy/', label: 'Refund policy' },
@@ -248,6 +248,7 @@ const routes = [
     changefreq: 'yearly',
     text: [
       'VITALOOP terms of service for website and product use.',
+      'Premium subscriptions renew automatically at the selected interval unless cancelled before renewal; price, taxes, and total are shown before payment is confirmed.',
       'Premium access can be cancelled from the account billing area or by contacting support when active.',
       'Refund requests are reviewed case by case under the VITALOOP refund policy.',
     ],

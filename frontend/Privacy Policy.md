@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated:** May 19, 2026
+**Last Updated:** October 19, 2026
 
 VITALOOP ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, and protect your personal information when you use our AI-powered blood test analysis platform.
 
@@ -27,7 +27,7 @@ VITALOOP ("we," "us," or "our") is committed to protecting your privacy. This Pr
 - IP address and general location (city/country level)
 
 ### 1.4 Payment Information
-We use Stripe for payment processing. We **never** store your full credit card number or financial details on our servers. Stripe handles all payment data according to PCI DSS standards.
+We use Creem for payment processing and subscription management. We **never** store your full credit card number or financial details on our servers. We provide Creem only the account and transaction metadata needed for billing; we do not provide health information, lab files, biomarker values, reports, or protocol text for billing.
 
 ---
 
@@ -99,11 +99,11 @@ We share minimal data with trusted third-party services necessary to operate VIT
 - Retention: Anthropic does not store your data
 - [Anthropic Privacy Policy](https://www.anthropic.com/privacy)
 
-**Payment Processor (Stripe)**
+**Payment Processor (Creem)**
 - Purpose: Handle subscription payments
-- Data Shared: Email, billing information
-- Security: PCI DSS Level 1 certified
-- [Stripe Privacy Policy](https://stripe.com/privacy)
+- Data Shared: Account and transaction metadata needed for billing
+- Health data: Not shared for billing
+- [Creem Privacy Notice](https://www.creem.io/privacy)
 
 **Hosting Provider (DigitalOcean)**
 - Purpose: Cloud infrastructure and data storage

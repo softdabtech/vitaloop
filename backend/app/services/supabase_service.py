@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -1299,6 +1301,9 @@ async def upsert_user_subscription_row(
     wayforpay_order_reference: Optional[str] = None,
     wayforpay_rec_token: Optional[str] = None,
     wayforpay_regular_mode: Optional[str] = None,
+    creem_customer_id: Optional[str] = None,
+    creem_subscription_id: Optional[str] = None,
+    creem_product_id: Optional[str] = None,
 ) -> None:
     """Keep the canonical subscriptions table aligned with external billing state."""
     supabase = _get_supabase()
@@ -1322,6 +1327,12 @@ async def upsert_user_subscription_row(
         payload["wayforpay_rec_token"] = wayforpay_rec_token
     if wayforpay_regular_mode:
         payload["wayforpay_regular_mode"] = wayforpay_regular_mode
+    if creem_customer_id:
+        payload["creem_customer_id"] = creem_customer_id
+    if creem_subscription_id:
+        payload["creem_subscription_id"] = creem_subscription_id
+    if creem_product_id:
+        payload["creem_product_id"] = creem_product_id
 
     existing_query = (
         supabase.table("subscriptions")
@@ -1376,7 +1387,7 @@ async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
     supabase = _get_supabase()
     resp = await _run_supabase_read(
         lambda: supabase.table("subscriptions")
-        .select("plan_name, status, current_period_end, cancel_at_period_end, billing_provider, wayforpay_order_reference")
+        .select("plan_name, status, current_period_end, cancel_at_period_end, billing_provider, wayforpay_order_reference, creem_customer_id, creem_subscription_id, creem_product_id")
         .eq("user_id", user_id)
         .in_("status", ["active", "past_due", "paused"])
         .order("updated_at", desc=True)
@@ -1385,6 +1396,59 @@ async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
         label="get_user_active_subscription",
     )
     return resp.data[0] if resp.data else None
+
+
+async def get_subscription_by_creem_subscription_id(creem_subscription_id: str) -> Optional[Dict[str, Any]]:
+    """Look up a VITALOOP subscription using Creem's immutable subscription ID."""
+    if not creem_subscription_id:
+        return None
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("subscriptions")
+        .select("user_id, plan_name, status, current_period_start, current_period_end, cancel_at_period_end, creem_customer_id, creem_subscription_id, creem_product_id")
+        .eq("creem_subscription_id", creem_subscription_id)
+        .limit(1)
+        .execute(),
+        label="get_subscription_by_creem_subscription_id",
+    )
+    return resp.data[0] if resp.data else None
+
+
+async def was_creem_webhook_processed(event_id: str) -> bool:
+    """Return whether a Creem event was fully processed before.
+
+    The event row is written only after the billing state update succeeds, so
+    a transient database failure remains retryable by Creem.
+    """
+    if not event_id:
+        return False
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("creem_webhook_events").select("event_id").eq("event_id", event_id).limit(1).execute(),
+        label="was_creem_webhook_processed",
+    )
+    return bool(resp.data)
+
+
+async def mark_creem_webhook_processed(event_id: str, event_type: str) -> None:
+    """Persist an audit/idempotency marker after a Creem webhook succeeds."""
+    if not event_id:
+        return
+    supabase = _get_supabase()
+    try:
+        await _run(
+            lambda: supabase.table("creem_webhook_events").insert({
+                "event_id": event_id,
+                "event_type": event_type,
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+        )
+    except Exception as exc:
+        # A duplicate can race another delivery after both checked above. The
+        # subscription write is idempotent, and the unique event key makes
+        # this safe to acknowledge.
+        if "duplicate" not in str(exc).lower():
+            raise
 
 
 async def get_active_subscriptions_by_user_ids(user_ids: List[str]) -> Dict[str, Dict]:

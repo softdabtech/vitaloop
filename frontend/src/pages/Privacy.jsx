@@ -38,7 +38,7 @@ export default function Privacy() {
         ← Back to VITALOOP
       </button>
       <h1 style={{ fontSize: 34, lineHeight: 1.2, fontWeight: 700, color: 'var(--gray-900, #1d1d1f)', marginBottom: 12 }}>Privacy Policy</h1>
-      <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14, marginBottom: 32 }}>Last updated: May 19, 2026</p>
+      <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14, marginBottom: 32 }}>Last updated: October 19, 2026</p>
 
       <section style={{ display: 'grid', gap: 24, fontSize: 15, lineHeight: 1.7, color: 'var(--gray-700, #424245)' }}>
         <div>
@@ -50,7 +50,7 @@ export default function Privacy() {
           <p><strong>Health Data:</strong> Lab test PDFs you upload for analysis, biomarker values and status extracted from labs, personalized protocol information, and progress data such as weekly check-ins and biomarker trends.</p>
           <p><strong>Account Information:</strong> Email address, encrypted password, account creation and login dates, subscription plan, and billing status.</p>
           <p><strong>Usage Data:</strong> Pages visited, features used, time spent, device and browser details, and IP-based city/country-level location data.</p>
-          <p><strong>Payment Information:</strong> Premium subscription charges and status are handled by Stripe. We do not store full credit card details on our servers.</p>
+          <p><strong>Payment Information:</strong> Premium checkout, subscription charges, and subscription-management requests are handled by Creem. We do not store full credit-card details on our servers. We provide Creem only the account and transaction metadata needed to process a payment; we do not provide health information, lab files, biomarker values, reports, or protocol text for billing.</p>
         </div>
 
         <div>
@@ -69,7 +69,7 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>4. Data Sharing and Third Parties</h2>
-          <p>We share only minimal required data with trusted providers to operate VITALOOP: Anthropic and OpenAI (AI-assisted analysis), Stripe (payment processing and subscription management), DigitalOcean (hosting), and Resend (transactional email).</p>
+          <p>We share only minimal required data with trusted providers to operate VITALOOP: Anthropic and OpenAI (AI-assisted analysis), Creem (payment processing and subscription management), DigitalOcean (hosting), and Resend (transactional email).</p>
           <p>When you use AI-powered features, your lab data and health information may be sent to our AI providers (Anthropic/OpenAI) for analysis. See our AI Disclosure section for details.</p>
           <p>We may disclose information only when legally required, to protect rights and safety, prevent fraud, or during business transfers as allowed by law.</p>
         </div>

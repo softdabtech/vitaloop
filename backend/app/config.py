@@ -95,11 +95,13 @@ class Settings(BaseSettings):
     symptom_engine_commercial_approval_recorded: bool = False
     symptom_engine_security_approval_recorded: bool = False
     symptom_engine_alerting_ready: bool = False
-    # WayForPay (UA cabinet Premium checkout). merchant_password is the
-    # merchant dashboard login password, not used by the SimpleSignature
-    # flow this integration uses (Purchase request + serviceUrl webhook are
-    # both authenticated with HMAC_MD5 over merchant_secret_key only) --
-    # kept here only in case a future flow needs it.
+    # International billing (`vitaloop.today`) — server-only secrets.
+    creem_api_key: str = ""
+    creem_webhook_secret: str = ""
+    creem_api_base_url: str = "https://api.creem.io"
+    creem_monthly_product_id: str = "prod_4MhqWhNnN5LWUl6WzdqWEY"
+    creem_annual_product_id: str = "prod_1HOZGfWiIm6sVv0DgU1COl"
+    # Ukrainian billing (`ua.vitaloop.today`) remains isolated on WayForPay.
     wayforpay_merchant_login: str = ""
     wayforpay_secret_key: str = ""
     wayforpay_merchant_password: str = ""

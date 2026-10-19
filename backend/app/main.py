@@ -43,6 +43,7 @@ from app.routers.b2b import analyze_labs as b2b_analyze_labs
 from app.routers import knowledge
 from app.routers import interventions
 from app.routers import lab_plan
+from app.routers.billing import creem as creem_router
 from app.routers.billing import wayforpay as wayforpay_router
 
 
@@ -191,4 +192,5 @@ app.include_router(b2b_analyze_labs.router)
 app.include_router(knowledge.router)
 app.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
 app.include_router(lab_plan.router, prefix="/lab-plan", tags=["lab-plan"])
+app.include_router(creem_router.router)
 app.include_router(wayforpay_router.router)
