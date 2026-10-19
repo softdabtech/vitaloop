@@ -593,14 +593,6 @@ export default function LabPlan() {
 
   return (
     <div className="coach-shell coach-grid">
-      <PersonalLabPlan
-        items={planItems}
-        isUk={isUk}
-        loading={planLoading}
-        error={planError}
-        onRetry={loadPlan}
-        activeReportVersionId={activeReportVersionId}
-      />
       <section className="coach-hero">
         <div className="lab-plan-hero relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
@@ -618,6 +610,15 @@ export default function LabPlan() {
           </div>
         </div>
       </section>
+
+      <PersonalLabPlan
+        items={planItems}
+        isUk={isUk}
+        loading={planLoading}
+        error={planError}
+        onRetry={loadPlan}
+        activeReportVersionId={activeReportVersionId}
+      />
 
       {readyUploadId && reportDetails && (
         <CoachCard className="lab-plan-report-recommendations p-5 sm:p-6">

@@ -33,7 +33,7 @@ const translations = {
     labResults: {
       title: 'Lab Results',
       subtitle: 'All uploaded results in one place.',
-      helper: 'Top cards explain what changed, what needs attention, and what to retest next.',
+      helper: 'Review changes between dated results and your next retest window.',
     },
     labPlan: {
       title: 'Lab Plan',
@@ -161,7 +161,7 @@ const translations = {
     labResults: {
       title: 'Результати аналізів',
       subtitle: 'Усі завантажені результати в одному місці.',
-      helper: 'Верхні картки показують що змінилось, що потребує уваги і що варто перевірити повторно.',
+      helper: 'Перегляньте зміни між результатами з датами та терміни повторної перевірки.',
     },
     labPlan: {
       title: 'План аналізів',

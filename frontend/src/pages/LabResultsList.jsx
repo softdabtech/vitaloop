@@ -26,10 +26,10 @@ import '../styles/dashboard2026.css'
 // missing localization this page previously lacked (hardcoded English
 // throughout body copy, badges, and the empty/premium states).
 const LAB_RESULTS_COPY_KEYS = [
-  'uploadResults', 'noResults', 'startSymptom', 'openLabPlan', 'uploads', 'mostRecent',
-  'uploadHistory', 'retestPlan', 'reviewWindow', 'labResults', 'processing', 'processingBody',
-  'failed', 'failedBody', 'queued', 'queuedBody', 'uploadAgain', 'noCompletedReport',
-  'newerUploadProcessing', 'newerUploadFailed', 'inRange', 'worthWatching', 'belowRange', 'aboveRange',
+  'uploadResults', 'noResults', 'startSymptom', 'openLabPlan', 'uploadHistory', 'retestPlan',
+  'reviewWindow', 'labResults', 'processing', 'processingBody',
+  'failed', 'failedBody', 'queued', 'queuedBody', 'uploadAgain', 'inRange', 'worthWatching',
+  'belowRange', 'aboveRange',
   'notEvaluated', 'viewResults',
   'premiumTitle', 'premiumBody', 'premiumCta', 'safetyContext', 'safetyBody', 'nextStep', 'nextBody',
 ]
@@ -44,8 +44,6 @@ const LAB_RESULTS_COPY = {
     'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
     'Start symptom check',
     'Open lab plan',
-    'Uploads',
-    'Most recent lab',
     'Upload history',
     'Retest plan',
     'Use your latest protocol to decide when to repeat',
@@ -57,9 +55,6 @@ const LAB_RESULTS_COPY = {
     'Upload received',
     'This upload is waiting to be processed.',
     'Upload again',
-    'No completed report yet',
-    'A newer upload is still being processed.',
-    'A newer upload could not be processed.',
     'In range',
     'Worth watching',
     'Below range',
@@ -81,8 +76,6 @@ const LAB_RESULTS_COPY = {
     'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
     'Почати перевірку симптомів',
     'Відкрити план аналізів',
-    'Завантаження',
-    'Останній аналіз',
     'Історія завантажень',
     'План повторної перевірки',
     'Терміни повторної перевірки залежать від вашого плану дій',
@@ -94,9 +87,6 @@ const LAB_RESULTS_COPY = {
     'Завантаження отримано',
     'Це завантаження очікує на обробку.',
     'Завантажити ще раз',
-    'Завершених звітів ще немає',
-    'Нове завантаження ще обробляється.',
-    'Нове завантаження не вдалося обробити.',
     'У референсі',
     'Потребує спостереження',
     'Нижче референсу',
@@ -176,12 +166,6 @@ function lifecycleStateCopy(state, copy) {
   if (state === 'failed') return { label: copy.failed, body: copy.failedBody }
   if (state === 'queued') return { label: copy.queued, body: copy.queuedBody }
   return null
-}
-
-function latestActivityCopy(state, copy) {
-  if (state === 'processing') return copy.newerUploadProcessing
-  if (state === 'failed') return copy.newerUploadFailed
-  return copy.queued
 }
 
 function lifecycleActionLabel(state, item, copy) {
@@ -438,10 +422,6 @@ export default function LabResultsList() {
     // undated item above a properly dated one by falling back to created_at.
     return sortProgressItems(items)
   }, [items])
-  const latestReadyItem = sortedItems.find((item) => canViewResults(item))
-  const latestActivity = sortedItems[0]
-  const latestActivityState = lifecycleState(latestActivity)
-
   const t = ct()
 
   if (loading) {
@@ -509,23 +489,10 @@ export default function LabResultsList() {
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="lab-results-summary grid gap-3 md:grid-cols-3">
-                <div className="lab-results-summary-card vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
-                </div>
-                <div className="lab-results-summary-card vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="lab-results-summary-source mt-1 text-sm font-semibold text-slate-900">{latestReadyItem ? patientFacingLabName(latestReadyItem.lab_name, copy.labResults(sortedItems.length)) : copy.noCompletedReport}</p>
-                  {latestActivity && latestActivity !== latestReadyItem && latestActivityState !== 'ready' && (
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                      {latestActivityCopy(latestActivityState, copy)}
-                    </p>
-                  )}
-                </div>
-                <div className="lab-results-summary-card vtl-light-card p-4">
+            <div className="lab-results-summary">
+                <div className="lab-results-summary-card lab-results-retest-card vtl-light-card px-4 py-3 sm:px-5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
+                  <p className="text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
                 </div>
             </div>
 

@@ -1,18 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
-const { useLabResultsMock } = vi.hoisted(() => ({
+const { listLabPlanItemsMock, useLabResultsMock, useQuestionnaireSessionMock } = vi.hoisted(() => ({
+  listLabPlanItemsMock: vi.fn(),
   useLabResultsMock: vi.fn(),
+  useQuestionnaireSessionMock: vi.fn(),
 }))
 
 vi.mock('../hooks/useQueries.js', () => ({
   useDashboardSummary: vi.fn(() => ({ data: null })),
   useLabResults: useLabResultsMock,
-  useQuestionnaireSession: vi.fn(() => ({ data: null })),
+  useQuestionnaireSession: useQuestionnaireSessionMock,
   useReportDetails: vi.fn(() => ({ data: null })),
 }))
 
-import {
+vi.mock('../api/labPlan.js', () => ({
+  listLabPlanItems: listLabPlanItemsMock,
+}))
+
+import LabPlan, {
   PersonalLabPlan,
   classifyLabRecommendationContext,
   clinicalResultDate,
@@ -314,5 +321,22 @@ describe('PersonalLabPlan', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(onRetry).toHaveBeenCalledOnce()
     expect(screen.queryByText('No tests in your Lab Plan yet')).toBeNull()
+  })
+})
+
+describe('LabPlan page order', () => {
+  it('shows the Lab Plan hero before the saved-plan block', async () => {
+    useQuestionnaireSessionMock.mockReturnValue({
+      data: { session_context: { active_concern: 'Persistent fatigue' } },
+    })
+    listLabPlanItemsMock.mockResolvedValue([])
+
+    render(<MemoryRouter><LabPlan /></MemoryRouter>)
+
+    const hero = await screen.findByRole('heading', { name: 'Tests that make sense for your current question.' })
+    const savedPlan = screen.getByRole('heading', { name: 'Your saved Lab Plan' })
+    const followingNode = 4
+
+    expect(hero.compareDocumentPosition(savedPlan) & followingNode).toBe(followingNode)
   })
 })

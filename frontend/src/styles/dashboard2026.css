@@ -377,6 +377,53 @@ button[aria-label].inline-icon {
   margin-right: auto;
 }
 
+/* Results content uses the same 1152px cabinet column as Lab Plan. These
+ * guards keep long clinical copy, source names, and localized stat labels
+ * inside their cards at every breakpoint. */
+.results-page-content,
+.results-report-hero > *,
+.results-report-copy,
+.results-report-meta > div,
+.results-report-stats > *,
+.results-content-card {
+  min-width: 0;
+}
+
+.results-report-headline {
+  max-width: none;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.results-report-narrative,
+.results-report-meta dd,
+.results-report-stat-label {
+  overflow-wrap: anywhere;
+}
+
+.results-report-stat-label {
+  line-height: 1.35;
+}
+
+.lab-results-summary {
+  width: 100%;
+}
+
+.lab-results-retest-card {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .lab-results-retest-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
 /* P39 -- shared cabinet page header, unified visual family with the coach-
  * hero pages (Today/Lab Plan/Symptom Check/Protocol use .coach-hero directly
  * in coach-design-system.css; this is the same gradient/radius/border
