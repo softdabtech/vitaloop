@@ -77,7 +77,7 @@ export default function UserCabinetLayout({ children }) {
 
       <div className="flex min-w-0 flex-1 flex-col vtl-topbar-standalone-pad">
         <main className="flex-1 overflow-x-hidden">
-          <div className="vtl-cabinet-content mx-auto w-full max-w-[1380px] px-3 pt-7 sm:px-5 md:pb-8 lg:px-6">
+          <div className="vtl-cabinet-content mx-auto w-full max-w-6xl px-3 pt-7 sm:px-5 md:pb-8 lg:px-6">
             {location.pathname === '/dashboard' && <PWAInstallBanner />}
             {children}
           </div>

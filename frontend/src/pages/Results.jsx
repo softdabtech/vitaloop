@@ -736,12 +736,12 @@ function triggerSubscriptionRequiredPaywall() {
 
 function SectionCard({ icon: Icon, title, children, className = '' }) {
   return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+    <section className={`results-content-card min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
           <Icon className="h-5 w-5" />
         </div>
-        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+        <h2 className="min-w-0 text-balance text-lg font-semibold text-slate-950">{title}</h2>
       </div>
       {children}
     </section>
@@ -2372,7 +2372,7 @@ export default function Results() {
         )}
       />
 
-      <div className="max-w-6xl">
+      <div className="results-page-content">
         <motion.header
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -2380,20 +2380,20 @@ export default function Results() {
           className="cabinet-header-hero mb-6 overflow-hidden !p-0"
         >
           <div className="results-report-hero grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
-            <div className="p-6 sm:p-8">
+            <div className="results-report-copy p-6 sm:p-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 <HeartPulse className="h-3.5 w-3.5" />
                 {copy.healthSummary}
               </div>
-              <h1 className="cabinet-title max-w-3xl">
+              <h1 className="results-report-headline cabinet-title">
                 {biomarkerSummaryHeadline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
               <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceNarrative}</p>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+              <p className="results-report-narrative mt-4 text-base leading-7 text-slate-600">
                 {reportFoundSummary || copy.intro}
               </p>
               {(reportMeta.source || formattedReportDate) && (
-                <dl className="mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                <dl className="results-report-meta mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
                   {reportMeta.source && (
                     <div className="min-w-0">
                       <dt className="font-semibold text-slate-500">{reportMetaLabels.source}</dt>
@@ -2428,15 +2428,15 @@ export default function Results() {
               <div className="results-report-stats grid grid-cols-3 gap-3 lg:grid-cols-1">
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-slate-950">{normalizedBiomarkers.length}</div>
-                  <div className="text-xs font-medium text-slate-500">{copy.markersRead}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.markersRead}</div>
                 </div>
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-amber-600">{watchCount}</div>
-                  <div className="text-xs font-medium text-slate-500">{copy.watchList}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.watchList}</div>
                 </div>
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-rose-600">{outOfRangeCount}</div>
-                  <div className="text-xs font-medium text-slate-500">{copy.outOfRange}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.outOfRange}</div>
                 </div>
               </div>
             </div>
