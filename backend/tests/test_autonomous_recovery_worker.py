@@ -5,6 +5,8 @@ covered by tests/db/test_finalize_lab_analysis_pg.py on an approved disposable
 PostgreSQL target.
 """
 import asyncio
+import logging
+import sys
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,69 @@ USER_A = "11111111-1111-1111-1111-111111111111"
 USER_B = "22222222-2222-2222-2222-222222222222"
 REPORT_A = "33333333-3333-3333-3333-333333333333"
 REPORT_B = "44444444-4444-4444-4444-444444444444"
+
+
+def test_worker_configures_stdout_logging_from_log_level(monkeypatch):
+    configured = {}
+
+    def basic_config(**kwargs):
+        configured.update(kwargs)
+
+    monkeypatch.setenv("LOG_LEVEL", "debug")
+    monkeypatch.setattr(worker.logging, "basicConfig", basic_config)
+
+    worker.configure_logging()
+
+    assert configured["level"] == logging.DEBUG
+    assert configured["stream"] is sys.stdout
+    assert configured["force"] is True
+    assert "%(message)s" in configured["format"]
+
+
+@pytest.mark.asyncio
+async def test_worker_logs_empty_cycle_and_continues_until_graceful_shutdown(monkeypatch, caplog):
+    stopped = asyncio.Event()
+    cycles = []
+
+    async def cycle():
+        cycles.append(True)
+        return {"discovered": 0, "processed": 0, "failed": 0}
+
+    async def stop_after_first_cycle():
+        while not cycles:
+            await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        stopped.set()
+
+    monkeypatch.setattr(worker.settings, "recovery_worker_enabled", True)
+    monkeypatch.setattr(worker, "run_recovery_cycle", cycle)
+    with caplog.at_level(logging.INFO, logger=worker.logger.name):
+        stopper = asyncio.create_task(stop_after_first_cycle())
+        await worker.run_worker(stop_event=stopped)
+        await stopper
+
+    assert cycles == [True]
+    assert "autonomous_recovery_worker_started" in caplog.messages
+    assert "autonomous_recovery_cycle discovered=0 processed=0 failed=0" in caplog.messages
+    assert "autonomous_recovery_worker_stopped" in caplog.messages
+
+
+@pytest.mark.asyncio
+async def test_worker_logs_safe_cycle_failure_and_shuts_down(monkeypatch, caplog):
+    stopped = asyncio.Event()
+
+    async def cycle():
+        stopped.set()
+        raise ValueError("report_id=secret-patient-identifier")
+
+    monkeypatch.setattr(worker.settings, "recovery_worker_enabled", True)
+    monkeypatch.setattr(worker, "run_recovery_cycle", cycle)
+    with caplog.at_level(logging.INFO, logger=worker.logger.name):
+        await worker.run_worker(stop_event=stopped)
+
+    assert "autonomous_recovery_cycle_failed exception_type=ValueError" in caplog.messages
+    assert "report_id=secret-patient-identifier" not in caplog.text
+    assert "autonomous_recovery_worker_stopped" in caplog.messages
 
 
 @pytest.mark.asyncio
