@@ -107,7 +107,7 @@ async def create_checkout(
             "label": "Terms acceptance",
             "optional": False,
             "checkbox": {
-                "label": "I agree to the [VITALOOP Terms](https://vitaloop.today/terms/) and [Refund Policy](https://vitaloop.today/refund-policy/)",
+                "label": "I agree to the [VITALOOP Terms](https://vitaloop.today/terms/), [Privacy Policy](https://vitaloop.today/privacy-policy/), [Refund Policy](https://vitaloop.today/refund-policy/), and [Creem Buyer Terms](https://www.creem.io/buyer-terms)",
             },
         }],
     })

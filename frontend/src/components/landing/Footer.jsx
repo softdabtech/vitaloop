@@ -21,6 +21,7 @@ const COMPANY_LINKS = [
 const TRUST_LINKS = [
   { label: 'Privacy & security', href: '/privacy-policy/' },
   { label: 'Terms', href: '/terms/' },
+  { label: 'Refund policy', href: '/refund-policy/' },
   { label: 'Editorial policy', href: '/editorial-policy/' },
   { label: 'Medical review policy', href: '/medical-review-policy/' },
   { label: 'Medical disclaimer', href: '/terms/' },

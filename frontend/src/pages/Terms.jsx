@@ -54,12 +54,12 @@ export default function Terms() {
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>3. Subscription</h2>
           <p>Premium is available as a recurring subscription at {PREMIUM_PRICE_LABEL} or $99.99 per year. The subscription renews automatically at the selected interval unless you cancel before renewal. The price, billing interval, applicable taxes, and total due are shown in checkout before you confirm payment.</p>
-          <p>Checkout and self-service subscription management are provided by Creem. We send only the account and transaction metadata needed for billing; we do not send symptoms, uploaded lab files, biomarker values, health reports, or protocol text to Creem.</p>
-          <p>You can cancel through the account billing area or contact <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a>. Access remains available through the end of the paid period unless a different outcome is required by law or confirmed in writing.</p>
+          <p>Creem acts as the merchant of record and contractual reseller for Premium purchases. Creem provides checkout and the customer portal, processes payment, calculates and remits applicable indirect taxes, and issues the payment confirmation and invoice. Your purchase is also subject to the <a href="https://www.creem.io/buyer-terms" target="_blank" rel="noreferrer" style={{ color: 'var(--teal-500)' }}>Creem Buyer Terms</a>.</p>
+          <p>We send only the account and transaction metadata needed for billing; we do not send symptoms, uploaded lab files, biomarker values, health reports, or protocol text to Creem. You can cancel through the account billing area or contact <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a>. Access remains available through the end of the paid period unless a different outcome is required by law or confirmed in writing.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. Refunds and billing support</h2>
-          <p>Refund requests are reviewed case by case for duplicate charges, accidental purchases, checkout or access issues, or other billing problems. See the <a href="/refund-policy/" style={{ color: 'var(--teal-500)' }}>Refund Policy</a> for details.</p>
+          <p>For duplicate charges, accidental purchases, checkout or access issues, or other billing problems, contact us first using the details in your receipt. Creem handles refunds and chargebacks for Creem transactions under its procedures and the applicable law. See the <a href="/refund-policy/" style={{ color: 'var(--teal-500)' }}>Refund Policy</a> for details.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>5. Acceptable use</h2>

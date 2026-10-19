@@ -7,6 +7,11 @@ const distDir = path.resolve(__dirname, '../dist')
 const indexPath = path.join(distDir, 'index.html')
 const uaIndexPath = path.join(distDir, 'ua-index.html')
 
+if (process.env.VITALOOP_STATIC_SITE !== 'ua') {
+  console.log('Skipped UA static pages (set VITALOOP_STATIC_SITE=ua for the isolated UA build)')
+  process.exit(0)
+}
+
 const UA = {
   title: 'Vitaloop Ukraine — персональна оцінка симптомів і аналізів',
   description:

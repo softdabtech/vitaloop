@@ -27,7 +27,7 @@ export default function RefundPolicy() {
           <p className="mt-5 text-lg leading-8 text-slate-600">
             VITALOOP Premium is a subscription for educational health intelligence: lab upload support, biomarker explanations, report structure, protocols, progress tracking, and check-ins. It does not provide diagnosis, treatment, prescriptions, or emergency medical services.
           </p>
-          <p className="mt-3 text-sm font-semibold text-slate-500">Last updated: August 24, 2026</p>
+          <p className="mt-3 text-sm font-semibold text-slate-500">Last updated: October 19, 2026</p>
         </section>
 
         <section className="mt-10 grid gap-5">
@@ -41,17 +41,17 @@ export default function RefundPolicy() {
           <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-black text-slate-950">Refund review</h2>
             <p className="mt-3 leading-7 text-slate-600">
-              Refund requests are reviewed case by case. We generally consider refunds for duplicate charges, accidental purchases, technical checkout or access issues, or situations where Premium access was not delivered after payment. To request a review, contact support within 14 days of the charge and include the account email and transaction details.
+              Contact VITALOOP first for duplicate charges, accidental purchases, technical checkout or access issues, or situations where Premium access was not delivered after payment. Include the account email and transaction details from your receipt. We assess the product and access issue, while Creem processes refunds and chargebacks for Creem transactions under its procedures and applicable law.
             </p>
             <p className="mt-3 leading-7 text-slate-600">
-              Refund approval is not guaranteed after substantial use of Premium features, including repeated lab uploads, report generation, protocol generation, or export activity.
+              Eligibility depends on the circumstances, the applicable law, and the terms shown before purchase. This policy does not limit any non-waivable statutory consumer rights.
             </p>
           </article>
 
           <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-black text-slate-950">Payment processing</h2>
             <p className="mt-3 leading-7 text-slate-600">
-              VITALOOP keeps billing and health intelligence data separate. We do not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to billing tools.
+              Creem is the merchant of record and contractual reseller for Premium purchases. It provides checkout and the customer portal, processes payment, applies applicable indirect taxes, and issues payment confirmations and invoices. Your purchase is subject to the <a className="font-bold text-emerald-700 underline" href="https://www.creem.io/buyer-terms" target="_blank" rel="noreferrer">Creem Buyer Terms</a>. VITALOOP keeps billing and health intelligence data separate: we do not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to Creem.
             </p>
           </article>
 
