@@ -760,6 +760,72 @@ def test_autonomous_recovery_preflight_requires_global_indexes_and_service_role(
         cur.execute("reset role")
 
 
+def test_autonomous_recovery_preflight_fails_closed_when_its_security_contract_drifts(db):
+    """The service-only readiness RPC must detect catalog drift, not just indexes."""
+    cur = db.cursor()
+    function = "public.autonomous_recovery_schema_preflight()"
+    mutations = (
+        (
+            f"grant execute on function {function} to authenticated",
+            (f"revoke execute on function {function} from authenticated",),
+        ),
+        (
+            f"alter function {function} set search_path to public",
+            (f"alter function {function} set search_path to pg_catalog, public",),
+        ),
+    )
+
+    for mutate, restore in mutations:
+        cur.execute("set role vitaloop_finalizer")
+        try:
+            cur.execute(mutate)
+        finally:
+            cur.execute("reset role")
+        try:
+            cur.execute("set role service_role")
+            expect_error(lambda: cur.execute(f"select {function}"), "VL503")
+        finally:
+            cur.execute("reset role")
+            cur.execute("set role vitaloop_finalizer")
+            for restore_statement in restore:
+                cur.execute(restore_statement)
+            cur.execute("reset role")
+
+        cur.execute("set role service_role")
+        try:
+            cur.execute(f"select {function}")
+            assert cur.fetchone()[0]["schema_ready"] is True
+        finally:
+            cur.execute("reset role")
+
+
+def test_autonomous_recovery_preflight_rejects_wrong_owner_when_runner_can_simulate_drift(db):
+    """Changing a function's owner requires a disposable-cluster superuser."""
+    cur = db.cursor()
+    cur.execute("select rolsuper from pg_catalog.pg_roles where rolname = current_user")
+    if not cur.fetchone()[0]:
+        pytest.skip("owner-drift simulation requires a superuser on the disposable cluster")
+
+    function = "public.autonomous_recovery_schema_preflight()"
+    cur.execute(f"alter function {function} owner to service_role")
+    try:
+        cur.execute("set role service_role")
+        expect_error(lambda: cur.execute(f"select {function}"), "VL503")
+    finally:
+        cur.execute("reset role")
+        cur.execute(f"alter function {function} owner to vitaloop_finalizer")
+        # PostgreSQL clears the prior service-role ACL as part of ownership
+        # transfer, so restore the complete intended contract.
+        cur.execute(f"grant execute on function {function} to service_role")
+
+    cur.execute("set role service_role")
+    try:
+        cur.execute(f"select {function}")
+        assert cur.fetchone()[0]["schema_ready"] is True
+    finally:
+        cur.execute("reset role")
+
+
 def test_rpc_works_under_rls_as_finalizer(db):
     c = Case(db)
     res, _ = c.call()

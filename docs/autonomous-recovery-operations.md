@@ -43,7 +43,15 @@ no `latest` fallback.
 
 ## Rollback
 
-Roll back application images by recreating all three production services with
-the previous known-good immutable SHA. Durable ledger rows are not deleted and
-remain safe for the restored worker or the existing request-path fast path.
-Do not delete or mutate `analysis_followup_work` rows as part of rollback.
+Roll back application images only to an explicit, previously deployed 40-character
+Git SHA. On the production host, set the exact known-good release identifier and
+recreate all three services without building:
+
+```bash
+PREVIOUS_RELEASE_SHA=<40-character previously deployed Git SHA>
+VITALOOP_IMAGE_TAG="$PREVIOUS_RELEASE_SHA" docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend
+```
+
+Durable ledger rows are not deleted and remain safe for the restored worker or
+the existing request-path fast path. Do not delete or mutate
+`analysis_followup_work` rows as part of rollback.
