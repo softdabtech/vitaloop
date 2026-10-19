@@ -5,7 +5,9 @@ The target must pass tests/db/safety.py BEFORE any DDL. Roles are operator-provi
 (tests/db/provision_cluster_roles.sql); tests never create roles or drop shared schemas.
 Not executed in this change set: guarantees below are UNVERIFIED until run."""
 import copy
+import asyncio
 import json
+import logging
 import os
 import threading
 import uuid
@@ -14,6 +16,9 @@ from pathlib import Path
 import pytest
 
 from app.services.analysis_input_digest import canonical_input_digest
+from app.services import recovery_dispatcher as dispatcher
+from app.services import supabase_service as svc
+from app.workers import autonomous_recovery as worker
 from tests.db.safety import (
     CONFIRM_ENV, UnsafeTarget, validate_dsn, validate_server_state,
 )
@@ -217,6 +222,145 @@ def expect_error(fn, state):
     with pytest.raises(Exception) as ei:
         fn()
     assert sqlstate(ei.value) == state, ei.value
+
+
+def _row_dict(cursor, query, params=()):
+    cursor.execute(query, params)
+    row = cursor.fetchone()
+    if row is None:
+        return None
+    return dict(zip((column.name for column in cursor.description), row))
+
+
+@pytest.mark.parametrize(
+    ("initial_state", "expected_attempt_count"),
+    (("pending", 1), ("retryable", 2), ("expired_lease", 2)),
+)
+@pytest.mark.asyncio
+async def test_autonomous_worker_recovers_committed_timeline_without_a_new_request(
+    db, monkeypatch, caplog, initial_state, expected_attempt_count,
+):
+    """E2E: a separate worker consumes an actual frozen-ledger item via SQL RPCs."""
+    case = Case(db)
+    committed, args = case.call()
+    report_id = str(committed["report_version_id"])
+    user_id, upload_id = str(case.user), str(case.upload)
+    cur = db.cursor()
+
+    # Keep one real pending effect for this focused E2E scenario. The other
+    # frozen rows are transitioned through the production claim/complete RPC;
+    # no constraints, payloads, or RLS policies are bypassed.
+    for effect_type in (
+        "retest_obligations", "retest_fulfillment", "lab_plan_fulfillment",
+        "safety_events", "intelligence_artifacts", "protocol", "audit",
+    ):
+        lease = uuid.uuid4()
+        cur.execute("select public.claim_analysis_followup_work(%s,%s,%s,%s)",
+                    (user_id, report_id, effect_type, lease))
+        assert cur.fetchone()[0]["claimed"] is True
+        cur.execute("select public.complete_analysis_followup_work(%s,%s,%s,%s,%s,%s)",
+                    (user_id, report_id, effect_type, lease, "failed", "synthetic_e2e_scope"))
+        assert cur.fetchone()[0]["status"] == "failed"
+
+    if initial_state != "pending":
+        interrupted_lease = uuid.uuid4()
+        cur.execute("select public.claim_analysis_followup_work(%s,%s,%s,%s)",
+                    (user_id, report_id, "timeline", interrupted_lease))
+        assert cur.fetchone()[0]["claimed"] is True
+        if initial_state == "retryable":
+            cur.execute("select public.complete_analysis_followup_work(%s,%s,%s,%s,%s,%s)",
+                        (user_id, report_id, "timeline", interrupted_lease, "retryable", "synthetic_retry"))
+        else:
+            # The first process has terminated without acknowledgement. Move
+            # only the lease clock backwards to simulate its real expiry.
+            cur.execute("update public.analysis_followup_work "
+                        "set lease_expires_at=clock_timestamp() - interval '1 second' "
+                        "where report_version_id=%s and effect_type='timeline'", (report_id,))
+
+    cur.execute("select status, attempt_count from public.analysis_followup_work "
+                "where report_version_id=%s and effect_type='timeline'", (report_id,))
+    assert cur.fetchone() == ({"pending": "pending", "retryable": "retryable", "expired_lease": "processing"}[initial_state],
+                              0 if initial_state == "pending" else 1)
+
+    stopped = asyncio.Event()
+
+    async def list_global(*, limit):
+        assert limit >= 1
+        row = _row_dict(cur, """
+            select user_id::text, report_version_id::text
+            from public.analysis_followup_work
+            where status in ('pending', 'retryable')
+               or (status = 'processing' and lease_expires_at <= clock_timestamp())
+            order by created_at
+            limit 1
+        """)
+        return [row] if row else []
+
+    async def get_report(user_id, report_version_id):
+        return _row_dict(cur, """
+            select id::text, user_id::text, upload_id::text, version, locale,
+                   input_snapshot, knowledge_report, protocol, safety_result,
+                   explainability, status
+            from public.report_versions where id=%s and user_id=%s
+        """, (report_version_id, user_id))
+
+    async def authoritative(*, user_id, upload_id, report_version_id):
+        report = await get_report(user_id=user_id, report_version_id=report_version_id)
+        cur.execute("""
+            select effect_type, status, attempt_count
+            from public.analysis_followup_work
+            where user_id=%s and upload_id=%s and report_version_id=%s
+            order by effect_type
+        """, (user_id, upload_id, report_version_id))
+        work = [dict(zip((column.name for column in cur.description), row)) for row in cur.fetchall()]
+        return {"report_version": report, "followup_work": work}
+
+    async def claim(*, user_id, report_version_id, effect_type, lease_token):
+        cur.execute("select public.claim_analysis_followup_work(%s,%s,%s,%s)",
+                    (user_id, report_version_id, effect_type, lease_token))
+        return cur.fetchone()[0]
+
+    async def load_payload(*, user_id, report_version_id, effect_type):
+        cur.execute("select public.load_analysis_followup_work_payload(%s,%s,%s)",
+                    (user_id, report_version_id, effect_type))
+        return cur.fetchone()[0]
+
+    async def complete(*, user_id, report_version_id, effect_type, lease_token, status, error_code=None):
+        cur.execute("select public.complete_analysis_followup_work(%s,%s,%s,%s,%s,%s)",
+                    (user_id, report_version_id, effect_type, lease_token, status, error_code))
+        return cur.fetchone()[0]
+
+    async def persist_timeline(user_id, event_type, summary, *, analysis_effect_key, require_durable, **_unused):
+        assert require_durable is True
+        cur.execute("""
+            insert into public.timeline_events(user_id, event_type, summary, analysis_effect_key)
+            values (%s,%s,%s,%s)
+            on conflict (analysis_effect_key) do nothing
+        """, (user_id, event_type, summary, analysis_effect_key))
+        stopped.set()
+
+    monkeypatch.setattr(svc, "list_global_recoverable_followup_reports", list_global)
+    monkeypatch.setattr(svc, "get_report_version_for_user", get_report)
+    monkeypatch.setattr(svc, "load_authoritative_finalization_replay", authoritative)
+    monkeypatch.setattr(svc, "claim_frozen_followup_work", claim)
+    monkeypatch.setattr(svc, "load_frozen_followup_payload", load_payload)
+    monkeypatch.setattr(svc, "complete_frozen_followup_work", complete)
+    monkeypatch.setattr(svc, "save_timeline_event", persist_timeline)
+    monkeypatch.setattr(worker.settings, "recovery_worker_enabled", True)
+    monkeypatch.setattr(worker.settings, "recovery_worker_interval_seconds", 60)
+
+    with caplog.at_level(logging.INFO):
+        await asyncio.wait_for(worker.run_worker(stop_event=stopped), timeout=5)
+
+    cur.execute("select status, attempt_count, lease_token, completed_at is not null "
+                "from public.analysis_followup_work where report_version_id=%s and effect_type='timeline'", (report_id,))
+    assert cur.fetchone() == ("completed", expected_attempt_count, None, True)
+    cur.execute("select count(*) from public.timeline_events where user_id=%s and event_type='lab_analyzed'", (user_id,))
+    assert cur.fetchone()[0] == 1
+    assert "autonomous_recovery_cycle discovered=1 processed=1 failed=0" in caplog.messages
+    assert "autonomous_recovery_worker_started" in caplog.messages
+    assert "autonomous_recovery_worker_stopped" in caplog.messages
+    assert user_id not in caplog.text and report_id not in caplog.text
 
 
 def test_commit_and_snapshot_roundtrip(db):
