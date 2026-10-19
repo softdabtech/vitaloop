@@ -8,12 +8,26 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
+import sys
 
 from app.config import settings
 from app.services.recovery_dispatcher import recover_global_pending_report_followups
 
 logger = logging.getLogger(__name__)
+
+
+def configure_logging() -> None:
+    """Configure the dedicated worker process to emit safe operational events."""
+    configured_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = logging.getLevelNamesMapping().get(configured_level, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        stream=sys.stdout,
+        force=True,
+    )
 
 
 async def run_recovery_cycle() -> dict[str, int]:
@@ -29,6 +43,7 @@ async def run_worker(*, stop_event: asyncio.Event | None = None) -> None:
     if not settings.recovery_worker_enabled:
         raise RuntimeError("recovery_worker_disabled")
     stopped = stop_event or asyncio.Event()
+    logger.info("autonomous_recovery_worker_started")
     while not stopped.is_set():
         try:
             result = await run_recovery_cycle()
@@ -53,6 +68,7 @@ def main() -> None:
             loop.add_signal_handler(sig, stop_event.set)
         await run_worker(stop_event=stop_event)
 
+    configure_logging()
     asyncio.run(_main())
 
 
