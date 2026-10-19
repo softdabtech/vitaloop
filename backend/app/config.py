@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     ops_alerts_enabled: bool = True
     ops_alerts_max_emails_per_day: int = 2
     ops_alert_state_file: str = "/tmp/vitaloop_ops_alerts.json"
+    # Autonomous processing of the durable, frozen post-finalization ledger.
+    # This process is started only by the production Compose service; keeping
+    # the switch off by default prevents accidental background work in web and
+    # test processes.
+    recovery_worker_enabled: bool = False
+    recovery_worker_interval_seconds: int = Field(default=60, ge=10, le=3600)
+    recovery_worker_batch_size: int = Field(default=8, ge=1, le=32)
+    recovery_worker_concurrency: int = Field(default=2, ge=1, le=4)
     frontend_base_url: str = "https://vitaloop.today"
     crm_base_url: str = "https://crm.vitaloop.today"
     webpush_vapid_public_key: str = ""

@@ -1540,6 +1540,51 @@ async def list_recoverable_followup_report_ids(*, user_id: str, limit: int = 4) 
     return report_ids
 
 
+async def list_global_recoverable_followup_reports(*, limit: int = 8) -> List[Dict[str, str]]:
+    """Return bounded, server-only recovery candidates across ledger owners.
+
+    This function is used solely by the autonomous worker, which is a separate
+    server-owned Compose service using the existing service-role client.  The
+    ledger's service_role RLS policy is deliberately the discovery boundary;
+    regular users have no route or RPC that can invoke this query.  Each result
+    is subsequently re-validated by ``recover_report_followups`` against the
+    immutable report and its owner-scoped frozen work rows before a claim.
+    """
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 32:
+        raise AtomicFinalizationError("invalid_global_followup_recovery_limit")
+
+    # A processing row is recoverable only after its database-authoritative
+    # lease has elapsed.  Never touch an active lease from another worker.
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("analysis_followup_work")
+        .select("user_id,report_version_id,status,lease_expires_at,created_at")
+        .or_(
+            "status.in.(pending,retryable),"
+            f"and(status.eq.processing,lease_expires_at.lte.{now})"
+        )
+        .order("created_at")
+        .limit(limit * len(FOLLOWUP_EFFECT_TYPES))
+        .execute()
+    )
+    rows = list(getattr(response, "data", None) or [])
+    candidates: List[Dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise AtomicFinalizationError("invalid_global_followup_recovery_row")
+        owner = _require_uuid(row.get("user_id"), field="user_id")
+        report_id = _require_uuid(row.get("report_version_id"), field="report_version_id")
+        key = (owner, report_id)
+        if key not in seen:
+            seen.add(key)
+            candidates.append({"user_id": owner, "report_version_id": report_id})
+        if len(candidates) >= limit:
+            break
+    return candidates
+
+
 async def claim_frozen_followup_work(
     *, user_id: str, report_version_id: str, effect_type: str, lease_token: str
 ) -> Dict[str, Any]:

@@ -10,6 +10,8 @@ concurrency:
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   # ─────────────────────────────────────────────────────────
@@ -203,6 +205,71 @@ jobs:
           npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
 
   # ─────────────────────────────────────────────────────────
+  # Compose contract gate. This runs on pull requests with only synthetic
+  # values: it must never need production credentials or contact production.
+  # ─────────────────────────────────────────────────────────
+  compose-production-validation:
+    name: Production Compose — immutable release contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate rendered production Compose contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_tag=0123456789abcdef0123456789abcdef01234567
+          created_env_file=""
+          if [[ ! -e backend/.env ]]; then
+            created_env_file=backend/.env
+            cat > "$created_env_file" <<'EOF'
+          SUPABASE_URL=https://ci-placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY=ci-placeholder-not-a-secret
+          EOF
+          fi
+          trap '[[ -z "$created_env_file" ]] || rm -f "$created_env_file"' EXIT
+
+          VITALOOP_IMAGE_TAG="$image_tag" docker compose -f docker-compose.prod.yml config --quiet
+          compose_config="$(VITALOOP_IMAGE_TAG="$image_tag" docker compose -f docker-compose.prod.yml config --format json)"
+
+          jq -e --arg tag "$image_tag" '
+            .services.backend.image == "vitaloop-backend:\($tag)" and
+            .services.frontend.image == "vitaloop-frontend:\($tag)" and
+            .services["recovery-worker"].image == "vitaloop-backend:\($tag)" and
+            .services["recovery-worker"].restart == "unless-stopped" and
+            ((.services["recovery-worker"].ports // []) | length == 0) and
+            ((.services["recovery-worker"].command | if type == "array" then join(" ") else . end)
+              == "python -m app.workers.autonomous_recovery")
+          ' <<<"$compose_config" >/dev/null
+
+          if grep -Eq 'VITALOOP_IMAGE_TAG:-latest|image:.*:latest' docker-compose.prod.yml; then
+            echo "Production Compose must not contain a latest-image fallback."
+            exit 1
+          fi
+          if grep -Fq ':latest' <<<"$compose_config"; then
+            echo "Rendered production Compose must not resolve any latest image."
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/ci-cd.yml").read_text(encoding="utf-8")
+          expected = (
+              "VITALOOP_IMAGE_TAG=$" + "{{ github.sha }} "
+              "docker compose -f docker-compose.prod.yml up -d --no-build "
+              "--force-recreate backend recovery-worker frontend"
+          )
+          if expected not in workflow:
+              raise SystemExit("Production deploy must pass its immutable Git SHA to Compose.")
+          PY
+          grep -Fq 'PREVIOUS_RELEASE_SHA=<40-character previously deployed Git SHA>' docs/autonomous-recovery-operations.md
+          grep -Fq 'VITALOOP_IMAGE_TAG="$PREVIOUS_RELEASE_SHA" docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend' docs/autonomous-recovery-operations.md
+
+          echo "Production Compose immutable-image, worker, deploy, and rollback contracts verified."
+
+  # ─────────────────────────────────────────────────────────
   # ─────────────────────────────────────────────────────────
   # Production schema gate. This is deliberately a main-only job: service-role
   # credentials must never be available to pull-request workflows. The protected
@@ -212,7 +279,8 @@ jobs:
   production-schema-preflight:
     name: Production — atomic schema preflight
     runs-on: ubuntu-latest
-    needs: [backend-test, crm-test, frontend-build]
+    needs: [backend-test, crm-test, frontend-build, compose-production-validation]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 5
     environment:
       name: production
@@ -231,7 +299,8 @@ jobs:
           : "${SUPABASE_SERVICE_ROLE_KEY:?Missing production service-role secret}"
 
           response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
+          recovery_response_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$recovery_response_file"' EXIT
           status="$(curl --request POST --silent --show-error \
             --output "$response_file" --write-out '%{http_code}' --max-time 20 \
             --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
@@ -262,13 +331,43 @@ jobs:
           PY
           echo "Production atomic schema contract verified."
 
+          recovery_status="$(curl --request POST --silent --show-error \
+            --output "$recovery_response_file" --write-out '%{http_code}' --max-time 20 \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/autonomous_recovery_schema_preflight")"
+          if [[ "$recovery_status" != "200" ]]; then
+            echo "Production autonomous-recovery schema preflight RPC did not return HTTP 200."
+            exit 1
+          fi
+
+          python - "$recovery_response_file" <<'PY'
+          import json
+          import sys
+
+          expected = {
+              "schema_ready": True,
+              "migration_contract": "20261019090000_autonomous_recovery_worker",
+          }
+          try:
+              with open(sys.argv[1], encoding="utf-8") as response:
+                  payload = json.load(response)
+          except (OSError, json.JSONDecodeError):
+              raise SystemExit("Production autonomous-recovery preflight returned an invalid response.")
+          if payload != expected:
+              raise SystemExit("Production autonomous-recovery schema contract is absent, incomplete, or incompatible.")
+          PY
+          echo "Production autonomous-recovery schema contract verified."
+
   # ─────────────────────────────────────────────────────────
   # JOB 4: Deploy to production (only on push to main)
   # ─────────────────────────────────────────────────────────
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    needs: [backend-test, crm-test, frontend-build, production-schema-preflight]
+    needs: [backend-test, crm-test, frontend-build, compose-production-validation, production-schema-preflight]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 20
     environment:
@@ -351,7 +450,7 @@ jobs:
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
             cd /var/www/VITALOOP &&
-            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend frontend
+            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend
           "
 
       - name: Install and reload nginx routing

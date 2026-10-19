@@ -80,12 +80,13 @@ async def _probe_llm_connectivity(timeout_seconds: float = 5.0) -> dict:
     return result
 
 
-async def _probe_supabase_readiness(*, timeout_seconds: float = 2.5, attempts: int = 2) -> dict:
-    """Run a lightweight Supabase readiness probe with one retry.
+async def _probe_supabase_readiness(*, timeout_seconds: float = 2.0, attempts: int = 3) -> dict:
+    """Run a lightweight Supabase readiness probe with bounded retries.
 
     Readiness is called by external monitors frequently, so avoid exact
-    counts or heavy queries here. A transient HTTP/2 reset or one slow edge
-    request should not page ops if the next attempt succeeds.
+    counts or heavy queries here. Production logs showed intermittent Supabase
+    probe failures that recovered on the next poll; a third short attempt
+    avoids reporting those brief edge resets as a readiness outage.
     """
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
