@@ -24,14 +24,19 @@ REPORT_B = "44444444-4444-4444-4444-444444444444"
 
 def test_worker_configures_stdout_logging_from_log_level(monkeypatch):
     configured = {}
+    httpx_logger = logging.getLogger("httpx")
+    previous_httpx_level = httpx_logger.level
 
     def basic_config(**kwargs):
         configured.update(kwargs)
 
     monkeypatch.setenv("LOG_LEVEL", "debug")
     monkeypatch.setattr(worker.logging, "basicConfig", basic_config)
-
-    worker.configure_logging()
+    try:
+        worker.configure_logging()
+        assert httpx_logger.level == logging.WARNING
+    finally:
+        httpx_logger.setLevel(previous_httpx_level)
 
     assert configured["level"] == logging.DEBUG
     assert configured["stream"] is sys.stdout

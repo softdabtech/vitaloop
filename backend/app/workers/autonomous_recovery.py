@@ -28,6 +28,9 @@ def configure_logging() -> None:
         stream=sys.stdout,
         force=True,
     )
+    # HTTP client request URLs can include sensitive query parameters; cycle
+    # counters and worker failures remain on this worker's INFO/ERROR loggers.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 async def run_recovery_cycle() -> dict[str, int]:
