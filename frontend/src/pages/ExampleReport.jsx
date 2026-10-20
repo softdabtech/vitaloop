@@ -2,63 +2,23 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
-  BarChart3,
   CheckCircle2,
-  ClipboardList,
   FileText,
   FlaskConical,
-  LayoutDashboard,
   ShieldCheck,
   TrendingUp,
-  Upload,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 
-const SCREENSHOTS = [
-  {
-    title: 'Today dashboard',
-    description: 'A single place for current priorities, uploads, weekly tasks, and next actions.',
-    image: '/mockups/example-report/dashboard.webp',
-    alt: 'VITALOOP user dashboard with health summary cards and next actions',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Lab results',
-    description: 'Normalized biomarkers with values, units, reference ranges, status, and interpretation context.',
-    image: '/mockups/example-report/lab-results.webp',
-    alt: 'VITALOOP lab results page with biomarker rows and status indicators',
-    icon: FlaskConical,
-  },
-  {
-    title: 'Upload flow',
-    description: 'Drop in a PDF report and keep the original file connected to the structured analysis.',
-    image: '/mockups/example-report/upload.webp',
-    alt: 'VITALOOP upload page for lab report PDFs',
-    icon: Upload,
-  },
-  {
-    title: 'Progress tracking',
-    description: 'See how symptoms, actions, and biomarker trends change across repeated cycles.',
-    image: '/mockups/example-report/progress.webp',
-    alt: 'VITALOOP progress page with charts and trend cards',
-    icon: TrendingUp,
-  },
-  {
-    title: 'Weekly check-in',
-    description: 'Capture adherence and how you feel so each loop becomes more useful than the last.',
-    image: '/mockups/example-report/check-in.webp',
-    alt: 'VITALOOP weekly check-in page with symptom and action tracking',
-    icon: ClipboardList,
-  },
-  {
-    title: 'Practitioner workspace',
-    description: 'For practitioners and teams managing client context and review queues.',
-    image: '/mockups/example-report/crm.webp',
-    alt: 'VITALOOP practitioner CRM dashboard with client panels',
-    icon: BarChart3,
-  },
+const CABINET_SCREENS = [
+  ['01-dashboard.png', 'VITALOOP dashboard screen'],
+  ['02-results-trends.png', 'VITALOOP lab results and trends screen'],
+  ['03-report.png', 'VITALOOP health summary screen'],
+  ['04-lab-plan.png', 'VITALOOP lab plan screen'],
+  ['05-upload.png', 'VITALOOP upload results screen'],
+  ['06-checkins.png', 'VITALOOP check-in history screen'],
 ]
 
 const REPORT_HIGHLIGHTS = [
@@ -183,28 +143,18 @@ export default function ExampleReport() {
               </p>
             </div>
 
-            <div className="mt-10 grid gap-6 lg:grid-cols-2">
-              {SCREENSHOTS.map(({ title, description, image, alt, icon: Icon }) => (
-                <motion.article
-                  key={title}
+            <div className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {CABINET_SCREENS.map(([image, alt], index) => (
+                <motion.figure
+                  key={image}
                   initial={{ opacity: 0, y: 18 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-80px' }}
-                  className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                  transition={{ delay: index * 0.04 }}
+                  className="w-[220px] shrink-0 snap-start sm:w-[260px] lg:w-[285px]"
                 >
-                  <div className="flex items-start gap-3 p-5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-950">{title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
-                    </div>
-                  </div>
-                  <div className="border-t border-slate-100 bg-slate-100 p-2">
-                    <img src={image} alt={alt} className="aspect-[16/10] w-full rounded-[18px] object-cover object-top" loading="lazy" />
-                  </div>
-                </motion.article>
+                  <img src={`/images/example-report-cabinet/${image}`} alt={alt} className="h-auto w-full" loading="lazy" />
+                </motion.figure>
               ))}
             </div>
           </div>
