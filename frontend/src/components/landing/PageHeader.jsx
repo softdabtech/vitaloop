@@ -1,22 +1,21 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import BrandMark from './BrandMark.jsx'
 
 const NAV_LINKS = [
-  { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
+  { id: 'how-it-works', label: 'How it works', route: '/#problem' },
+  { id: 'example-report', label: 'Example report', route: '/example-report' },
   { id: 'pricing', label: 'Pricing', route: '/#pricing' },
-  { id: 'health-hub', label: 'Health Hub', route: '/health-hub/' },
   { id: 'team', label: 'Team', route: '/team/' },
-  { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
+  { id: 'for-nutritionists', label: 'For professionals', route: '/for-nutritionists' },
 ]
 
 export function PageHeader() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -28,11 +27,6 @@ export function PageHeader() {
       return
     }
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
-  }
-
-  const isActive = (item) => {
-    if (item.route.includes('#')) return false
-    return location.pathname.replace(/\/$/, '') === item.route.replace(/\/$/, '')
   }
 
   const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
@@ -48,13 +42,12 @@ export function PageHeader() {
           <BrandMark />
         </button>
 
-        <nav className="hidden items-center gap-7 lg:flex">
+        <nav className="hidden items-center gap-7 md:flex">
           {NAV_LINKS.map((item) => (
             <button
               key={item.id}
               onClick={() => navAction(item)}
-              aria-current={isActive(item) ? 'page' : undefined}
-              className={`text-sm transition ${isActive(item) ? 'font-semibold text-emerald-700' : navTextClass}`}
+              className={`text-sm transition ${navTextClass}`}
             >
               {item.label}
             </button>
@@ -63,19 +56,20 @@ export function PageHeader() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Log in link — only for non-authenticated visitors */}
-          {!user && (
-            <button
-              onClick={() => navigate('/login')}
-              className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-            >
-              Log in
-            </button>
-          )}
+          <button
+            onClick={() => navigate('/login')}
+            className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+            style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
+            tabIndex={(!authLoading && user) ? -1 : 0}
+            aria-hidden={(!authLoading && user) ? true : undefined}
+          >
+            Log in
+          </button>
 
           {/* Cabinet / Sign Up button */}
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
-            className={`${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
+            className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
           >
             {user ? 'Dashboard' : 'Sign Up'}
           </button>
@@ -85,7 +79,7 @@ export function PageHeader() {
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-label="Open navigation menu"
-            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
+            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 md:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -101,15 +95,14 @@ export function PageHeader() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="border-t border-slate-200 bg-white lg:hidden"
+            className="border-t border-slate-200 bg-white md:hidden"
           >
             <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
               {NAV_LINKS.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => navAction(item)}
-                  aria-current={isActive(item) ? 'page' : undefined}
-                  className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900 ${isActive(item) ? 'bg-emerald-50 text-emerald-800' : 'text-slate-700'}`}
+                  className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                 >
                   {item.label}
                 </button>

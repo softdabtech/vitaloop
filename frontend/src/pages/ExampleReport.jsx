@@ -132,14 +132,14 @@ export default function ExampleReport() {
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(16,185,129,0.22)] transition hover:bg-emerald-600"
+                className="inline-flex items-center rounded-lg bg-teal-500 px-8 py-4 text-sm font-semibold text-white shadow-md transition-all hover:bg-teal-600 hover:shadow-lg"
               >
                 Start with your results
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
                 onClick={() => navigate('/how-it-works')}
-                className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-400 hover:bg-slate-50"
+                className="inline-flex items-center rounded-lg border-2 border-teal-500 bg-white px-8 py-4 text-sm font-semibold text-teal-600 transition-all hover:bg-teal-50"
               >
                 See how it works
               </button>
