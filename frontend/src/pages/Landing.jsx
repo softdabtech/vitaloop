@@ -931,7 +931,7 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/images/vitaloop-mobile-results-hero.png"
+                src="/images/vitaloop-mobile-results-hero.png?v=20261020"
                 alt="VITALOOP mobile results dashboard and personalised interpretation screens"
                 width="1195"
                 height="1316"

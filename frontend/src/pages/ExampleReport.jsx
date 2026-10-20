@@ -150,7 +150,7 @@ export default function ExampleReport() {
           <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="relative">
             <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.22),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.12),transparent_34%)]" />
             <img
-              src="/images/vitaloop-mobile-example-report-hero.png"
+              src="/images/vitaloop-mobile-example-report-hero.png?v=20261020"
               alt="VITALOOP mobile dashboard and lab results screens"
               width="1195"
               height="1316"

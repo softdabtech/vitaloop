@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
 
 const HERO_SCREEN = {
-  src: '/images/vitaloop-mobile-dashboard-hero.png',
+  src: '/images/vitaloop-mobile-dashboard-hero.png?v=20261020',
   alt: 'VITALOOP mobile dashboard and clinical progress screens',
 }
 
