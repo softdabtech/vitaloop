@@ -149,13 +149,15 @@ export default function ExampleReport() {
 
           <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="relative">
             <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.22),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.12),transparent_34%)]" />
-            <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 shadow-2xl shadow-emerald-900/10">
-              <img
-                src="/mockups/example-report/dashboard.webp"
-                alt="VITALOOP dashboard preview"
-                className="aspect-[16/10] w-full object-cover object-top"
-              />
-            </div>
+            <img
+              src="/images/vitaloop-mobile-example-report-hero.png"
+              alt="VITALOOP mobile dashboard and lab results screens"
+              width="1195"
+              height="1316"
+              fetchPriority="high"
+              decoding="async"
+              className="relative mx-auto h-auto w-full max-w-[590px] drop-shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+            />
           </motion.div>
         </section>
 
