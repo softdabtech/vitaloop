@@ -931,10 +931,13 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/mockups/example-report/lab-results.webp?v=20260901"
-                alt="VITALOOP health report with priority findings, why-it-matters context, and top biomarker results"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
+                src="/images/vitaloop-mobile-results-hero.png"
+                alt="VITALOOP mobile results dashboard and personalised interpretation screens"
+                width="1195"
+                height="1316"
+                className="mx-auto h-auto w-full max-w-[620px] drop-shadow-[0_24px_44px_rgba(15,23,42,0.14)]"
                 loading="eager"
+                decoding="async"
               />
             </motion.div>
 

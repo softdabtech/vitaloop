@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
 
 const HERO_SCREEN = {
-  src: '/mockups/cabinet-live/results-clean.webp',
-  alt: 'VITALOOP cabinet dashboard with Health Signal Score, score breakdown, and health journey progress',
-  label: 'Today',
+  src: '/images/vitaloop-mobile-dashboard-hero.png',
+  alt: 'VITALOOP mobile dashboard and clinical progress screens',
 }
 
 const TRUST_CHIPS = [
@@ -97,31 +96,19 @@ export function LightHero() {
             </div>
           </div>
 
-          {/* RIGHT: Product workflow preview */}
+          {/* RIGHT: Mobile product preview */}
           <div className="min-w-0 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-[660px]">
-              <div className="absolute inset-6 rounded-[36px] bg-gradient-to-br from-teal-100 via-sky-50 to-white blur-3xl" />
-              <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_28px_80px_rgba(15,23,42,0.16)] sm:p-4">
-                <div className="mb-3 flex items-center justify-between gap-4 px-1 sm:mb-4 sm:px-2">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Symptoms → Upload → Results → Follow-through</p>
-                  </div>
-                  <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline-flex">Real product screens</span>
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                  <img
-                    src={HERO_SCREEN.src}
-                    alt={HERO_SCREEN.alt}
-                    width="1792"
-                    height="929"
-                    fetchPriority="high"
-                    decoding="async"
-                    className="aspect-[1.93/1] w-full object-cover object-top"
-                  />
-                </div>
-              </div>
+            <div className="relative w-full max-w-[540px]">
+              <div className="absolute inset-x-10 bottom-6 h-24 rounded-full bg-teal-200/50 blur-3xl" />
+              <img
+                src={HERO_SCREEN.src}
+                alt={HERO_SCREEN.alt}
+                width="1195"
+                height="1316"
+                fetchPriority="high"
+                decoding="async"
+                className="relative h-auto w-full drop-shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+              />
             </div>
           </div>
         </div>
