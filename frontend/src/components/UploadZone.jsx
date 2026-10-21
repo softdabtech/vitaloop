@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { FileText } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
 
 function resolveRejectionMessage(rejection, isUk = false) {
@@ -54,14 +55,14 @@ export default function UploadZone({ onFile, onError, disabled = false }) {
       {...getRootProps()}
       className={`vtl-upload-zone flex flex-col items-center justify-center px-6 py-10 text-center transition ${
         disabled
-          ? 'cursor-not-allowed border-slate-300 bg-slate-50/90'
+          ? 'vtl-upload-zone--disabled cursor-not-allowed'
           : isDragActive
-            ? 'cursor-copy border-emerald-400 bg-emerald-50'
-            : 'cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/60'
+            ? 'vtl-upload-zone--drag-active cursor-copy'
+            : 'cursor-pointer'
       }`}
     >
       <input {...getInputProps()} />
-      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-4xl ring-1 ring-emerald-300">📄</div>
+      <div className="vtl-upload-zone__icon mb-4" aria-hidden="true"><FileText size={36} strokeWidth={1.75} /></div>
       <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
         {isDragActive
           ? (isUk ? 'Відпустіть файл тут' : 'Drop your lab report here')
@@ -73,12 +74,12 @@ export default function UploadZone({ onFile, onError, disabled = false }) {
         type="button"
         disabled={disabled}
         onClick={open}
-        className="vtl-button-primary vtl-focus-ring mt-5 inline-flex items-center justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+        className="cabinet-btn cabinet-btn--primary mt-5 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isUk ? 'Обрати файл' : 'Choose File'}
       </button>
 
-      <p className="mt-3 text-xs text-emerald-700">
+      <p className="mt-3 text-xs text-[color:var(--vtl-color-brand-800)]">
         {isUk ? 'Файл безпечно завантажується для структурованого аналізу показників.' : 'Your file is securely uploaded for structured biomarker analysis.'}
       </p>
     </div>

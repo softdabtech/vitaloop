@@ -1,0 +1,95 @@
+/*
+ * VITALOOP foundation tokens — v1
+ *
+ * Canonical design language approved for the marketing site and user cabinet.
+ * These tokens are deliberately additive: legacy aliases below retain their
+ * existing values until a screen has passed its visual-regression gate.
+ * Do not use raw hex values in new UI work; consume semantic tokens instead.
+ */
+
+:root {
+  /* Brand: calm clinical confidence. */
+  --vtl-color-brand-950: #063c38;
+  --vtl-color-brand-800: #0b655d;
+  --vtl-color-brand-700: #0f786c;
+  --vtl-color-brand-600: #138a7d;
+  --vtl-color-brand-500: #20a394;
+  --vtl-color-brand-100: #ddf5f0;
+  --vtl-color-brand-50: #effaf7;
+
+  /* Neutral surfaces and text. */
+  --vtl-color-ink: #102a2a;
+  --vtl-color-ink-secondary: #365253;
+  --vtl-color-text-muted: #627b7c;
+  --vtl-color-border: #dde9e7;
+  --vtl-color-border-strong: #c8ddda;
+  --vtl-color-canvas: #f6faf9;
+  --vtl-color-surface: #ffffff;
+
+  /* Semantic statuses: colour never carries the meaning alone. */
+  --vtl-status-stable: #18794e;
+  --vtl-status-stable-bg: #eaf7ef;
+  --vtl-status-monitor: #a65b09;
+  --vtl-status-monitor-bg: #fff4de;
+  --vtl-status-review: #b42318;
+  --vtl-status-review-bg: #fff0ef;
+  --vtl-status-unavailable: #566d70;
+  --vtl-status-unavailable-bg: #eff3f3;
+
+  /* Interaction states. */
+  --vtl-color-focus-ring: rgb(32 163 148 / 28%);
+  --vtl-color-overlay: rgb(6 60 56 / 48%);
+
+  /* Typography. Inter is the only product UI family. */
+  --vtl-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vtl-font-size-meta: 12px;
+  --vtl-font-size-body: 14px;
+  --vtl-font-size-body-lg: 16px;
+  --vtl-font-size-heading-sm: 20px;
+  --vtl-font-size-heading: 28px;
+  --vtl-font-size-display: 40px;
+  --vtl-line-height-tight: 1.15;
+  --vtl-line-height-heading: 1.25;
+  --vtl-line-height-body: 1.5;
+  --vtl-font-weight-regular: 400;
+  --vtl-font-weight-medium: 500;
+  --vtl-font-weight-bold: 700;
+  --vtl-font-weight-extrabold: 800;
+
+  /* Spacing: only these steps are permitted in component primitives. */
+  --vtl-space-1: 4px;
+  --vtl-space-2: 8px;
+  --vtl-space-3: 12px;
+  --vtl-space-4: 16px;
+  --vtl-space-6: 24px;
+  --vtl-space-8: 32px;
+  --vtl-space-12: 48px;
+
+  /* Geometry. */
+  --vtl-radius-field: 12px;
+  --vtl-radius-card: 16px;
+  --vtl-radius-panel: 20px;
+  --vtl-radius-pill: 999px;
+
+  /* Elevation: use only for elevation, never to encode a medical status. */
+  --vtl-shadow-card: 0 1px 2px rgb(6 60 56 / 4%), 0 4px 12px rgb(6 60 56 / 5%);
+  --vtl-shadow-raised: 0 8px 20px rgb(6 60 56 / 10%);
+  --vtl-shadow-primary: 0 8px 18px rgb(15 120 108 / 18%);
+
+  /* Component intent. These are the preferred tokens for new work. */
+  --vtl-action-primary-bg: var(--vtl-color-brand-700);
+  --vtl-action-primary-bg-hover: var(--vtl-color-brand-800);
+  --vtl-action-primary-fg: #ffffff;
+  --vtl-action-secondary-bg: var(--vtl-color-surface);
+  --vtl-action-secondary-fg: var(--vtl-color-ink);
+  --vtl-action-secondary-border: var(--vtl-color-border-strong);
+  --vtl-action-danger-fg: var(--vtl-status-review);
+  --vtl-action-danger-border: #f1c4c1;
+}
+
+/*
+ * Compatibility contract — do not repoint these aliases globally.
+ * Each legacy visual system is migrated one route at a time, with screenshots
+ * compared before and after. New components must use --vtl-* above.
+ */
+

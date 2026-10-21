@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BIOMARKER_STATUS_META,
   biomarkerStatusLabel,
   normalizeBiomarkerStatus,
   summarizeBiomarkerStatuses,
@@ -43,5 +44,14 @@ describe('evidence-aware biomarker status contract', () => {
     })
     expect(biomarkerStatusLabel('UNKNOWN')).toBe('Not evaluated')
     expect(biomarkerStatusLabel('BORDERLINE', true)).toBe('Потребує спостереження')
+  })
+
+  it('keeps API-facing labels while mapping visual treatment to four semantic statuses', () => {
+    expect(BIOMARKER_STATUS_META.OPTIMAL.badge).toContain('vtl-status-badge--stable')
+    expect(BIOMARKER_STATUS_META.BORDERLINE.badge).toContain('vtl-status-badge--monitor')
+    expect(BIOMARKER_STATUS_META.DEFICIENT.badge).toContain('vtl-status-badge--review')
+    expect(BIOMARKER_STATUS_META.ELEVATED.badge).toContain('vtl-status-badge--review')
+    expect(BIOMARKER_STATUS_META.UNKNOWN.badge).toContain('vtl-status-badge--unavailable')
+    expect(biomarkerStatusLabel('DEFICIENT')).toBe('Below range')
   })
 })

@@ -10,13 +10,13 @@
   --vtl-text-secondary-light: #64748b;
   --vtl-danger: #ef4444;
   --vtl-success: var(--brand, #1d9e75);
-  --vtl-radius-card: 20px;
+  --dashboard-radius-card: 20px;
   /* P40 -- unified with .coach-button/.cabinet-btn's pill radius so every
      primary/secondary action button in the cabinet looks the same. */
-  --vtl-radius-btn: 999px;
-  --vtl-radius-sm: 12px;
-  --vtl-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
-  --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --dashboard-radius-btn: 999px;
+  --dashboard-radius-sm: 12px;
+  --dashboard-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+  --dashboard-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --vtl-emerald-glow: 0 0 0 3px rgba(var(--brand-rgb, 29, 158, 117), 0.18);
   /* Bottom nav height so pages can account for it */
   --vtl-bottom-bar-height: 76px;
@@ -330,10 +330,10 @@ button[aria-label].inline-icon {
 }
 
 .vtl-card {
-  border-radius: var(--vtl-radius-card);
+  border-radius: var(--dashboard-radius-card);
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.88));
-  box-shadow: var(--vtl-shadow-dark);
+  box-shadow: var(--dashboard-shadow-dark);
 }
 
 .vtl-card-hover {
@@ -342,13 +342,13 @@ button[aria-label].inline-icon {
 
 .vtl-card-hover:hover {
   transform: scale(1.02);
-  box-shadow: var(--vtl-shadow-dark), var(--vtl-emerald-glow);
+  box-shadow: var(--dashboard-shadow-dark), var(--vtl-emerald-glow);
   border-color: rgba(16, 185, 129, 0.4);
 }
 
 .vtl-button-primary {
   min-height: 48px;
-  border-radius: var(--vtl-radius-btn);
+  border-radius: var(--dashboard-radius-btn);
   border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.72);
   background: linear-gradient(135deg, var(--vtl-accent), #0f7f5f);
   color: #ffffff;
@@ -364,7 +364,7 @@ button[aria-label].inline-icon {
 
 .vtl-button-secondary {
   min-height: 44px;
-  border-radius: var(--vtl-radius-btn);
+  border-radius: var(--dashboard-radius-btn);
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(15, 23, 42, 0.65);
   color: var(--vtl-text-primary-dark);
@@ -374,9 +374,31 @@ button[aria-label].inline-icon {
 .vtl-upload-zone {
   min-height: 420px;
   border-radius: var(--vtl-radius-card);
-  border: 3px dashed rgba(var(--brand-rgb, 29, 158, 117), 0.86);
-  background: rgba(var(--brand-rgb, 29, 158, 117), 0.06);
-  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb, 29, 158, 117), 0.22), 0 0 42px rgba(var(--brand-rgb, 29, 158, 117), 0.1);
+  border: 2px dashed var(--vtl-color-brand-500);
+  background: var(--vtl-color-brand-50);
+  box-shadow: var(--vtl-shadow-card);
+}
+
+.vtl-upload-zone--drag-active {
+  border-color: var(--vtl-color-brand-700);
+  background: var(--vtl-color-brand-100);
+}
+
+.vtl-upload-zone--disabled {
+  border-color: var(--vtl-color-border-strong);
+  background: var(--vtl-status-unavailable-bg);
+  color: var(--vtl-status-unavailable);
+}
+
+.vtl-upload-zone__icon {
+  display: grid;
+  width: 80px;
+  height: 80px;
+  place-items: center;
+  border-radius: var(--vtl-radius-panel);
+  background: var(--vtl-color-brand-100);
+  color: var(--vtl-color-brand-800);
+  box-shadow: var(--vtl-shadow-card);
 }
 
 .vtl-status-pill {
@@ -413,7 +435,7 @@ button[aria-label].inline-icon {
 }
 
 .vtl-light-card {
-  border-radius: var(--vtl-radius-card);
+  border-radius: var(--dashboard-radius-card);
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -546,16 +568,17 @@ button[aria-label].inline-icon {
  * contained, matching .coach-button exactly, for pages that don't import
  * coach-design-system.css. */
 .cabinet-btn {
-  min-height: 48px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  border-radius: 999px;
+  gap: var(--vtl-space-2);
+  border-radius: var(--vtl-radius-pill);
   border: 1px solid transparent;
-  padding: 0 20px;
-  font-size: 14px;
-  font-weight: 800;
+  padding: 0 var(--vtl-space-6);
+  font-size: var(--vtl-font-size-body);
+  font-family: var(--vtl-font-sans);
+  font-weight: var(--vtl-font-weight-bold);
   line-height: 1;
   white-space: nowrap;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
@@ -567,52 +590,53 @@ button[aria-label].inline-icon {
 }
 
 .cabinet-btn:focus-visible {
-  outline: 3px solid rgba(42, 191, 170, 0.28);
+  outline: 3px solid var(--vtl-color-focus-ring);
   outline-offset: 3px;
 }
 
 .cabinet-btn--primary {
-  color: #fff;
-  background: linear-gradient(135deg, #2ABFAA 0%, #109581 100%);
-  box-shadow: 0 14px 26px rgba(42, 191, 170, 0.25);
+  color: var(--vtl-action-primary-fg);
+  background: var(--vtl-action-primary-bg);
+  box-shadow: var(--vtl-shadow-primary);
 }
 
 .cabinet-btn--primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 36px rgba(42, 191, 170, 0.32);
+  background: var(--vtl-action-primary-bg-hover);
+  box-shadow: var(--vtl-shadow-primary);
 }
 
 .cabinet-btn--secondary {
-  color: #0f172a;
-  background: #fff;
-  border-color: #E2E8F0;
+  color: var(--vtl-action-secondary-fg);
+  background: var(--vtl-action-secondary-bg);
+  border-color: var(--vtl-action-secondary-border);
 }
 
 .cabinet-btn--secondary:hover {
-  border-color: rgba(42, 191, 170, 0.45);
+  border-color: var(--vtl-color-brand-500);
 }
 
 .cabinet-btn--danger {
-  color: #b91c1c;
-  background: #fff;
-  border-color: #fecaca;
+  color: var(--vtl-action-danger-fg);
+  background: var(--vtl-action-secondary-bg);
+  border-color: var(--vtl-action-danger-border);
 }
 
 .cabinet-btn--danger:hover {
-  background: #fef2f2;
+  background: var(--vtl-status-review-bg);
 }
 
 /* Solid fill for a final, one-step-from-irreversible confirm (e.g. "Yes,
  * delete everything") -- visually stronger than the outline .cabinet-btn--
  * danger used for the entry point into that flow. */
 .cabinet-btn--danger-solid {
-  color: #fff;
-  background: #b91c1c;
-  border-color: #b91c1c;
+  color: var(--vtl-action-primary-fg);
+  background: var(--vtl-status-review);
+  border-color: var(--vtl-status-review);
 }
 
 .cabinet-btn--danger-solid:hover {
-  background: #991b1b;
+  background: var(--vtl-action-danger-fg);
 }
 
 /* Small utility action (remove entry, sign out, etc.) -- one consistent

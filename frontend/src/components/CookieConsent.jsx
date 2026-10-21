@@ -117,7 +117,7 @@ function Toggle({ checked, onChange, disabled }) {
         borderRadius: 12,
         border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        background: disabled ? '#9ca3af' : checked ? '#0d9488' : '#d1d5db',
+        background: disabled ? 'var(--vtl-status-unavailable)' : checked ? 'var(--vtl-color-brand-700)' : 'var(--vtl-color-border-strong)',
         transition: 'background 0.2s',
         flexShrink: 0,
         padding: 0,
@@ -130,8 +130,8 @@ function Toggle({ checked, onChange, disabled }) {
         width: 18,
         height: 18,
         borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+        background: 'var(--vtl-color-surface)',
+        boxShadow: 'var(--vtl-shadow-card)',
         transition: 'left 0.18s',
       }} />
     </button>
@@ -160,16 +160,16 @@ function SettingsPanel({ t, prefs, setPrefs, onSave, onAcceptAll, onBack }) {
           <div key={key} style={rowStyle}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{label}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--vtl-color-ink)' }}>{label}</span>
                 {locked && (
                   <span style={chipStyle}>{t.always}</span>
                 )}
               </div>
-              <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#64748b', lineHeight: 1.5 }}>{desc}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--vtl-color-text-muted)', lineHeight: 1.5 }}>{desc}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
               {!locked && (
-                <span style={{ fontSize: 12, color: prefs[key] ? '#0d9488' : '#9ca3af', fontWeight: 600 }}>
+                <span style={{ fontSize: 12, color: prefs[key] ? 'var(--vtl-color-brand-700)' : 'var(--vtl-status-unavailable)', fontWeight: 600 }}>
                   {prefs[key] ? t.on : t.off}
                 </span>
               )}
@@ -254,10 +254,10 @@ export default function CookieConsent() {
       <div style={bannerInnerStyle}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: 'var(--vtl-color-ink)', letterSpacing: '-0.01em' }}>
               {t.bannerTitle}
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#475569', lineHeight: 1.45, maxWidth: 420 }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--vtl-color-ink-secondary)', lineHeight: 1.45, maxWidth: 420 }}>
               {t.bannerText}{' '}
               <a href={privacyHref} style={linkStyle} target="_blank" rel="noreferrer">{t.privacyLink}</a>
               {' · '}
@@ -282,7 +282,7 @@ export default function CookieConsent() {
 const backdropStyle = {
   position: 'fixed', inset: 0, zIndex: 10000,
   display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-  background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)',
+  background: 'var(--vtl-color-overlay)', backdropFilter: 'blur(4px)',
   padding: '0 16px 24px',
 }
 
@@ -295,10 +295,10 @@ const bannerWrapStyle = {
 
 const bannerInnerStyle = {
   pointerEvents: 'auto',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 16,
-  boxShadow: '0 18px 45px rgba(15,23,42,0.18)',
+  background: 'var(--vtl-color-surface)',
+  border: '1px solid var(--vtl-color-border)',
+  borderRadius: 'var(--vtl-radius-card)',
+  boxShadow: 'var(--vtl-shadow-raised)',
   padding: '14px 16px',
   width: 'min(100%, 560px)',
   maxWidth: 'calc(100vw - 24px)',
@@ -308,10 +308,10 @@ const bannerInnerStyle = {
 }
 
 const panelStyle = {
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 20,
-  boxShadow: '0 20px 60px rgba(15,23,42,0.22)',
+  background: 'var(--vtl-color-surface)',
+  border: '1px solid var(--vtl-color-border)',
+  borderRadius: 'var(--vtl-radius-panel)',
+  boxShadow: 'var(--vtl-shadow-raised)',
   padding: '24px',
   width: '100%',
   maxWidth: 520,
@@ -319,19 +319,19 @@ const panelStyle = {
   overflowY: 'auto',
 }
 
-const titleStyle = { margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }
-const subtitleStyle = { margin: '6px 0 0', fontSize: 13, color: '#64748b', lineHeight: 1.5 }
+const titleStyle = { margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--vtl-color-ink)', letterSpacing: '-0.01em' }
+const subtitleStyle = { margin: '6px 0 0', fontSize: 13, color: 'var(--vtl-color-text-muted)', lineHeight: 1.5 }
 
 const rowStyle = {
   display: 'flex', alignItems: 'flex-start', gap: 16,
-  padding: '14px 16px', borderRadius: 12,
-  background: '#f8fafc', border: '1px solid #e2e8f0',
+  padding: '14px 16px', borderRadius: 'var(--vtl-radius-field)',
+  background: 'var(--vtl-color-canvas)', border: '1px solid var(--vtl-color-border)',
 }
 
 const chipStyle = {
   fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-  color: '#0d9488', background: '#f0fdfa', border: '1px solid #99f6e4',
-  borderRadius: 100, padding: '2px 8px',
+  color: 'var(--vtl-color-brand-800)', background: 'var(--vtl-color-brand-50)', border: '1px solid var(--vtl-color-border-strong)',
+  borderRadius: 'var(--vtl-radius-pill)', padding: '2px 8px',
 }
 
 const btnGroupStyle = {
@@ -339,39 +339,38 @@ const btnGroupStyle = {
 }
 
 const primaryBtnStyle = {
-  padding: '8px 16px', borderRadius: 100, border: 'none', cursor: 'pointer',
-  background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
-  color: '#fff', fontWeight: 700, fontSize: 12.5,
-  boxShadow: '0 4px 14px rgba(15,118,110,0.30)',
+  minHeight: 44, padding: '8px 16px', borderRadius: 'var(--vtl-radius-pill)', border: 'none', cursor: 'pointer',
+  background: 'var(--vtl-action-primary-bg)',
+  color: 'var(--vtl-action-primary-fg)', fontWeight: 700, fontSize: 12.5,
+  boxShadow: 'var(--vtl-shadow-primary)',
   transition: 'opacity 0.15s',
   whiteSpace: 'nowrap',
 }
 
 const secondaryBtnStyle = {
   ...primaryBtnStyle,
-  background: '#0f172a',
-  boxShadow: '0 4px 14px rgba(15,23,42,0.20)',
+  background: 'var(--vtl-action-primary-bg)',
 }
 
 const outlineBtnStyle = {
-  padding: '8px 16px', borderRadius: 100, cursor: 'pointer',
-  background: 'transparent',
-  border: '1.5px solid #cbd5e1',
-  color: '#475569', fontWeight: 700, fontSize: 12.5,
+  minHeight: 44, padding: '8px 16px', borderRadius: 'var(--vtl-radius-pill)', cursor: 'pointer',
+  background: 'var(--vtl-action-secondary-bg)',
+  border: '1px solid var(--vtl-action-secondary-border)',
+  color: 'var(--vtl-action-secondary-fg)', fontWeight: 700, fontSize: 12.5,
   transition: 'border-color 0.15s',
   whiteSpace: 'nowrap',
 }
 
 const ghostBtnStyle = {
-  padding: '8px 10px', borderRadius: 100, border: 'none', cursor: 'pointer',
-  background: 'transparent', color: '#64748b', fontWeight: 600, fontSize: 12.5,
+  minHeight: 40, padding: '8px 10px', borderRadius: 'var(--vtl-radius-pill)', border: 'none', cursor: 'pointer',
+  background: 'transparent', color: 'var(--vtl-color-text-muted)', fontWeight: 600, fontSize: 12.5,
   textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
 }
 
 const backBtnStyle = {
-  padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
+  padding: '6px 12px', borderRadius: 'var(--vtl-radius-field)', border: '1px solid var(--vtl-color-border)',
   background: 'transparent', cursor: 'pointer',
-  color: '#64748b', fontSize: 13, fontWeight: 600,
+  color: 'var(--vtl-color-text-muted)', fontSize: 13, fontWeight: 600,
 }
 
-const linkStyle = { color: '#0d9488', textDecoration: 'underline', textUnderlineOffset: 2 }
+const linkStyle = { color: 'var(--vtl-color-brand-700)', textDecoration: 'underline', textUnderlineOffset: 2 }
