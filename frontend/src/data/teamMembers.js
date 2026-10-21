@@ -35,6 +35,11 @@ export const teamMembers = [
     image: '/images/team/anna-bombela.webp?v=20261007', linkedin: null,
   },
   {
+    id: 'maryna-onoprinchuk', category: 'leadership', name: 'Maryna Onoprinchuk', role: 'Partner',
+    bio: 'Partner supporting VITALOOP’s growth across the US and EU. She leads investor communications and helps establish the business and operating structure needed for sustainable international expansion.',
+    image: '/images/team/maryna-onoprinchuk.webp?v=20261021', linkedin: 'https://www.linkedin.com/in/marynao/',
+  },
+  {
     id: 'senior-python-engineer', category: 'engineering', name: null, role: 'Senior Python Engineer',
     bio: 'Senior backend engineer focused on health-data processing, platform architecture, AI integration and reliability of VITALOOP’s clinical intelligence pipeline.',
     image: null, linkedin: null,
