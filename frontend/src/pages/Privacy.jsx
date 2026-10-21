@@ -9,14 +9,14 @@ function getLegalPagePadding() {
 
 export default function Privacy() {
   const navigate = useNavigate()
-  const h2Style = { color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }
+  const h2Style = { color: 'var(--vtl-color-ink)', fontSize: 'var(--vtl-font-size-heading-sm)', fontWeight: 'var(--vtl-font-weight-bold)', marginBottom: 8 }
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--white, #ffffff)',
-      color: 'var(--gray-900, #1d1d1f)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
+      background: 'var(--vtl-color-surface)',
+      color: 'var(--vtl-color-ink)',
+      fontFamily: 'var(--vtl-font-sans)',
       padding: getLegalPagePadding(),
       maxWidth: 720,
       margin: '0 auto',
@@ -31,16 +31,16 @@ export default function Privacy() {
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: 14, color: 'var(--teal-600, #0F6E56)',
+          fontSize: 14, color: 'var(--vtl-color-brand-700)',
           marginBottom: 48, padding: 0,
         }}
       >
         ← Back to VITALOOP
       </button>
-      <h1 style={{ fontSize: 34, lineHeight: 1.2, fontWeight: 700, color: 'var(--gray-900, #1d1d1f)', marginBottom: 12 }}>Privacy Policy</h1>
-      <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14, marginBottom: 32 }}>Last updated: October 19, 2026</p>
+      <h1 style={{ fontSize: 'var(--vtl-font-size-heading)', lineHeight: 'var(--vtl-line-height-heading)', fontWeight: 'var(--vtl-font-weight-bold)', color: 'var(--vtl-color-ink)', marginBottom: 12 }}>Privacy Policy</h1>
+      <p style={{ color: 'var(--vtl-color-text-muted)', fontSize: 14, marginBottom: 32 }}>Last updated: October 19, 2026</p>
 
-      <section style={{ display: 'grid', gap: 24, fontSize: 15, lineHeight: 1.7, color: 'var(--gray-700, #424245)' }}>
+      <section style={{ display: 'grid', gap: 24, fontSize: 15, lineHeight: 1.7, color: 'var(--vtl-color-ink-secondary)' }}>
         <div>
           <p>VITALOOP ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, and protect your personal information when you use our AI-powered blood test analysis platform.</p>
         </div>

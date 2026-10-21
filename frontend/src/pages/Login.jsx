@@ -978,7 +978,7 @@ export default function Login() {
       />
       <div className={rootClassName} style={{
         minHeight: '100svh', display: 'flex',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
+        fontFamily: 'var(--vtl-font-sans)',
         background: authTheme.appBg,
       }}>
         {/* Left panel: hero image for UA, abstract for EN */}
@@ -1216,15 +1216,15 @@ export default function Login() {
               data-testid="auth-submit"
               disabled={loading}
               style={{
-                width: '100%', background: loading ? '#085041' : '#1D9E75',
-                color: 'white', border: 'none', borderRadius: 12,
+                width: '100%', background: loading ? 'var(--vtl-color-brand-800)' : 'var(--vtl-action-primary-bg)',
+                color: 'var(--vtl-action-primary-fg)', border: 'none', borderRadius: 'var(--vtl-radius-pill)', minHeight: 44,
                 padding: '14px', fontSize: 16, fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'background 200ms, transform 200ms',
                 marginTop: 4,
               }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#0F6E56' }}
-              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#1D9E75' }}
+              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'var(--vtl-action-primary-bg-hover)' }}
+              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = 'var(--vtl-action-primary-bg)' }}
             >
               {loading ? copy.loading
                 : isForgot ? copy.sendReset
