@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FlaskConical, Calendar, ChevronRight, Upload, Activity, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
-import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
@@ -393,7 +392,6 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
 }
 
 export default function LabResultsList() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const { hasAccess } = useFeature('progress')
   const isUk = isUkrainianLocale()
@@ -406,13 +404,6 @@ export default function LabResultsList() {
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false)
-      setOverviewLoading(false)
-      setError('We could not verify your session. Please refresh the page and try again.')
-      return undefined
-    }
-
     let active = true
 
     const fetchLabResults = async () => {
@@ -442,7 +433,7 @@ export default function LabResultsList() {
     return () => {
       active = false
     }
-  }, [user, reloadToken])
+  }, [reloadToken])
 
   const sortedItems = useMemo(() => {
     // The backend already returns items in correct clinical order (real lab

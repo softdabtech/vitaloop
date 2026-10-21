@@ -30,7 +30,12 @@ function readAccessTokenFromSupabaseStorage() {
   }
 }
 
-async function resolveAccessToken() {
+async function resolveAccessToken({ preferSupabaseSession = false } = {}) {
+  const storedToken = readAccessTokenFromSupabaseStorage()
+  if (!preferSupabaseSession && storedToken) {
+    return storedToken
+  }
+
   if (hasSupabaseConfig) {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.access_token) {
@@ -38,7 +43,7 @@ async function resolveAccessToken() {
     }
   }
 
-  return readAccessTokenFromSupabaseStorage()
+  return storedToken
 }
 
 api.interceptors.request.use(async (config) => {
@@ -125,7 +130,7 @@ api.interceptors.response.use(
       // right after login when the first request may miss the Authorization header.
       if (!authBoundary && !error.config?._retry) {
         error.config._retry = true
-        const token = await resolveAccessToken()
+        const token = await resolveAccessToken({ preferSupabaseSession: true })
         if (token) {
           error.config.headers = error.config.headers || {}
           error.config.headers.Authorization = `Bearer ${token}`
@@ -137,7 +142,7 @@ api.interceptors.response.use(
       // This avoids false sign-outs during session hydration races on hard refresh.
       if (authBoundary && !error.config?._retryAuthBoundary) {
         error.config._retryAuthBoundary = true
-        const token = await resolveAccessToken()
+        const token = await resolveAccessToken({ preferSupabaseSession: true })
         if (token) {
           error.config.headers = error.config.headers || {}
           error.config.headers.Authorization = `Bearer ${token}`

@@ -25,6 +25,10 @@ function readAccessTokenFromSupabaseStorage() {
 }
 
 async function hasActiveAccessToken() {
+  // Read the persisted session first. This keeps entitlement loading
+  // independent of a parallel Supabase hydration call in another component.
+  if (readAccessTokenFromSupabaseStorage()) return true
+
   if (hasSupabaseConfig) {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.access_token) return true
@@ -136,14 +140,8 @@ export const useUserEntitlements = () =>
       }
 
       try {
-        const { data } = await api.get('/auth/me', { timeout: ENTITLEMENTS_REQUEST_TIMEOUT_MS })
-        return data?.entitlements || {
-          is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
-          billing_status: String(data?.subscription_status || 'free').toLowerCase(),
-          plan_key: data?.plan_name || 'free',
-          has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
-          features: freeEntitlements.features,
-        }
+        const { data } = await api.get('/auth/entitlements', { timeout: ENTITLEMENTS_REQUEST_TIMEOUT_MS })
+        return data || freeEntitlements
       } catch (error) {
         if (error?.response?.status === 401) {
           return freeEntitlements
