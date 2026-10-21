@@ -17,6 +17,9 @@ vi.mock('./components/dashboard/UserCabinetLayout.jsx', () => ({
 vi.mock('./pages/HealthProfile.jsx', () => ({
   default: () => <div>Health profile route content</div>,
 }))
+vi.mock('./pages/SymptomCheck.jsx', () => ({
+  default: () => <div>Questionnaire route content</div>,
+}))
 
 beforeEach(() => {
   apiMock.get.mockReset()
@@ -42,6 +45,15 @@ describe('cabinet route classification', () => {
 })
 
 describe('EndUserFlowRoute onboarding error recovery', () => {
+  it('does not request onboarding state for a route allowed before onboarding', async () => {
+    window.history.replaceState({}, '', '/questionnaire')
+
+    render(<App />)
+
+    expect(await screen.findByText('Questionnaire route content')).toBeTruthy()
+    expect(apiMock.get).not.toHaveBeenCalled()
+  })
+
   it('shows the error screen, retries, recovers to the protected route, and does not redirect', async () => {
     apiMock.get
       .mockRejectedValueOnce(new Error('Onboarding service unavailable'))

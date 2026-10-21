@@ -22,7 +22,12 @@ export function useSubscription() {
     uploadLimit,
     uploadsRemaining,
     planName: resolved.plan_key || null,
-    loading: isLoading || dashboardLoading,
+    // Subscription access is determined by the entitlement response. The
+    // dashboard summary only supplies an informational free-tier usage count;
+    // it must not keep subscription management unavailable when that separate
+    // endpoint is slow or unavailable.
+    loading: isLoading,
+    usageLoading: dashboardLoading,
     error,
     refresh: refetch,
   }

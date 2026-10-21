@@ -180,8 +180,10 @@ function CRMRoute({ children, needsOps = false }) {
 
 function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfOnboardingComplete = false }) {
   const { user, loading } = useAuth()
-  const { state, loading: onboardingLoading, isError, error, retry } = useOnboardingState({ enabled: Boolean(user) && !loading })
   const shouldWaitForOnboarding = !allowBeforeOnboarding || redirectIfOnboardingComplete
+  const { state, loading: onboardingLoading, isError, error, retry } = useOnboardingState({
+    enabled: Boolean(user) && !loading && shouldWaitForOnboarding,
+  })
   const onboardingStateKnown = state?.requires_onboarding !== null && state?.requires_onboarding !== undefined
   const requiresOnboarding = Boolean(state?.requires_onboarding)
 
@@ -879,11 +881,11 @@ export default function App() {
               reason. */}
           <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
           <Route path="/assignments/:assignmentId" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />)} />
+          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/account" element={renderCabinetRoute(<Settings />)} />
           <Route path="/settings" element={<Navigate to="/account" replace />} />
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />)} />
-          <Route path="/subscription" element={renderCabinetRoute(<Subscription />)} />
+          <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
           <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />)} />
           <Route path="/help-center" element={renderCabinetRoute(<Help embedded basePath="/help-center" />)} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
@@ -895,7 +897,7 @@ export default function App() {
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
           <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
-          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />)} />
+          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
           <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
           {/* Legacy check-in URLs currently lead to the structured symptom flow.
               The old mixed free-text questionnaire remains outside the active
