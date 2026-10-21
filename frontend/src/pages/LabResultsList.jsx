@@ -15,6 +15,15 @@ import '../styles/dashboard2026.css'
 
 const LAB_RESULTS_REQUEST_TIMEOUT_MS = 8000
 
+function withRequestTimeout(request, timeout = LAB_RESULTS_REQUEST_TIMEOUT_MS) {
+  let timeoutId
+  const deadline = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error('Request timed out')), timeout)
+  })
+
+  return Promise.race([request, deadline]).finally(() => window.clearTimeout(timeoutId))
+}
+
 // Cabinet reconciliation: full EN/UA coverage ported from origin/main's
 // LabResultsList.jsx (LAB_RESULTS_COPY). Applied on top of the CURRENT
 // file's data logic, not origin/main's — origin/main's version regresses
@@ -178,7 +187,7 @@ function lifecycleActionLabel(state, item, copy) {
 
 async function fetchRecentUploadFallback() {
   try {
-    const fallbackRes = await api.get('/uploads/recent', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
+    const fallbackRes = await withRequestTimeout(api.get('/uploads/recent'))
     return normalizeProgressPayload(fallbackRes.data).slice(0, 1)
   } catch {
     return []
@@ -195,7 +204,7 @@ export function buildFetchResultsError(_err) {
 
 async function fetchResultsWithFallback() {
   try {
-    const res = await api.get('/progress', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
+    const res = await withRequestTimeout(api.get('/progress'))
     return { items: normalizeProgressPayload(res.data), error: null }
   } catch (err) {
     if (err.response?.status === 402) {
@@ -219,7 +228,7 @@ function triggerLabHistoryAccessPaywall() {
 // of those. See app/services/progress_overview.py::build_progress_overview().
 async function fetchProgressOverview() {
   try {
-    const res = await api.get('/progress/overview', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
+    const res = await withRequestTimeout(api.get('/progress/overview'))
     return { data: res.data || null, error: null }
   } catch (err) {
     console.error('LabResultsList overview fetch error:', err)
@@ -241,7 +250,7 @@ function statusGroupTone(group) {
 // Stage 2D-2: renders the backend's already-computed `/progress/overview`
 // data. Formatting only — direction, dates, and values below are read
 // directly from the overview payload, never derived in this component.
-function ClinicalProgressPanel({ overview, loading, error, t, copy }) {
+function ClinicalProgressPanel({ overview, loading, t, copy }) {
   const labels = t.labProgress
 
   if (loading) {
@@ -256,7 +265,7 @@ function ClinicalProgressPanel({ overview, loading, error, t, copy }) {
     )
   }
 
-  if (error) {
+  if (overview?._fetchError) {
     return (
       <aside className="vtl-light-card h-fit p-5" role="status">
         <h2 id="lab-progress-title" className="text-base font-semibold tracking-tight text-slate-800">{labels.title}</h2>
@@ -394,7 +403,6 @@ export default function LabResultsList() {
   const [error, setError] = useState(null)
   const [overview, setOverview] = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(true)
-  const [overviewError, setOverviewError] = useState(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
@@ -425,8 +433,7 @@ export default function LabResultsList() {
     const fetchOverview = async () => {
       const result = await fetchProgressOverview()
       if (!active) return
-      setOverview(result.data)
-      setOverviewError(result.error)
+      setOverview(result.data || (result.error ? { _fetchError: true } : null))
       setOverviewLoading(false)
     }
 
@@ -487,7 +494,6 @@ export default function LabResultsList() {
               onClick={() => {
                 setLoading(true)
                 setError(null)
-                setOverviewError(null)
                 setOverviewLoading(true)
                 setReloadToken((value) => value + 1)
               }}
@@ -522,7 +528,7 @@ export default function LabResultsList() {
 
             <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
               <section aria-labelledby="lab-progress-title" className="min-w-0">
-                <ClinicalProgressPanel overview={overview} loading={overviewLoading} error={overviewError} t={t} copy={copy} />
+                <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
               </section>
 
               <section aria-labelledby="upload-history-title" className="min-w-0 space-y-3">
