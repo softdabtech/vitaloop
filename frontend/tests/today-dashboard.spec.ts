@@ -154,6 +154,7 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
   })
 
   await page.route('**/auth/me', (route) => fulfillJson(route, { entitlements }))
+  await page.route('**/auth/entitlements', (route) => fulfillJson(route, entitlements))
   await page.route('**/profile', (route) => fulfillJson(route, { profile: { goals } }))
   await page.route('**/auth/onboarding/state', (route) => fulfillJson(route, { role: 'end_user', requires_onboarding: false, completed: true }))
   await page.route('**/questionnaire/session', (route) => fulfillJson(route, {

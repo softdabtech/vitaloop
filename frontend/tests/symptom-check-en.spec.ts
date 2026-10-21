@@ -167,6 +167,9 @@ async function installApi(page: Page, scenario: Scenario) {
     if (path.endsWith('/auth/me')) {
       return json(route, { user: { global_role: 'end_user' }, memberships: [], entitlements: { is_premium: false, features: {} } })
     }
+    if (path.endsWith('/auth/entitlements')) {
+      return json(route, { is_premium: false, billing_status: 'free', plan_key: 'free', has_active_subscription: false, features: {} })
+    }
     if (path.endsWith('/symptom-check/catalog/root-concerns')) {
       return scenario.structuredUnavailable
         ? json(route, { detail: 'disabled' }, 404)
