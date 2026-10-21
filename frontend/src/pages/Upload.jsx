@@ -8,7 +8,7 @@ import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
 import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaLabUpload } from '../lib/analytics.js'
+import { gaLabUpload, gaLabUploadStarted } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
@@ -370,6 +370,7 @@ export default function Upload() {
     toast(copy.uploading(file.name, (file.size / 1024).toFixed(0)), { icon: '📄' })
 
     setAnalyzing(true)
+    gaLabUploadStarted('file')
     try {
       const formData = new FormData()
       formData.append('file', file)

@@ -8,6 +8,18 @@
 import { PREMIUM_MONTHLY_PRICE } from './pricing.js'
 
 const GA_ID = 'G-LG0BCMBJJE'
+const FORBIDDEN_PARAM = /(?:^|_)(?:email|name|phone|user_id|upload_id|assessment_id|report_id|biomarker|reference|health|symptom|diagnos|medical|lab_count|score)(?:_|$)/i
+const RESERVED_UI_PARAM = /^(source|medium|campaign|term|content)$/i
+
+export function getProductSurface(hostname = typeof window === 'undefined' ? '' : window.location.hostname) {
+  return String(hostname).toLowerCase() === 'ua.vitaloop.today' ? 'ua' : 'main'
+}
+
+function safeParams(params = {}) {
+  return Object.fromEntries(Object.entries(params).filter(([key, value]) => (
+    value !== undefined && value !== null && !FORBIDDEN_PARAM.test(key) && !RESERVED_UI_PARAM.test(key)
+  )))
+}
 
 function fbqTrack(eventName, params = {}) {
   if (typeof window === 'undefined') return
@@ -33,7 +45,8 @@ function gtag(...args) {
 export function gaEvent(eventName, params = {}) {
   try {
     gtag('event', eventName, {
-      ...params,
+      ...safeParams(params),
+      product_surface: getProductSurface(),
       send_to: GA_ID,
       engagement_time_msec: 100,
     })
@@ -54,11 +67,7 @@ export function gaEvent(eventName, params = {}) {
  * @param {string|null} userId
  */
 export function gaSetUserId(userId) {
-  try {
-    gtag('set', { user_id: userId || undefined })
-  } catch {
-    // Never throw from analytics
-  }
+  // Deliberately no-op: Supabase IDs must never be sent to GA4.
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +83,7 @@ export function gaPageView(path, title) {
     gtag('event', 'page_view', {
       page_path: path,
       page_title: title || (typeof document !== 'undefined' ? document.title : ''),
+      product_surface: getProductSurface(),
       send_to: GA_ID,
     })
   } catch {
@@ -117,7 +127,7 @@ export function gaSignUp(method = 'email') {
  * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
  */
 export function gaSignupStarted(method = 'email', attributionParams = {}) {
-  gaEvent('signup_started', { method, ...attributionParams })
+  gaEvent('signup_intent', { method, ui_location: 'signup_page', entry_point: 'signup_form' })
 }
 
 /**
@@ -126,7 +136,7 @@ export function gaSignupStarted(method = 'email', attributionParams = {}) {
  * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
  */
 export function gaSignupCompleted(method = 'email', attributionParams = {}) {
-  gaEvent('signup_completed', { method, ...attributionParams })
+  gaEvent('sign_up', { method, ui_location: 'signup_page', entry_point: 'signup_form' })
 }
 
 /**
@@ -146,6 +156,7 @@ export function gaLogin(method = 'email') {
  * Treat as the top-of-funnel purchase intent signal.
  */
 export function gaBeginCheckout(priceLabel = null) {
+  if (getProductSurface() === 'main') return
   gaEvent('begin_checkout', {
     currency: 'USD',
     value: PREMIUM_MONTHLY_PRICE,
@@ -175,6 +186,7 @@ export function gaBeginCheckout(priceLabel = null) {
  * Pass the payment provider's session/transaction ID if available.
  */
 export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE, currency = 'USD') {
+  if (getProductSurface() === 'main') return
   gaEvent('purchase', {
     transaction_id: transactionId || `vtl_${Date.now()}`,
     currency,
@@ -200,11 +212,11 @@ export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE, currenc
 }
 
 /** Fire when a user views pricing/subscription content. */
-export function gaViewPricing(source = 'subscription') {
+export function gaViewPricing() {
   gaEvent('view_item', {
     item_category: 'subscription',
     item_name: 'VITALOOP Premium',
-    source,
+    ui_location: 'subscription_page',
   })
   fbqTrack('ViewContent', {
     content_name: 'VITALOOP Premium',
@@ -226,7 +238,7 @@ export function gaLabUpload() {
     event_label: 'lab_upload_completed',
     value: 1,
   })
-  gaEvent('lab_upload_completed')
+  gaEvent('lab_upload_completed', { ui_location: 'upload_page' })
   fbqTrack('Lead', {
     content_name: 'lab_upload_completed',
     value: 1,
@@ -234,8 +246,17 @@ export function gaLabUpload() {
   })
 }
 
+/** Fire when the user starts a file or manual lab upload. */
+export function gaLabUploadStarted(uploadMethod) {
+  gaEvent('lab_upload_started', {
+    ui_location: 'upload_page',
+    ...(uploadMethod === 'file' || uploadMethod === 'manual' ? { upload_method: uploadMethod } : {}),
+  })
+}
+
 /** Fire when the user completes the onboarding flow. */
 export function gaOnboardingComplete() {
+  gaEvent('onboarding_completed', { ui_location: 'onboarding' })
   gaEvent('tutorial_complete', {
     event_category: 'activation',
     event_label: 'onboarding_flow',
@@ -244,19 +265,12 @@ export function gaOnboardingComplete() {
 
 /** Fire when the user completes the adaptive health questionnaire. */
 export function gaQuestionnaireComplete(score) {
-  gaEvent('questionnaire_completed', {
-    event_category: 'engagement',
-    ...(score !== undefined ? { value: Math.round(score) } : {}),
-  })
+  gaEvent('questionnaire_completed', { event_category: 'engagement' })
 }
 
 /** Fire when the public symptom flow returns a completed lab discussion list. */
-export function gaSymptomAssessmentComplete({ assessmentId, labCount } = {}) {
-  gaEvent('symptom_assessment_completed', {
-    event_category: 'activation',
-    ...(assessmentId ? { assessment_id: assessmentId } : {}),
-    ...(Number.isFinite(labCount) ? { recommended_lab_count: labCount } : {}),
-  })
+export function gaSymptomAssessmentComplete() {
+  gaEvent('symptom_assessment_completed', { event_category: 'activation', ui_location: 'symptom_intake' })
   // `qualify_lead` was pre-defined as a GA4 key event with no code ever
   // firing it (found empty during a 2026-09-02 tracking audit). Per business
   // decision that day: an anonymous visitor finishing the public symptom
@@ -264,15 +278,15 @@ export function gaSymptomAssessmentComplete({ assessmentId, labCount } = {}) {
   // symptom_assessment_completed, so existing history stays intact.
   gaEvent('qualify_lead', {
     event_category: 'activation',
-    ...(assessmentId ? { assessment_id: assessmentId } : {}),
   })
 }
 
 /** Fire for high-intent public CTAs that lead into account creation. */
-export function gaSignupIntent(source = 'public_site') {
+export function gaSignupIntent(entryPoint = 'public_site') {
   gaEvent('signup_intent', {
     event_category: 'acquisition',
-    source,
+    ui_location: 'symptom_intake',
+    entry_point: entryPoint,
   })
 }
 
@@ -282,22 +296,22 @@ export function gaSignupIntent(source = 'public_site') {
 
 /** Fire when a weekly check-in is submitted successfully. */
 export function gaCheckInSubmit() {
-  gaEvent('checkin_submitted', { event_category: 'engagement' })
+  gaEvent('check_in_submitted', { event_category: 'engagement', ui_location: 'check_in' })
 }
 
 /** Fire when a user views their generated protocol. */
-export function gaProtocolView(uploadId) {
+export function gaProtocolView() {
   gaEvent('protocol_viewed', {
     event_category: 'activation',
-    upload_id: uploadId,
+    ui_location: 'protocol_page',
   })
 }
 
 /** Fire when a user views the results page after upload. */
-export function gaResultsView(uploadId) {
+export function gaResultsView() {
   gaEvent('results_viewed', {
     event_category: 'activation',
-    upload_id: uploadId,
+    ui_location: 'results_page',
   })
 }
 

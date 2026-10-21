@@ -10,7 +10,7 @@ import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
-import { gaPageView, gaPurchase, gaSetUserId } from './lib/analytics.js'
+import { gaPageView, gaSetUserId } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 import { isUkrainianLocale } from './lib/locale.js'
 
@@ -125,12 +125,8 @@ function GAPageTracker() {
     const params = new URLSearchParams(location.search)
     if (params.get('sub') !== 'success') return
 
-    const purchaseTrackedKey = 'vtl_purchase_tracked_sub_success'
-    if (window.sessionStorage.getItem(purchaseTrackedKey) === '1') return
-    window.sessionStorage.setItem(purchaseTrackedKey, '1')
-    // The hosted checkout redirects here after payment. Access is still
-    // granted solely by the server-side Creem webhook, never by this URL.
-    gaPurchase(`sub_success_${Date.now()}`)
+    // Access is granted solely by the server-side Creem webhook. Do not emit
+    // ecommerce purchase events for the international product.
   }, [location.pathname, location.search])
   return null
 }
