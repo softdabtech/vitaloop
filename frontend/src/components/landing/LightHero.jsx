@@ -53,6 +53,13 @@ export function LightHero() {
               <button
                 onClick={() => navigate('/symptom-intake')}
                 className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[color:var(--vtl-action-primary-bg)] px-8 py-3 font-semibold text-[color:var(--vtl-action-primary-fg)] shadow-[var(--vtl-shadow-primary)] transition-all hover:bg-[color:var(--vtl-action-primary-bg-hover)]"
+                style={{
+                  minHeight: 44,
+                  border: 'none',
+                  borderRadius: 'var(--vtl-radius-pill)',
+                  background: 'var(--vtl-action-primary-bg)',
+                  color: 'var(--vtl-action-primary-fg)',
+                }}
               >
                 Start with symptoms
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -61,6 +68,13 @@ export function LightHero() {
               <button
                 onClick={() => navigate('/example-report')}
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--vtl-action-secondary-border)] bg-[color:var(--vtl-action-secondary-bg)] px-8 py-3 font-semibold text-[color:var(--vtl-action-secondary-fg)] transition hover:border-[color:var(--vtl-color-brand-500)]"
+                style={{
+                  minHeight: 44,
+                  borderRadius: 'var(--vtl-radius-pill)',
+                  borderColor: 'var(--vtl-action-secondary-border)',
+                  background: 'var(--vtl-action-secondary-bg)',
+                  color: 'var(--vtl-action-secondary-fg)',
+                }}
               >
                 See example report
               </button>
