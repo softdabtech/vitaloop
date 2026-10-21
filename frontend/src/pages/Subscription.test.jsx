@@ -43,4 +43,14 @@ describe('Subscription checkout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel' }))
     await waitFor(() => expect(creemMock.openCreemBillingPortal).toHaveBeenCalledOnce())
   })
+
+  it('shows a recoverable status error instead of leaving subscription management blank', () => {
+    subscriptionMock.mockReturnValue({ ...freeState, error: new Error('request timed out') })
+
+    render(<Subscription />)
+
+    expect(screen.getByRole('alert').textContent).toContain('We could not load your subscription status')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(freeState.refresh).toHaveBeenCalledOnce()
+  })
 })

@@ -2,6 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 
+// Entitlements control access to subscription management. Keep this request
+// bounded so a delayed backend response cannot leave that route loading
+// indefinitely. Individual consumers already render their own retry/error UI.
+export const ENTITLEMENTS_REQUEST_TIMEOUT_MS = 6000
+
 function readAccessTokenFromSupabaseStorage() {
   if (typeof window === 'undefined') return null
 
@@ -131,7 +136,7 @@ export const useUserEntitlements = () =>
       }
 
       try {
-        const { data } = await api.get('/auth/me')
+        const { data } = await api.get('/auth/me', { timeout: ENTITLEMENTS_REQUEST_TIMEOUT_MS })
         return data?.entitlements || {
           is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
           billing_status: String(data?.subscription_status || 'free').toLowerCase(),
@@ -156,6 +161,10 @@ export const useUserEntitlements = () =>
     // without adding any new polling.
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
+    // This is a user-facing status check, not a background refresh. Surface a
+    // bounded failure to the subscription page instead of silently retrying
+    // for the global QueryClient retry window.
+    retry: false,
   })
 
 // P37e: report details for the Today dashboard's returning-user sections

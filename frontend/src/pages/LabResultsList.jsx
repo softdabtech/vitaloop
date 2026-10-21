@@ -13,6 +13,8 @@ import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { summarizeBiomarkerStatuses } from '../lib/biomarkerStatus.js'
 import '../styles/dashboard2026.css'
 
+const LAB_RESULTS_REQUEST_TIMEOUT_MS = 8000
+
 // Cabinet reconciliation: full EN/UA coverage ported from origin/main's
 // LabResultsList.jsx (LAB_RESULTS_COPY). Applied on top of the CURRENT
 // file's data logic, not origin/main's — origin/main's version regresses
@@ -176,7 +178,7 @@ function lifecycleActionLabel(state, item, copy) {
 
 async function fetchRecentUploadFallback() {
   try {
-    const fallbackRes = await api.get('/uploads/recent')
+    const fallbackRes = await api.get('/uploads/recent', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
     return normalizeProgressPayload(fallbackRes.data).slice(0, 1)
   } catch {
     return []
@@ -193,7 +195,7 @@ export function buildFetchResultsError(_err) {
 
 async function fetchResultsWithFallback() {
   try {
-    const res = await api.get('/progress')
+    const res = await api.get('/progress', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
     return { items: normalizeProgressPayload(res.data), error: null }
   } catch (err) {
     if (err.response?.status === 402) {
@@ -217,11 +219,11 @@ function triggerLabHistoryAccessPaywall() {
 // of those. See app/services/progress_overview.py::build_progress_overview().
 async function fetchProgressOverview() {
   try {
-    const res = await api.get('/progress/overview')
-    return res.data || null
+    const res = await api.get('/progress/overview', { timeout: LAB_RESULTS_REQUEST_TIMEOUT_MS })
+    return { data: res.data || null, error: null }
   } catch (err) {
     console.error('LabResultsList overview fetch error:', err)
-    return null
+    return { data: null, error: err }
   }
 }
 
@@ -239,7 +241,7 @@ function statusGroupTone(group) {
 // Stage 2D-2: renders the backend's already-computed `/progress/overview`
 // data. Formatting only — direction, dates, and values below are read
 // directly from the overview payload, never derived in this component.
-function ClinicalProgressPanel({ overview, loading, t, copy }) {
+function ClinicalProgressPanel({ overview, loading, error, t, copy }) {
   const labels = t.labProgress
 
   if (loading) {
@@ -250,6 +252,19 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
           <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
           <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
         </div>
+      </aside>
+    )
+  }
+
+  if (error) {
+    return (
+      <aside className="vtl-light-card h-fit p-5" role="status">
+        <h2 id="lab-progress-title" className="text-base font-semibold tracking-tight text-slate-800">{labels.title}</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          {isUkrainianLocale()
+            ? 'Динаміка результатів тимчасово недоступна. Історія завантажень залишається доступною нижче.'
+            : 'Progress is temporarily unavailable. Your upload history is still available below.'}
+        </p>
       </aside>
     )
   }
@@ -379,10 +394,16 @@ export default function LabResultsList() {
   const [error, setError] = useState(null)
   const [overview, setOverview] = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(true)
+  const [overviewError, setOverviewError] = useState(null)
   const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      setOverviewLoading(false)
+      setError('We could not verify your session. Please refresh the page and try again.')
+      return undefined
+    }
 
     let active = true
 
@@ -396,15 +417,16 @@ export default function LabResultsList() {
           console.error('LabResultsList fetch error:', result.originalError)
         }
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
       if (!active) return
     }
 
     const fetchOverview = async () => {
-      const data = await fetchProgressOverview()
+      const result = await fetchProgressOverview()
       if (!active) return
-      setOverview(data)
+      setOverview(result.data)
+      setOverviewError(result.error)
       setOverviewLoading(false)
     }
 
@@ -465,6 +487,8 @@ export default function LabResultsList() {
               onClick={() => {
                 setLoading(true)
                 setError(null)
+                setOverviewError(null)
+                setOverviewLoading(true)
                 setReloadToken((value) => value + 1)
               }}
               className="rounded-lg border border-rose-300 bg-white px-3 py-2 font-semibold text-rose-800"
@@ -498,7 +522,7 @@ export default function LabResultsList() {
 
             <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
               <section aria-labelledby="lab-progress-title" className="min-w-0">
-                <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
+                <ClinicalProgressPanel overview={overview} loading={overviewLoading} error={overviewError} t={t} copy={copy} />
               </section>
 
               <section aria-labelledby="upload-history-title" className="min-w-0 space-y-3">
