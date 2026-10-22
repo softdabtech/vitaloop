@@ -342,19 +342,19 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
               </button>
             ))}
           </div>
-          {progressMarkers.length ? progressMarkers.map(({ marker, kind }) => (
-            <div key={`${kind}-${marker.canonical_name || marker.name}`} className="rounded-[var(--vtl-radius-field)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-3">
+          {progressMarkers.length ? progressMarkers.map(({ marker: change, kind }) => (
+            <div key={`${kind}-${change.canonical_name || change.name}`} className="rounded-[var(--vtl-radius-field)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{marker.name}</p>
-                <span className={`vtl-status-pill border ${statusGroupTone(marker.current_status_group)}`}>
-                  {kind === 'changed' ? (labels.direction[marker.direction] || marker.direction) : labels.insufficientHistory}
+                <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{change.name}</p>
+                <span className={`vtl-status-pill border ${statusGroupTone(change.current_status_group)}`}>
+                  {kind === 'changed' ? (labels.direction[change.direction] || change.direction) : labels.insufficientHistory}
                 </span>
               </div>
               {kind === 'changed' && (
                 <p className="mt-1 text-xs text-slate-500">
-                  {labels.previousLabel} {marker.previous_value}{marker.unit ? ` ${marker.unit}` : ''} ({labels.onLabel} {marker.previous_date})
+                  {labels.previousLabel} {change.previous_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.previous_date})
                   {' → '}
-                  {labels.latestLabel} {marker.latest_value}{marker.unit ? ` ${marker.unit}` : ''} ({labels.onLabel} {marker.latest_date})
+                  {labels.latestLabel} {change.latest_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.latest_date})
                 </p>
               )}
             </div>
