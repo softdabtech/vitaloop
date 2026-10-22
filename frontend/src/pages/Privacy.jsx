@@ -1,14 +1,9 @@
-import { useNavigate } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
-
-function getLegalPagePadding() {
-  if (typeof window === 'undefined') return '80px 24px'
-  return window.innerWidth < 500 ? '40px 16px' : '80px 24px'
-}
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 export default function Privacy() {
-  const navigate = useNavigate()
+  const linkStyle = { color: 'var(--vtl-color-brand-700)' }
   const h2Style = { color: 'var(--vtl-color-ink)', fontSize: 'var(--vtl-font-size-heading-sm)', fontWeight: 'var(--vtl-font-weight-bold)', marginBottom: 8 }
 
   return (
@@ -17,26 +12,14 @@ export default function Privacy() {
       background: 'var(--vtl-color-surface)',
       color: 'var(--vtl-color-ink)',
       fontFamily: 'var(--vtl-font-sans)',
-      padding: getLegalPagePadding(),
-      maxWidth: 720,
-      margin: '0 auto',
     }}>
       <Seo
         title="Privacy Policy | VITALOOP"
         description="Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information."
         path="/privacy-policy"
       />
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: 14, color: 'var(--vtl-color-brand-700)',
-          marginBottom: 48, padding: 0,
-        }}
-      >
-        ← Back to VITALOOP
-      </button>
+      <PageHeader />
+      <main className="mx-auto w-full max-w-[720px] px-4 py-12 sm:px-6 lg:py-20">
       <h1 style={{ fontSize: 'var(--vtl-font-size-heading)', lineHeight: 'var(--vtl-line-height-heading)', fontWeight: 'var(--vtl-font-weight-bold)', color: 'var(--vtl-color-ink)', marginBottom: 12 }}>Privacy Policy</h1>
       <p style={{ color: 'var(--vtl-color-text-muted)', fontSize: 14, marginBottom: 32 }}>Last updated: October 19, 2026</p>
 
@@ -123,9 +106,9 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>12. Contact Us</h2>
-          <p><strong>Privacy Questions:</strong> <a href="mailto:privacy@vitaloop.today" style={{ color: 'var(--teal-500)' }}>privacy@vitaloop.today</a></p>
-          <p><strong>General Support:</strong> <a href="mailto:support@vitaloop.today" style={{ color: 'var(--teal-500)' }}>support@vitaloop.today</a></p>
-          <p><strong>Founder:</strong> <a href="mailto:bombela@softdab.tech" style={{ color: 'var(--teal-500)' }}>bombela@softdab.tech</a></p>
+          <p><strong>Privacy Questions:</strong> <a href="mailto:privacy@vitaloop.today" style={linkStyle}>privacy@vitaloop.today</a></p>
+          <p><strong>General Support:</strong> <a href="mailto:support@vitaloop.today" style={linkStyle}>support@vitaloop.today</a></p>
+          <p><strong>Founder:</strong> <a href="mailto:bombela@softdab.tech" style={linkStyle}>bombela@softdab.tech</a></p>
           <p><strong>Mailing Address:</strong> VITALOOP TODAY, New York, WA, US</p>
         </div>
 
@@ -136,12 +119,12 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>Related Documents</h2>
-          <p><a href="/terms/" style={{ color: 'var(--teal-500)' }}>Terms of Service</a></p>
-          <p><a href="/privacy-policy/" style={{ color: 'var(--teal-500)' }}>Privacy Policy</a></p>
-          <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14 }}><em>This Privacy Policy is effective as of May 19, 2026.</em></p>
+          <p><a href="/terms/" style={linkStyle}>Terms of Service</a></p>
+          <p><a href="/privacy-policy/" style={linkStyle}>Privacy Policy</a></p>
+          <p style={{ color: 'var(--vtl-color-text-muted)', fontSize: 'var(--vtl-font-size-body)' }}><em>This Privacy Policy is effective as of May 19, 2026.</em></p>
         </div>
       </section>
-
+      </main>
       <Footer />
     </div>
   )

@@ -2,21 +2,19 @@ import { Link } from 'react-router-dom'
 import { RotateCcw, ShieldCheck, Stethoscope } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 export default function RefundPolicy() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
+    <div className="min-h-screen bg-[color:var(--vtl-color-canvas)] text-[color:var(--vtl-color-ink)]">
       <Seo
         title="Refund Policy | VITALOOP"
         description="Read the VITALOOP refund, cancellation, subscription access, and billing support policy."
         path="/refund-policy"
       />
-      <main className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:py-20">
-        <Link to="/" className="text-sm font-semibold text-emerald-700 underline-offset-4 hover:underline">
-          ← Back to VITALOOP
-        </Link>
-
-        <section className="mt-10">
+      <PageHeader />
+      <main className="mx-auto w-full max-w-[960px] px-4 py-12 sm:px-6 lg:py-20">
+        <section>
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
             <RotateCcw className="h-4 w-4" />
             Refund policy

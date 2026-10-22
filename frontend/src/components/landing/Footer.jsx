@@ -16,8 +16,7 @@ const HEALTH_HUB_LINKS = [
 
 const COMPANY_LINKS = [
   { label: 'Team', href: '/team/' },
-  { label: 'For practitioners', href: '/for-nutritionists/' },
-  { label: 'For teams', href: '/for-nutritionists/' },
+  { label: 'For practitioners & teams', href: '/for-nutritionists/' },
   { label: 'For investors', href: '/for-investors/' },
 ]
 
@@ -27,7 +26,7 @@ const TRUST_LINKS = [
   { label: 'Refund policy', href: '/refund-policy/' },
   { label: 'Editorial policy', href: '/editorial-policy/' },
   { label: 'Medical review policy', href: '/medical-review-policy/' },
-  { label: 'Medical disclaimer', href: '/terms/' },
+  { label: 'Medical disclaimer', href: '/terms/#medical-disclaimer' },
 ]
 
 const SOCIAL_LINKS = [

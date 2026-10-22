@@ -22,6 +22,8 @@ const TRUST_PAGES = [
   ['Editorial team', '/authors/vitaloop-editorial-team/'],
   ['Privacy policy', '/privacy-policy/'],
   ['Terms of service', '/terms/'],
+  ['Refund policy', '/refund-policy/'],
+  ['Medical disclaimer', '/terms/#medical-disclaimer'],
 ]
 
 function LinkGroup({ title, links }) {
