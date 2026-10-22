@@ -23,7 +23,7 @@ import { test, expect, type Page, type Route } from '@playwright/test'
 // contracts (see output/p37c-.../p37e-...-2026-09-20.md and
 // frontend/src/lib/todayViewModel.js) — not invented shapes.
 
-const LOCAL_BASE = 'http://localhost:5173'
+const LOCAL_BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173'
 const SUPABASE_AUTH_STORAGE_KEY = 'sb-bfjxkzydonhwmafnyktt-auth-token'
 
 const DEFAULT_ENTITLEMENTS_FREE = {
@@ -187,6 +187,12 @@ function collectRequestPaths(page: Page) {
 async function gotoToday(page: Page) {
   await page.goto(`${LOCAL_BASE}/dashboard`)
   await page.waitForLoadState('networkidle')
+}
+
+// The dashboard owns exactly one visually primary action: NextBestAction.
+// Contextual cockpit actions deliberately remain quiet links.
+async function expectOneDashboardPrimaryAction(page: Page) {
+  await expect(page.locator('.coach-button--primary')).toHaveCount(1)
 }
 
 test.describe('Today dashboard — P37f fixture QA', () => {
@@ -635,9 +641,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Transferrin saturation').first()).toBeVisible()
     await expect(page.getByText(/transferrin_saturation/)).toHaveCount(0)
     await expect(page.getByText('Missing context', { exact: true })).toBeVisible()
-    // P45: no filled/pill button chrome on Dashboard home -- every action
-    // is bold text, including what used to be the one CoachButton primary.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
   })
 
   test('controlled symptom context is visible and provenance confirms the report snapshot', async ({ page }) => {
@@ -695,10 +699,10 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     await expect(page.getByText('Discuss thyroid pattern with a doctor.').first()).toBeVisible()
     await expect(page.getByText('Some answers suggest timely clinician review is important.')).toBeVisible()
-    // "This week" leads with the clinician-review row, rendered as the
-    // page's one primary CTA -- P45: bold text, no button chrome.
+    // Clinical context is preserved, but the dashboard-level NextBestAction
+    // remains the page's sole primary CTA.
     await expect(page.getByText('Discuss with a doctor').first()).toBeVisible()
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
   })
 
   test('P37k.3: no safety at all -> no "Discuss with a doctor" row, no green all-clear banner', async ({ page }) => {
@@ -727,10 +731,8 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('This week', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Pinned markers')).toHaveCount(0)
     await expect(page.getByText('No biomarker values available for this report.')).toHaveCount(0)
-    // P45: no button chrome on Dashboard home -- the sparse primary action
-    // is bold text too.
     await expect(page.getByRole('button', { name: /View results/i }).first()).toBeVisible()
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     await expect(page.getByText('Follow-up timing')).toHaveCount(0) // no retest data at all -- section omitted, not faked
     await expect(page.getByText('Missing context', { exact: true })).toHaveCount(0) // no gaps -- section omitted, not faked
   })
@@ -752,10 +754,8 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: {} })
     await gotoToday(page)
     await expect(page.getByText('This week', { exact: true })).toBeVisible()
-    // P45: no button chrome on Dashboard home -- the forced Upload row is
-    // bold text like every other This week row.
     await expect(page.getByRole('button', { name: /Upload new results/i }).first()).toBeVisible()
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
   })
 
   test('P37k.6: no protocol/action_plan -> This week never fabricates a plan row, gap row still shown', async ({ page }) => {
@@ -878,10 +878,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    // P45: no button chrome on Dashboard home -- "primary" is still exactly
-    // one row/data-wise (Upload leads This week), but visually it's bold
-    // text like everything else, so no .coach-button exists at all here.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     await expect(page.getByRole('button', { name: /Upload new results/i }).first()).toBeVisible()
     // The saved plan item still appears, but only as a plain secondary link.
     await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
@@ -938,9 +935,8 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await page.waitForLoadState('networkidle')
     await expect(page.locator('.cockpit-skeleton-line')).toHaveCount(0)
     await expect(page.locator('.cockpit-lab-row__name')).toHaveText('Hemoglobin')
-    // Still no button chrome and one /results/{uploadId} call -- the
-    // loading phase never doubled up on either guarantee.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    // The loading phase never duplicates the one primary next step.
+    await expectOneDashboardPrimaryAction(page)
     // The legacy hero still never appeared, even after content resolved.
     await expect(page.locator('.today-hero')).toHaveCount(0)
   })
@@ -953,11 +949,11 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       resultsDelayMs: 800,
     })
     await page.goto(`${LOCAL_BASE}/dashboard`)
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     await expect(page.getByRole('button', { name: /Upload new results/i }).first()).toBeVisible()
     await page.waitForLoadState('networkidle')
-    // Same primary action, same label, after resolution -- no swap.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    // Same sole primary action after resolution -- no swap.
+    await expectOneDashboardPrimaryAction(page)
     await expect(page.getByRole('button', { name: /Upload new results/i }).first()).toBeVisible()
   })
 
@@ -1082,7 +1078,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     await expect(page.getByRole('button', { name: /Upload new results/i }).first()).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow).toBeLessThanOrEqual(1)
@@ -1146,10 +1142,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    // P45: no button chrome on Dashboard home -- the "one primary CTA"
-    // guarantee is now about which This week row is first/primary in data,
-    // not about a visually distinct filled button.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     const primaryRow = page.locator('.cockpit-row').first()
     // Fresh state's primary row here is the retest item (no safety, no
     // protocol/action_plan data in this fixture) -- never the very_old
@@ -1174,10 +1167,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    // P45: no button chrome -- "exactly one primary, no duplicate" is a
-    // data guarantee (first This week row) rendered as bold text like
-    // every other action, not a visually distinct filled button.
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
     const primaryRow = page.locator('.cockpit-row').first()
     // Primary label is the exact existing very_old copy, and its
     // destination is /upload -- the forced Upload row, never the saved plan.
@@ -1194,7 +1184,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(secondaryPlanLink).toBeVisible()
     const isCoachButton = await secondaryPlanLink.evaluate((el) => el.classList.contains('coach-button'))
     expect(isCoachButton).toBe(false)
-    await expect(page.locator('.coach-button')).toHaveCount(0)
+    await expectOneDashboardPrimaryAction(page)
   })
 
   test('P38b-4: delayed /results keeps the same shell -- CabinetPageFrame present throughout, no .today-hero, no layout swap', async ({ page }) => {
