@@ -52,7 +52,7 @@ export function LightHero() {
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
               <button
                 onClick={() => navigate('/symptom-intake')}
-                className="group inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[color:var(--vtl-action-primary-bg)] px-6 py-2.5 text-sm font-semibold text-[color:var(--vtl-action-primary-fg)] shadow-[var(--vtl-shadow-primary)] transition-colors hover:bg-[color:var(--vtl-action-primary-bg-hover)] sm:text-base"
+                className="group vtl-public-button vtl-public-button--primary shrink-0 px-6 text-sm sm:text-base"
               >
                 Start assessment
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -60,7 +60,7 @@ export function LightHero() {
 
               <button
                 onClick={() => navigate('/example-report')}
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--vtl-action-secondary-border)] bg-[color:var(--vtl-action-secondary-bg)] px-6 py-2.5 text-sm font-semibold text-[color:var(--vtl-action-secondary-fg)] transition-colors hover:border-[color:var(--vtl-color-brand-500)] sm:text-base"
+                className="vtl-public-button vtl-public-button--secondary shrink-0 px-6 text-sm sm:text-base"
               >
                 View example
               </button>

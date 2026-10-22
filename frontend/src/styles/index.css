@@ -81,6 +81,79 @@ a {
   outline-offset: 2px;
 }
 
+/* ──────────────── PUBLIC ACTION CONTRACT ────────────────
+ *
+ * Shared by public marketing and Health Hub surfaces. Cabinet controls keep
+ * their dedicated Coach/cabinet primitives; status colours are never used as
+ * CTA colours.
+ */
+.vtl-public-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vtl-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--vtl-radius-pill);
+  padding: 0 var(--vtl-space-6);
+  font-family: var(--vtl-font-sans);
+  font-size: var(--vtl-font-size-body);
+  font-weight: var(--vtl-font-weight-bold);
+  line-height: var(--vtl-line-height-tight);
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.vtl-public-button:focus-visible {
+  outline: 3px solid var(--vtl-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.vtl-public-button:disabled,
+.vtl-public-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.vtl-public-button--primary {
+  background: var(--vtl-action-primary-bg);
+  color: var(--vtl-action-primary-fg);
+  box-shadow: var(--vtl-shadow-primary);
+}
+
+.vtl-public-button--primary:hover {
+  background: var(--vtl-action-primary-bg-hover);
+  color: var(--vtl-action-primary-fg);
+  transform: translateY(-1px);
+}
+
+.vtl-public-button--large {
+  min-height: 48px;
+}
+
+.vtl-public-button--secondary {
+  border-color: var(--vtl-action-secondary-border);
+  background: var(--vtl-action-secondary-bg);
+  color: var(--vtl-action-secondary-fg);
+}
+
+.vtl-public-button--secondary:hover {
+  border-color: var(--vtl-color-brand-500);
+  background: var(--vtl-color-brand-50);
+  color: var(--vtl-color-brand-800);
+}
+
+.vtl-public-button--quiet {
+  background: transparent;
+  color: var(--vtl-color-brand-700);
+}
+
+.vtl-public-button--quiet:hover {
+  background: var(--vtl-color-brand-50);
+  color: var(--vtl-color-brand-800);
+}
+
 /* ──────────────── SAFE MOBILE BASELINE ──────────────── */
 @media (max-width: 600px) {
   body {

@@ -341,7 +341,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_cta_click', { location: 'hero', label: 'start_free' })
                   navigate('/login?signup=true')
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                className="vtl-public-button vtl-public-button--primary gap-2 px-6"
               >
                   Start for free
                 <ArrowRight className="h-4 w-4" />
@@ -351,7 +351,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_example_click', { location: 'hero' })
                   navigate('/example-report')
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50"
+                className="vtl-public-button vtl-public-button--secondary gap-2 px-6"
               >
                   View sample report
               </button>
@@ -684,7 +684,7 @@ export default function ForNutritionists() {
                 gaEvent('nutritionist_pricing_click', { plan: 'free' })
                 navigate('/login?signup=true')
               }}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-white"
+              className="vtl-public-button vtl-public-button--secondary w-full"
             >
                 Start free
             </button>
@@ -727,7 +727,7 @@ export default function ForNutritionists() {
                 gaEvent('nutritionist_pricing_click', { plan: 'practitioner_pro' })
                 navigate('/login?signup=true')
               }}
-              className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              className="vtl-public-button vtl-public-button--primary w-full"
             >
                 Try Practitioner Premium
             </button>
@@ -789,7 +789,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_cta_click', { location: 'bottom_cta', label: 'signup' })
                   navigate('/login?signup=true')
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-600 sm:w-auto"
+                className="vtl-public-button vtl-public-button--primary w-full gap-2 px-7 sm:w-auto"
               >
                   Sign up for free
                 <ArrowRight className="h-4 w-4" />
@@ -799,7 +799,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_how_it_works_click', { location: 'bottom_cta' })
                   navigate('/how-it-works')
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 sm:w-auto"
+                className="vtl-public-button vtl-public-button--secondary w-full gap-2 px-7 sm:w-auto"
               >
                   How the platform works
               </button>

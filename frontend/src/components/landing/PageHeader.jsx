@@ -29,7 +29,7 @@ export function PageHeader() {
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
   }
 
-  const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
+  const ctaBase = 'vtl-public-button'
   const navTextClass = 'text-slate-600 hover:text-slate-900'
 
   return (
@@ -58,7 +58,7 @@ export function PageHeader() {
           {/* Log in link — only for non-authenticated visitors */}
           <button
             onClick={() => navigate('/login')}
-            className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+            className="hidden sm:inline-flex vtl-public-button vtl-public-button--secondary px-4"
             style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
             tabIndex={(!authLoading && user) ? -1 : 0}
             aria-hidden={(!authLoading && user) ? true : undefined}
@@ -69,7 +69,7 @@ export function PageHeader() {
           {/* Cabinet / Sign Up button */}
           <button
             onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
-            className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
+            className={`hidden sm:inline-flex ${ctaBase} vtl-public-button--primary`}
           >
             {user ? 'Dashboard' : 'Sign Up'}
           </button>
@@ -114,7 +114,7 @@ export function PageHeader() {
                     closeMobileMenu()
                     navigate('/dashboard')
                   }}
-                  className="mt-1 w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                  className="mt-1 w-full vtl-public-button vtl-public-button--primary"
                 >
                   Dashboard
                 </button>
@@ -125,7 +125,7 @@ export function PageHeader() {
                       closeMobileMenu()
                       navigate('/login?signup=true')
                     }}
-                    className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                    className="w-full vtl-public-button vtl-public-button--primary"
                   >
                     Sign Up — Free
                   </button>
@@ -134,7 +134,7 @@ export function PageHeader() {
                       closeMobileMenu()
                       navigate('/login')
                     }}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="w-full vtl-public-button vtl-public-button--secondary"
                   >
                     Log in
                   </button>

@@ -92,14 +92,14 @@ export default function ExampleReport() {
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center rounded-lg bg-teal-500 px-8 py-4 text-sm font-semibold text-white shadow-md transition-all hover:bg-teal-600 hover:shadow-lg"
+                className="vtl-public-button vtl-public-button--primary vtl-public-button--large px-8"
               >
                 Start with your results
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
                 onClick={() => navigate('/how-it-works')}
-                className="inline-flex items-center rounded-lg border-2 border-teal-500 bg-white px-8 py-4 text-sm font-semibold text-teal-600 transition-all hover:bg-teal-50"
+                className="vtl-public-button vtl-public-button--secondary vtl-public-button--large px-8"
               >
                 See how it works
               </button>
@@ -225,14 +225,14 @@ export default function ExampleReport() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+                className="vtl-public-button vtl-public-button--primary"
               >
                 Get started free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
                 onClick={() => navigate('/for-nutritionists')}
-                className="inline-flex items-center rounded-2xl border border-white/35 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                className="vtl-public-button vtl-public-button--secondary"
               >
                 For teams and practitioners
               </button>

@@ -237,10 +237,10 @@ function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={isDisabled}
-          className={`w-full min-h-12 py-3 rounded-lg font-semibold mb-8 transition-all ${
+          className={`vtl-public-button vtl-public-button--large w-full py-3 mb-8 ${
             plan.featured
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-white'
-              : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 hover:border-emerald-300'
+              ? 'vtl-public-button--primary'
+              : 'vtl-public-button--secondary'
           } ${isDisabled ? 'cursor-default opacity-70' : ''}`}
         >
           {isCurrentPlan ? 'Current plan' : plan.cta}

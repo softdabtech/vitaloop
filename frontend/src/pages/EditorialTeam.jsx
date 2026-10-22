@@ -31,8 +31,8 @@ export default function EditorialTeam() {
           <h2 className="text-2xl font-black">How articles are produced</h2>
           <p className="mt-4 leading-8 text-slate-700">Writers use official health agencies, clinical guidelines, and peer-reviewed evidence. Claims are checked against cited sources, limitations are made visible, and medical-review status is disclosed on every article.</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/editorial-policy/" className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white">Editorial policy</Link>
-            <Link to="/medical-review-policy/" className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700">Medical review policy</Link>
+            <Link to="/editorial-policy/" className="vtl-public-button vtl-public-button--primary">Editorial policy</Link>
+            <Link to="/medical-review-policy/" className="vtl-public-button vtl-public-button--secondary">Medical review policy</Link>
           </div>
         </section>
       </main>

@@ -111,13 +111,13 @@ export default function HowItWorksSection() {
             <div className="mt-5 flex flex-wrap gap-2.5">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                className="vtl-public-button vtl-public-button--primary px-4"
               >
                 Start free <ArrowRight size={14} aria-hidden="true" />
               </button>
               <button
                 onClick={() => navigate('/#pricing')}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+                className="vtl-public-button vtl-public-button--secondary px-4"
               >
                 Compare plans <LineChart size={14} aria-hidden="true" />
               </button>

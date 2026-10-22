@@ -178,7 +178,7 @@ export default function Features() {
             </p>
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
+              className="vtl-public-button vtl-public-button--primary vtl-public-button--large gap-2 px-8 text-lg"
             >
               Get Started Free
               <span>→</span>

@@ -237,10 +237,10 @@ export default function SymptomIntake() {
                   ))}
                 </div>
                 <div className="mt-6 flex items-center justify-between">
-                  <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700">
+                  <button type="button" onClick={() => setStep(1)} className="vtl-public-button vtl-public-button--secondary">
                     <ArrowLeft className="h-4 w-4" /> Back
                   </button>
-                  <button type="button" onClick={() => duration && setStep(3)} className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!duration}>
+                  <button type="button" onClick={() => duration && setStep(3)} className="vtl-public-button vtl-public-button--primary" disabled={!duration}>
                     Continue <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -328,7 +328,7 @@ export default function SymptomIntake() {
                   <button type="button" onClick={() => {
                     gaSignupIntent('symptom_assessment')
                     navigate('/login?signup=true&returnUrl=%2Flab-plan%3Fsource%3Dsymptom-intake')
-                  }} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
+                  }} className="w-full vtl-public-button vtl-public-button--primary">
                     Create free account to save your plan <ArrowRight className="h-4 w-4" />
                   </button>
                   {!assessmentStored && (

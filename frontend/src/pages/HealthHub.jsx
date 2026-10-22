@@ -72,10 +72,10 @@ export default function HealthHub() {
                 Practical, evidence-aware guides for connecting symptoms, blood tests, biomarker context, and better clinician conversations.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link onClick={() => gaEvent('health_hub_cta_click', { destination: 'symptom_intake' })} to="/symptom-intake/" className="inline-flex items-center rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800">
+                <Link onClick={() => gaEvent('health_hub_cta_click', { destination: 'symptom_intake' })} to="/symptom-intake/" className="vtl-public-button vtl-public-button--primary">
                   Get your personal assessment <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
-                <Link to="/example-report/" className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:border-emerald-300">
+                <Link to="/example-report/" className="vtl-public-button vtl-public-button--secondary">
                   See an example report
                 </Link>
               </div>

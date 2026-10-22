@@ -602,7 +602,7 @@ export default function Landing() {
 
   const rootClasses = 'overflow-x-hidden bg-white text-slate-900'
   const sectionCard = 'border border-slate-200 bg-white/85 backdrop-blur'
-  const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
+  const ctaBase = 'vtl-public-button'
   const navTextClass = 'text-slate-600 hover:text-slate-900'
 
   const staggerParent = useMemo(() => ({
@@ -647,7 +647,7 @@ export default function Landing() {
             {/* Log in link — only for non-authenticated visitors; visibility keeps space reserved during auth check */}
             <button
               onClick={() => navigate('/login')}
-              className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              className="hidden sm:inline-flex vtl-public-button vtl-public-button--secondary"
               style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
               tabIndex={(!authLoading && user) ? -1 : 0}
               aria-hidden={(!authLoading && user) ? true : undefined}
@@ -658,7 +658,7 @@ export default function Landing() {
             {/* Cabinet / Sign Up button */}
             <button
               onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
-              className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
+              className={`hidden sm:inline-flex ${ctaBase} vtl-public-button--primary`}
             >
               {user ? 'Dashboard' : 'Sign Up'}
             </button>
@@ -700,7 +700,7 @@ export default function Landing() {
                 {user ? (
                   <button
                     onClick={() => { closeMobileMenu(); navigate('/dashboard') }}
-                    className="mt-1 w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                    className="mt-1 w-full vtl-public-button vtl-public-button--primary"
                   >
                     Dashboard
                   </button>
@@ -708,13 +708,13 @@ export default function Landing() {
                   <div className="mt-1 flex flex-col gap-2">
                     <button
                       onClick={() => { closeMobileMenu(); navigate('/login?signup=true') }}
-                      className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                      className="w-full vtl-public-button vtl-public-button--primary"
                     >
                       Sign Up — Free
                     </button>
                     <button
                       onClick={() => { closeMobileMenu(); navigate('/login') }}
-                      className={`w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                      className="w-full vtl-public-button vtl-public-button--secondary"
                     >
                       Log in
                     </button>
@@ -1150,14 +1150,14 @@ export default function Landing() {
               <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
                 <button
                   onClick={() => navigate('/for-nutritionists')}
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+                  className="vtl-public-button vtl-public-button--primary"
                 >
                   For practitioners
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </button>
                 <button
                   onClick={() => navigate('/for-nutritionists')}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                  className="vtl-public-button vtl-public-button--secondary"
                 >
                   For teams
                 </button>
@@ -1179,14 +1179,14 @@ export default function Landing() {
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     onClick={() => navigate('/health-hub/')}
-                    className={`${ctaBase} shrink-0 ${'bg-slate-900 text-white hover:bg-slate-700'}`}
+                    className={`${ctaBase} vtl-public-button--primary shrink-0`}
                   >
                     Explore Health Hub
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </button>
                   <button
                     onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                    className={`${ctaBase} shrink-0 ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+                    className={`${ctaBase} vtl-public-button--secondary shrink-0`}
                   >
                     Compare plans
                   </button>

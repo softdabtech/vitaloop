@@ -149,11 +149,11 @@ export default function ForInvestors() {
             VITALOOP is building the execution layer between symptom context, lab data, and repeated health outcomes. The product blends consumer habit loops with practitioner operations into one longitudinal system.
           </motion.p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
+            <button onClick={() => navigate('/login?signup=true')} className="vtl-public-button vtl-public-button--primary">
               Open product
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
-            <a href="mailto:info@softdab.tech?subject=VITALOOP%20Investor%20Deck" className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
+            <a href="mailto:info@softdab.tech?subject=VITALOOP%20Investor%20Deck" className="vtl-public-button vtl-public-button--secondary">
               Request investor deck
             </a>
           </div>
@@ -401,11 +401,11 @@ export default function ForInvestors() {
             </table>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a href="mailto:info@softdab.tech?subject=VITALOOP%20Investor%20Call" className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
+            <a href="mailto:info@softdab.tech?subject=VITALOOP%20Investor%20Call" className="vtl-public-button vtl-public-button--primary">
               Book investor call
               <ArrowRight className="ml-2 h-4 w-4" />
             </a>
-            <button onClick={() => navigate('/')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
+            <button onClick={() => navigate('/')} className="vtl-public-button vtl-public-button--secondary">
               Back to landing
             </button>
           </div>

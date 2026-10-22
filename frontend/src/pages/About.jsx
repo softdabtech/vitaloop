@@ -142,7 +142,7 @@ export default function About() {
               </p>
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
+                className="vtl-public-button vtl-public-button--primary vtl-public-button--large"
               >
                 Start with symptoms
                 <span>→</span>
@@ -389,14 +389,14 @@ export default function About() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
+                className="vtl-public-button vtl-public-button--primary vtl-public-button--large"
               >
                 Start with symptoms
                 <span>→</span>
               </button>
               <a
                 href="mailto:alex@vitaloop.today"
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-8 py-4 text-lg font-bold text-slate-700 hover:bg-slate-50 transition"
+                className="vtl-public-button vtl-public-button--secondary vtl-public-button--large"
               >
                 Talk to the founder
               </a>

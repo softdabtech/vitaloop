@@ -279,10 +279,10 @@ export default function Team() {
                 <p className="mt-4 text-base leading-8 text-slate-600 sm:text-lg">We’re growing the team, expanding our health expertise and speaking with partners and investors who share our view of longitudinal health intelligence.</p>
               </div>
               <div className="mt-7 flex flex-col gap-3 sm:mt-0 sm:flex-row sm:flex-shrink-0">
-                <Link to="/for-investors/" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
+                <Link to="/for-investors/" className="vtl-public-button vtl-public-button--primary">
                   For Investors <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
-                <Link to="/contact/" className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">Contact us</Link>
+                <Link to="/contact/" className="vtl-public-button vtl-public-button--secondary">Contact us</Link>
               </div>
             </div>
           </section>
