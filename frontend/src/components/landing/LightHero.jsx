@@ -49,34 +49,20 @@ export function LightHero() {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
               <button
                 onClick={() => navigate('/symptom-intake')}
-                className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[color:var(--vtl-action-primary-bg)] px-8 py-3 font-semibold text-[color:var(--vtl-action-primary-fg)] shadow-[var(--vtl-shadow-primary)] transition-all hover:bg-[color:var(--vtl-action-primary-bg-hover)]"
-                style={{
-                  minHeight: 44,
-                  border: 'none',
-                  borderRadius: 'var(--vtl-radius-pill)',
-                  background: 'var(--vtl-action-primary-bg)',
-                  color: 'var(--vtl-action-primary-fg)',
-                }}
+                className="group inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[color:var(--vtl-action-primary-bg)] px-6 py-2.5 text-sm font-semibold text-[color:var(--vtl-action-primary-fg)] shadow-[var(--vtl-shadow-primary)] transition-colors hover:bg-[color:var(--vtl-action-primary-bg-hover)] sm:text-base"
               >
-                Get your personal assessment
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                Start assessment
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
 
               <button
                 onClick={() => navigate('/example-report')}
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--vtl-action-secondary-border)] bg-[color:var(--vtl-action-secondary-bg)] px-8 py-3 font-semibold text-[color:var(--vtl-action-secondary-fg)] transition hover:border-[color:var(--vtl-color-brand-500)]"
-                style={{
-                  minHeight: 44,
-                  borderRadius: 'var(--vtl-radius-pill)',
-                  borderColor: 'var(--vtl-action-secondary-border)',
-                  background: 'var(--vtl-action-secondary-bg)',
-                  color: 'var(--vtl-action-secondary-fg)',
-                }}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--vtl-action-secondary-border)] bg-[color:var(--vtl-action-secondary-bg)] px-6 py-2.5 text-sm font-semibold text-[color:var(--vtl-action-secondary-fg)] transition-colors hover:border-[color:var(--vtl-color-brand-500)] sm:text-base"
               >
-                See example report
+                View example
               </button>
             </div>
 

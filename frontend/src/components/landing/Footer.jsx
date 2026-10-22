@@ -4,6 +4,9 @@ const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#problem' },
   { label: 'Example report', href: '/example-report/' },
   { label: 'Pricing', href: '/#pricing' },
+]
+
+const HEALTH_HUB_LINKS = [
   { label: 'Help Center', href: '/help/' },
   { label: 'Health Intelligence Hub', href: '/health-hub/' },
   { label: 'Fatigue & low energy', href: '/health-hub/topics/fatigue-low-energy/' },
@@ -42,34 +45,66 @@ function InstagramIcon() {
 }
 
 export default function Footer() {
+  const columns = [
+    { title: 'Product', links: PRODUCT_LINKS },
+    { title: 'Health Hub', links: HEALTH_HUB_LINKS },
+    { title: 'Professionals', links: COMPANY_LINKS },
+    { title: 'Trust', links: TRUST_LINKS },
+  ]
+
   return (
-    <footer className="border-t border-slate-200 bg-white py-10">
-      <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 lg:grid-cols-[1.25fr_0.7fr_0.7fr_0.7fr]">
-        <div>
-          <div className="flex items-center gap-2">
+    <footer className="border-t border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-canvas)]">
+      <div className="mx-auto w-full max-w-[1240px] px-4 py-12 sm:px-6 md:py-16">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.55fr)_repeat(4,minmax(0,0.82fr))]">
+          <div className="sm:col-span-2 lg:col-span-1">
             <BrandMark />
-          </div>
-          <p className="mt-4 max-w-md leading-relaxed text-slate-500">
-            Symptom-first lab intelligence, explainable Knowledge reports, and weekly health-loop tracking for people and professional teams.
-          </p>
-          <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-600">Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
-          <div className="mt-6 flex flex-col items-start gap-2">
-            <a href="mailto:info@softdab.tech" className="text-left text-slate-500 underline-offset-2 hover:underline">
+            <p className="mt-5 max-w-sm text-[15px] leading-7 text-[color:var(--vtl-color-text-muted)]">
+              Symptom-first lab intelligence, explainable Knowledge reports, and weekly health-loop tracking for people and professional teams.
+            </p>
+            <p className="mt-5 max-w-sm text-xs font-semibold uppercase leading-5 tracking-[0.15em] text-[color:var(--vtl-color-ink-secondary)]">
+              Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.
+            </p>
+            <a
+              href="mailto:info@softdab.tech"
+              className="mt-5 inline-flex min-h-11 items-center rounded-[var(--vtl-radius-pill)] border border-[color:var(--vtl-color-border-strong)] bg-[color:var(--vtl-color-surface)] px-4 text-sm font-semibold text-[color:var(--vtl-color-ink)] transition hover:border-[color:var(--vtl-color-brand-500)] hover:text-[color:var(--vtl-color-brand-700)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
+            >
               info@softdab.tech
             </a>
-            <p className="text-left text-slate-600">
-              © 2026 VITALOOP. Made by{' '}
-              <a
-                href="https://softdab.tech"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-700 underline decoration-current underline-offset-2 hover:text-emerald-600"
-              >
-                SoftDAB
-              </a>
-            </p>
           </div>
-          <div className="mt-6 flex items-center gap-3">
+
+          {columns.map((column) => (
+            <nav key={column.title} aria-label={column.title}>
+              <h2 className="text-xs font-bold uppercase tracking-[0.17em] text-[color:var(--vtl-color-brand-700)]">
+                {column.title}
+              </h2>
+              <div className="mt-5 flex flex-col items-start gap-3">
+                {column.links.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="text-sm leading-6 text-[color:var(--vtl-color-text-muted)] transition hover:text-[color:var(--vtl-color-brand-700)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </nav>
+          ))}
+        </div>
+
+        <div className="mt-12 flex flex-col gap-5 border-t border-[color:var(--vtl-color-border)] pt-6 text-sm text-[color:var(--vtl-color-text-muted)] sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © 2026 VITALOOP. Made by{' '}
+            <a
+              href="https://softdab.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[color:var(--vtl-color-brand-700)] underline decoration-current underline-offset-2 hover:text-[color:var(--vtl-color-brand-800)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
+            >
+              SoftDAB
+            </a>
+          </p>
+          <div className="flex items-center gap-3">
             {SOCIAL_LINKS.map((link) => (
               <a
                 key={link.label}
@@ -77,50 +112,9 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={link.label}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-emerald-500/20 hover:text-emerald-600"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface)] text-[color:var(--vtl-color-ink-secondary)] transition hover:border-[color:var(--vtl-color-brand-500)] hover:text-[color:var(--vtl-color-brand-700)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
               >
                 <InstagramIcon />
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Product</div>
-          <div className="mt-4 flex flex-col gap-3">
-            {PRODUCT_LINKS.map((link) => (
-              <a key={link.label} href={link.href} className="text-left text-slate-500 underline-offset-2 hover:underline">
-                {link.label}
-              </a>
-            ))}
-            <a
-              href="https://www.producthunt.com/products/softdab-custom-data-encryption-solution"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100"
-            >
-              Featured on Product Hunt
-            </a>
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Professionals</div>
-          <div className="mt-4 flex flex-col items-start gap-3 text-left">
-            {COMPANY_LINKS.map((link) => (
-              <a key={link.label} href={link.href} className="text-left text-slate-500 underline-offset-2 hover:underline">
-                {link.label}
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Trust</div>
-          <div className="mt-4 flex flex-col items-start gap-3 text-left">
-            {TRUST_LINKS.map((link) => (
-              <a key={link.label} href={link.href} className="text-left text-slate-500 underline-offset-2 hover:underline">
-                {link.label}
               </a>
             ))}
           </div>

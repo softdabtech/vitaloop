@@ -214,7 +214,7 @@ function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan
         <h3 className="text-2xl font-bold text-slate-900 mb-1">{plan.name}</h3>
 
         {/* Description */}
-        <p className="text-sm text-slate-600 mb-6">{plan.description}</p>
+        <p className="text-sm text-slate-600 mb-6 md:min-h-12">{plan.description}</p>
 
         {/* Price */}
         <motion.div
@@ -237,7 +237,7 @@ function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={isDisabled}
-          className={`w-full py-3 rounded-lg font-semibold mb-8 transition-all ${
+          className={`w-full min-h-12 py-3 rounded-lg font-semibold mb-8 transition-all ${
             plan.featured
               ? 'bg-emerald-500 hover:bg-emerald-400 text-white'
               : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 hover:border-emerald-300'

@@ -2,6 +2,7 @@ import { ArrowRight, BookOpen, Search, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Footer from '../components/landing/Footer.jsx'
+import { AnimatedFAQ, FAQ_ITEMS } from '../components/landing/AnimatedFAQ.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
 import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../data/healthHubContent.js'
@@ -45,6 +46,14 @@ export default function HealthHub() {
               url: `https://vitaloop.today/health-hub/${article.slug}/`,
             })),
           ],
+        }, {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: FAQ_ITEMS.map((item) => ({
+            '@type': 'Question',
+            name: item.question,
+            acceptedAnswer: { '@type': 'Answer', text: item.answer },
+          })),
         }]}
       />
       <PageHeader />
@@ -152,6 +161,8 @@ export default function HealthHub() {
             </div>
           </div>
         </section>
+
+        <AnimatedFAQ />
       </main>
       <Footer />
     </div>

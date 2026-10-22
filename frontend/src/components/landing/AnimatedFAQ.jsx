@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useMemo } from 'react'
 import { Search, ChevronDown } from 'lucide-react'
 
-const FAQ_ITEMS = [
+export const FAQ_ITEMS = [
   {
     question: 'Can I start with symptoms even without lab results?',
     answer: 'Yes. You can begin with symptom intake and guided follow-up questions. VITALOOP helps organize context and identify what may be useful to discuss and test next.',

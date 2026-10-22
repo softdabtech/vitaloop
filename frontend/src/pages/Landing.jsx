@@ -31,7 +31,6 @@ import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
-import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
@@ -178,37 +177,6 @@ const HERO_TRUST_SIGNALS = [
   },
 ]
 
-const FAQ_ITEMS = [
-  {
-    question: 'Can I start with symptoms even without lab results?',
-    answer: 'Yes. You can begin with symptom intake and guided follow-up questions. VITALOOP helps you organize context and identify what may be useful to discuss and test next.',
-  },
-  {
-    question: 'Does VITALOOP diagnose conditions?',
-    answer: 'No. VITALOOP is a wellness support and organization platform. It provides educational insights and protocol suggestions, not medical diagnosis or treatment.',
-  },
-  {
-    question: 'Will this replace my doctor?',
-    answer: 'No. It is designed to make your discussions with a qualified clinician more focused by organizing symptoms, lab context, and next-step questions.',
-  },
-  {
-    question: 'What do I get after uploading lab results?',
-    answer: 'You receive normalized biomarker interpretation, prioritized issues, and a structured protocol you can follow and refine over time.',
-  },
-  {
-    question: 'Can practitioners use VITALOOP with clients?',
-    answer: 'Yes. Practitioner workflows support client context review, progress monitoring, and clearer communication around protocol execution.',
-  },
-  {
-    question: 'How is this different from generic AI chat?',
-    answer: 'VITALOOP keeps your structured health context over time and connects symptom intake, lab normalization, and weekly feedback into one continuous workflow.',
-  },
-  {
-    question: 'How much does VITALOOP cost?',
-    answer: 'VITALOOP offers a free plan and paid plans for continuous tracking and practitioner workflows. Pricing details are available in the Pricing section.',
-  },
-]
-
 const SCHEMA_HOWTO = {
   '@context': 'https://schema.org',
   '@type': 'HowTo',
@@ -222,16 +190,6 @@ const SCHEMA_HOWTO = {
     { '@type': 'HowToStep', name: 'Receive prioritized protocol actions', text: 'Get a ranked action plan mapped to your context and biomarker patterns.', position: 4 },
     { '@type': 'HowToStep', name: 'Track weekly and adapt', text: 'Use weekly check-ins and retests to refine your protocol over time.', position: 5 },
   ],
-}
-
-const SCHEMA_FAQ = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    '@type': 'Question',
-    name: item.question,
-    acceptedAnswer: { '@type': 'Answer', text: item.answer },
-  })),
 }
 
 // Removed 2026-09-01: a dead `PRICING` const (never referenced anywhere in
@@ -658,7 +616,7 @@ export default function Landing() {
         title="Clinical Reasoning for Blood Tests & Symptoms | VITALOOP"
         description="Start with symptoms or upload blood test results. Get an explainable clinical reasoning map, biomarker context, lab discussion guidance, and next steps you can track."
         path="/"
-        schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
+        schemas={[SCHEMA_HOWTO]}
       />
 
 
@@ -797,21 +755,21 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-[990px] px-4 pb-4 pt-10 sm:px-6 md:pt-14">
           <motion.div
             {...fadeUp(reduced)}
-            className="overflow-hidden rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,#ecfdf5,#ffffff_50%,#f8fafc)] p-6 md:p-8"
+            className="overflow-hidden rounded-[var(--vtl-radius-panel)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface)] p-6 shadow-[var(--vtl-shadow-card)] md:p-8"
           >
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--vtl-color-border-strong)] bg-[color:var(--vtl-color-brand-50)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--vtl-color-brand-700)]">
               <Shield className="h-3.5 w-3.5" />
               Data safety
             </div>
-            <h2 className="text-[26px] font-semibold tracking-tight text-slate-900 md:text-[32px]">
+            <h2 className="text-[length:var(--vtl-font-size-heading)] font-bold leading-[var(--vtl-line-height-heading)] tracking-tight text-[color:var(--vtl-color-ink)] md:text-[32px]">
               How we store your data
             </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[color:var(--vtl-color-ink-secondary)] md:text-[length:var(--vtl-font-size-body-lg)]">
               VITALOOP uses encryption, access controls, workspace isolation, and privacy-focused processing to protect sensitive health information.
             </p>
 
-            <div className="mt-4 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="mt-5 flex items-start gap-3 rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border-strong)] bg-[color:var(--vtl-color-brand-50)] px-4 py-3 text-sm leading-6 text-[color:var(--vtl-color-ink-secondary)]">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--vtl-color-brand-700)]" />
               <span>
                 We do not sell, rent, or broker personal health data to advertisers or data marketplaces.
               </span>
@@ -823,55 +781,48 @@ export default function Landing() {
                   title: 'Technical safeguards',
                   body: 'Encryption in transit (TLS) and encrypted storage at rest for sensitive health records.',
                   icon: Lock,
-                  tone: 'from-emerald-500/20 to-teal-500/10 text-emerald-700',
                 },
                 {
                   title: 'Access controls',
                   body: 'Role-based access and workspace isolation limit data visibility to authorized users only.',
                   icon: ShieldCheck,
-                  tone: 'from-cyan-500/20 to-sky-500/10 text-cyan-700',
                 },
                 {
                   title: 'Audit controls',
                   body: 'System events are logged for traceability, review, and security investigations.',
                   icon: FileText,
-                  tone: 'from-indigo-500/20 to-blue-500/10 text-indigo-700',
                 },
                 {
                   title: 'Administrative safeguards',
                   body: 'Documented security procedures, access governance, and periodic control reviews.',
                   icon: Clock3,
-                  tone: 'from-amber-500/20 to-orange-500/10 text-amber-700',
                 },
                 {
                   title: 'Integrity and recovery',
                   body: 'Backups, reliability controls, and incident-response processes protect data continuity.',
                   icon: CheckCircle2,
-                  tone: 'from-violet-500/20 to-fuchsia-500/10 text-violet-700',
                 },
                 {
                   title: 'Data subject rights',
                   body: 'Users can request data export or deletion and review policy terms at any time.',
                   icon: Shield,
-                  tone: 'from-rose-500/20 to-pink-500/10 text-rose-700',
                 },
               ].map((item) => {
                 const Icon = item.icon
                 return (
                   <motion.div
                     key={item.title}
-                    whileHover={reduced ? undefined : { y: -3, scale: 1.01 }}
+                    whileHover={reduced ? undefined : { y: -2 }}
                     transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                    className="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-white/95 p-4 shadow-[0_1px_0_rgba(16,185,129,0.08)]"
+                    className="rounded-[var(--vtl-radius-card)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface)] p-4 shadow-[var(--vtl-shadow-card)]"
                   >
-                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_45%)]" />
                     <div className="flex items-start gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} ring-1 ring-black/5`}>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--vtl-radius-field)] bg-[color:var(--vtl-color-brand-50)] text-[color:var(--vtl-color-brand-700)]">
                         <Icon className="h-4.5 w-4.5" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900 tracking-tight">{item.title}</p>
-                        <p className="mt-1 text-xs leading-5 text-slate-600">{item.body}</p>
+                        <p className="text-sm font-semibold tracking-tight text-[color:var(--vtl-color-ink)]">{item.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-[color:var(--vtl-color-text-muted)]">{item.body}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -879,18 +830,18 @@ export default function Landing() {
               })}
             </div>
 
-            <div className="mt-5 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">
-              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="mt-5 flex items-start gap-3 rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-canvas)] px-4 py-3 text-sm leading-6 text-[color:var(--vtl-color-ink-secondary)]">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--vtl-color-brand-700)]" />
               <span>
                 Read our full Privacy Policy{' '}
-                <a href="/privacy-policy/" className="font-semibold text-emerald-700 underline-offset-2 hover:text-emerald-600 hover:underline">
+                <a href="/privacy-policy/" className="font-semibold text-[color:var(--vtl-color-brand-700)] underline-offset-2 hover:text-[color:var(--vtl-color-brand-800)] hover:underline">
                   here
                 </a>
                 .
               </span>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-900">
+            <div className="mt-4 rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border-strong)] bg-[color:var(--vtl-color-canvas)] px-4 py-3 text-sm leading-6 text-[color:var(--vtl-color-ink-secondary)]">
               <p>VITALOOP is a wellness tool, not a medical device.</p>
               <p>We implement HIPAA-aligned safeguards; formal HIPAA obligations apply when required by customer context and agreements.</p>
               <p>Always consult qualified healthcare providers for medical decisions.</p>
@@ -1264,65 +1215,6 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-10 ${sectionCard}`}>
-            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Built for repeated cycles</p>
-                <h2 className="mt-2 text-[28px] font-semibold tracking-tight md:text-[34px]">
-                  Not another one-off lab interpretation.
-                </h2>
-                <p className="mt-3 text-[16px] leading-7 text-slate-600">
-                  VITALOOP keeps the useful parts of each cycle: what you felt, what you tested,
-                  what changed, and what should be checked again.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  { icon: FileText, title: 'Clear record', body: 'Symptoms and labs stay connected.' },
-                  { icon: ListChecks, title: 'Next actions', body: 'Priorities are ranked before execution.' },
-                  { icon: Repeat2, title: 'Retest logic', body: 'Each upload informs the next cycle.' },
-                ].map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <article key={item.title} className="rounded-2xl border border-slate-200 bg-white p-5">
-                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <h3 className="mt-4 font-bold text-slate-900">{item.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
-                    </article>
-                  )
-                })}
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="mx-auto w-full max-w-[1240px] px-4 pb-24 pt-10 sm:px-6 md:pb-28 md:pt-16">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">Start with symptoms. Build your personalized loop.</h2>
-            <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Move from uncertainty to a clear plan with symptom intake, lab interpretation, and adaptive weekly execution.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => navigate('/symptom-intake')} className={`${ctaBase} bg-[color:var(--vtl-action-primary-bg)] text-[color:var(--vtl-action-primary-fg)] hover:bg-[color:var(--vtl-action-primary-bg-hover)]`}>
-                Get your personal assessment
-              </button>
-              <button onClick={() => navigate('/example-report')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                See example report
-              </button>
-              <button onClick={() => navigate('/for-nutritionists')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                For professionals
-              </button>
-              <a href="/help/" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                Help Center
-              </a>
-            </div>
-          </motion.div>
-        </section>
-
-        <AnimatedFAQ />
       </main>
 
       <Footer />

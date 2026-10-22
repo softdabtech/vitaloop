@@ -59,12 +59,9 @@ Avoid unsupported claims unless verified with source data:
 - KPI strip: `StatsBar.jsx`
 - Process loop copy: `HowItWorksTimeline.jsx`
 - Pricing plan copy: `InteractivePricing.jsx`
-- FAQ answers shown to users: `AnimatedFAQ.jsx`
-- FAQ schema copy for SEO: `Landing.jsx` (`FAQ_ITEMS` and `SCHEMA_FAQ`)
+- FAQ answers shown to users and FAQ schema source: `AnimatedFAQ.jsx` (rendered on `HealthHub.jsx`)
 
-When updating FAQ text, always update both:
-1. `AnimatedFAQ.jsx`
-2. `Landing.jsx` FAQ schema source
+When updating FAQ text, update `AnimatedFAQ.jsx`; `HealthHub.jsx` derives its schema from the same source.
 
 ## Pre-merge Copy Checklist
 1. No mention of image/photo uploads.
