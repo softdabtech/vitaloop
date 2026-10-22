@@ -513,7 +513,7 @@ export default function App() {
           <Route path="/symptom-check" element={<Navigate to="/questionnaire" replace />} />
           <Route path="/results-trends" element={<Navigate to="/lab-results" replace />} />
           <Route path="/upload" element={renderCabinetRoute(<Upload />)} />
-          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />)} />
+          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={<Navigate to="/dashboard" replace />} />

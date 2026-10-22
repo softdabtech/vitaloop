@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Loader2, RefreshCw, Upload } from 'lucide-react'
 import { CoachBadge, CoachButton, CoachCard, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { listLabPlanItems } from '../api/labPlan.js'
+import api from '../lib/api.js'
 import { useDashboardSummary, useLabResults, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { biomarkerDisplayName } from '../lib/biomarker-display.js'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -498,10 +499,13 @@ export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeRe
 
 export default function LabPlan() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const isUk = isUkrainianLocale()
   const [planItems, setPlanItems] = useState([])
   const [planLoading, setPlanLoading] = useState(true)
   const [planError, setPlanError] = useState(false)
+  const [publicAssessment, setPublicAssessment] = useState(null)
+  const [publicAssessmentLoading, setPublicAssessmentLoading] = useState(searchParams.get('source') === 'symptom-intake')
   const { data: questionnaireSession } = useQuestionnaireSession()
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
@@ -523,6 +527,22 @@ export default function LabPlan() {
   useEffect(() => {
     loadPlan()
   }, [loadPlan])
+
+  useEffect(() => {
+    if (searchParams.get('source') !== 'symptom-intake') return undefined
+    let active = true
+    api.get('/assessment/current')
+      .then(({ data }) => {
+        if (active) setPublicAssessment(data?.assessment || null)
+      })
+      .catch(() => {
+        if (active) setPublicAssessment(null)
+      })
+      .finally(() => {
+        if (active) setPublicAssessmentLoading(false)
+      })
+    return () => { active = false }
+  }, [searchParams])
 
   const uploaded = useMemo(() => new Set(Array.isArray(concernSummary?.linkedLabs) ? concernSummary.linkedLabs : []), [concernSummary])
   const statusFor = (item) => uploaded.has(item.name.toLowerCase()) ? 'uploaded' : 'suggested'
@@ -577,7 +597,7 @@ export default function LabPlan() {
   const recommendedSplit = useMemo(() => splitByLatestReport(RECOMMENDED_LABS), [splitByLatestReport])
   const optionalSplit = useMemo(() => splitByLatestReport(OPTIONAL_LABS), [splitByLatestReport])
 
-  if (!concern) {
+  if (!concern && !publicAssessmentLoading && !publicAssessment) {
     return (
       <div className="coach-shell">
         <EmptyCoachState
@@ -591,6 +611,11 @@ export default function LabPlan() {
     )
   }
 
+  const hasSavedPublicGuide = !concern && Boolean(publicAssessment)
+  const savedDiscussionLabs = Array.isArray(publicAssessment?.recommended_labs)
+    ? publicAssessment.recommended_labs
+    : []
+
   return (
     <div className="coach-shell coach-grid">
       <section className="coach-hero">
@@ -599,7 +624,7 @@ export default function LabPlan() {
             <p className="coach-eyebrow">{isUk ? 'План аналізів' : 'Lab Plan'}</p>
             <h1 className="coach-title-xl">{isUk ? 'Аналізи, які мають сенс для вашого поточного запиту.' : 'Tests that make sense for your current question.'}</h1>
             <p className="coach-body mt-4 max-w-2xl">
-              {isUk ? 'На основі: ' : 'Based on: '}<strong>{concern}</strong>{/\.\s*$/.test(concern) ? '' : '.'}
+              {isUk ? 'На основі: ' : 'Based on: '}<strong>{concern || (isUk ? 'збереженої перевірки симптомів' : 'your saved symptom check')}</strong>{/\.\s*$/.test(concern) ? '' : '.'}
               {' '}
               {isUk ? 'Це не діагноз. Це пріоритетний список для обговорення з лікарем і завантаження результатів.' : 'This is not a diagnosis. It is a prioritized checklist for clinician discussion and result upload.'}
             </p>
@@ -610,6 +635,25 @@ export default function LabPlan() {
           </div>
         </div>
       </section>
+
+      {hasSavedPublicGuide && (
+        <CoachCard className="p-5 sm:p-6" aria-live="polite">
+          <p className="coach-eyebrow">{isUk ? 'Збережений стартовий план' : 'Your saved starting plan'}</p>
+          <h2 className="coach-title-lg">{isUk ? 'Напрямки для обговорення вже збережені' : 'Your discussion directions are already saved'}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {isUk ? 'Це не діагноз. Використайте цей список для розмови з лікарем або завантажте наявні результати.' : 'This is not a diagnosis. Use this list to prepare a clinician conversation or upload results you already have.'}
+          </p>
+          {savedDiscussionLabs.length > 0 && (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2" aria-label={isUk ? 'Збережені напрямки' : 'Saved discussion directions'}>
+              {savedDiscussionLabs.map((lab) => (
+                <li key={lab?.key || lab?.name} className="rounded-[var(--vtl-radius-control)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface-subtle)] p-3 text-sm font-semibold text-[color:var(--vtl-color-ink)]">
+                  {lab?.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CoachCard>
+      )}
 
       <PersonalLabPlan
         items={planItems}

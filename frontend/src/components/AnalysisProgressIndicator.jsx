@@ -69,17 +69,17 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full space-y-6 rounded-xl bg-gradient-to-br from-emerald-50 to-slate-50 p-6 ring-1 ring-emerald-200"
+      className="w-full space-y-6 rounded-[var(--vtl-radius-card)] border border-[var(--vtl-color-border-strong)] bg-[linear-gradient(135deg,var(--vtl-color-surface),var(--vtl-color-brand-50))] p-6 shadow-[var(--vtl-shadow-card)]"
     >
       {/* Overall progress bar — capped, never reaches or claims 100%/complete */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">{copy.progressLabel}</p>
-          <p className="text-sm font-semibold text-emerald-600">{Math.round(overallProgress)}%</p>
+          <p className="text-sm font-medium text-[color:var(--vtl-color-ink-secondary)]">{copy.progressLabel}</p>
+          <p className="text-sm font-semibold text-[color:var(--vtl-color-brand-800)]">{Math.round(overallProgress)}%</p>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--vtl-color-border)]">
           <motion.div
-            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400"
+            className="h-full bg-[var(--vtl-action-primary-bg)]"
             initial={{ width: 0 }}
             animate={{ width: `${overallProgress}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -92,19 +92,19 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
         key={currentLabel}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 ring-1 ring-emerald-100"
+        className="flex min-h-11 items-center gap-3 rounded-[var(--vtl-radius-field)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] px-4 py-3"
       >
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           className="shrink-0"
         >
-          <Loader className="h-5 w-5 text-emerald-500" />
+          <Loader className="h-5 w-5 text-[color:var(--vtl-color-brand-800)]" />
         </motion.div>
-        <p className="text-sm text-slate-700">{currentLabel}</p>
+        <p className="text-sm text-[color:var(--vtl-color-ink-secondary)]">{currentLabel}</p>
       </motion.div>
 
-      <div className="flex flex-col items-center gap-1 text-center text-xs text-slate-500">
+      <div className="flex flex-col items-center gap-1 text-center text-xs text-[color:var(--vtl-color-ink-secondary)]">
         <p>{copy.elapsed(Math.floor(elapsedSeconds))}</p>
         <p>{copy.keepOpen}</p>
       </div>

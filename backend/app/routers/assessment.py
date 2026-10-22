@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import re
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.services import supabase_service as svc
+from app.dependencies import get_current_user
 from app.services.ua_wellbeing_openai import generate_ua_wellbeing_assessment
 from app.services.negative_evidence import _DOMAIN_MARKERS as _CLINICAL_DOMAIN_MARKERS
 from app.services.negative_evidence import _HUMAN_MARKER_NAMES as _CLINICAL_MARKER_NAMES
@@ -104,6 +106,11 @@ class EmailCaptureRequest(BaseModel):
     session_id: str = Field(..., min_length=8, max_length=120)
     assessment_id: str = Field(..., min_length=8, max_length=80)
     email: str = Field(..., min_length=3, max_length=254)
+
+
+class ClaimAssessmentRequest(BaseModel):
+    assessment_id: str = Field(..., min_length=8, max_length=80)
+    session_id: str = Field(..., min_length=8, max_length=120)
 
 
 def _client_context(request: Request) -> Dict[str, Any]:
@@ -314,6 +321,93 @@ async def submit_symptom_intake(body: SymptomAssessmentRequest, request: Request
         "recommended_labs": recommended_labs,
         "stored": stored,
         "disclaimer": "This is wellness education, not a diagnosis. Discuss symptoms and testing decisions with a qualified healthcare professional.",
+    }
+
+
+@router.post("/claim")
+async def claim_public_symptom_assessment(
+    body: ClaimAssessmentRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Attach a main-site anonymous intake to the authenticated owner.
+
+    Both opaque values must match the original row. This endpoint deliberately
+    does not accept health content from the browser and refuses UA rows, so a
+    main-site signup cannot alter the separate Ukrainian funnel.
+    """
+    user_id = str(current_user.get("sub") or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing user identity")
+
+    sb = svc._get_supabase()
+    try:
+        response = await svc._run(
+            lambda: sb.table("symptom_assessments")
+            .select("id,claimed_by_user_id")
+            .eq("id", body.assessment_id)
+            .eq("session_id", body.session_id)
+            .eq("source", "vitaloop.today")
+            .limit(1)
+            .execute()
+        )
+        assessment = (response.data or [None])[0]
+    except Exception as exc:
+        logger.warning("symptom_assessment_claim_lookup_failed error=%r", exc)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Assessment is temporarily unavailable") from exc
+
+    if not assessment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+
+    claimed_by = str(assessment.get("claimed_by_user_id") or "").strip()
+    if claimed_by and claimed_by != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Assessment belongs to another account")
+
+    try:
+        await svc._run(
+            lambda: sb.table("symptom_assessments")
+            .update({"claimed_by_user_id": user_id, "claimed_at": datetime.now(timezone.utc).isoformat()})
+            .eq("id", body.assessment_id)
+            .eq("session_id", body.session_id)
+            .execute()
+        )
+    except Exception as exc:
+        logger.warning("symptom_assessment_claim_update_failed error=%r", exc)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Could not save assessment") from exc
+
+    return {"claimed": True}
+
+
+@router.get("/current")
+async def get_current_public_symptom_assessment(current_user: dict = Depends(get_current_user)):
+    """Return only the current user's most recently claimed main-site guide."""
+    user_id = str(current_user.get("sub") or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing user identity")
+
+    sb = svc._get_supabase()
+    try:
+        response = await svc._run(
+            lambda: sb.table("symptom_assessments")
+            .select("recommended_labs,created_at")
+            .eq("claimed_by_user_id", user_id)
+            .eq("source", "vitaloop.today")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.warning("current_symptom_assessment_lookup_failed error=%r", exc)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Assessment is temporarily unavailable") from exc
+
+    assessment = (response.data or [None])[0]
+    if not assessment:
+        return {"assessment": None}
+
+    return {
+        "assessment": {
+            "recommended_labs": assessment.get("recommended_labs") or [],
+            "created_at": assessment.get("created_at"),
+        },
     }
 
 

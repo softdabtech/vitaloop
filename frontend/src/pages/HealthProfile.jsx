@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { AlertTriangle, Lightbulb } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaEvent } from '../lib/analytics.js'
-import { CoachButton, CoachCard, CoachInput, CoachProgress } from '../components/coach/CoachUI.jsx'
+import { CoachAlert, CoachButton, CoachCard, CoachInput, CoachProgress } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
@@ -194,9 +195,9 @@ const DEFAULT_PROFILE = {
 }
 
 function MetricTile({ label, value, tone = 'default', note }) {
-  const toneClass = tone === 'success' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50'
-  const valueClass = tone === 'success' ? 'text-emerald-900' : 'text-slate-950'
-  const labelClass = tone === 'success' ? 'text-emerald-700' : 'text-slate-500'
+  const toneClass = tone === 'success' ? 'border-[var(--vtl-color-border-strong)] bg-[var(--vtl-status-stable-bg)]' : 'border-[var(--vtl-color-border)] bg-[var(--vtl-color-canvas)]'
+  const valueClass = 'text-[color:var(--vtl-color-ink)]'
+  const labelClass = tone === 'success' ? 'text-[color:var(--vtl-status-stable)]' : 'text-[color:var(--vtl-color-ink-secondary)]'
   return (
     <div className={`rounded-2xl border p-4 ${toneClass}`}>
       <p className={`text-xs font-bold uppercase tracking-wide ${labelClass}`}>{label}</p>
@@ -204,7 +205,7 @@ function MetricTile({ label, value, tone = 'default', note }) {
       {/* dataviz skill: a status tone never rides on color alone -- a plain
           word next to the value gives the same reading regardless of color
           vision instead of leaving "why is this tile green" implicit. */}
-      {note && <p className="mt-0.5 text-xs font-semibold text-emerald-700">{note}</p>}
+      {note && <p className="mt-0.5 text-xs font-semibold text-[color:var(--vtl-status-stable)]">{note}</p>}
     </div>
   )
 }
@@ -375,23 +376,12 @@ export default function HealthProfile() {
         helper={ct().healthProfile.helper}
       />
 
-      {loading && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          {copy.loadingProfile}
-        </div>
-      )}
+      {loading && <CoachAlert className="mb-4">{copy.loadingProfile}</CoachAlert>}
 
       {profileLoadError && !loading && (
-        <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <CoachAlert tone="warning" className="mb-4" action={<CoachButton type="button" variant="secondary" onClick={loadProfile}>{copy.retryLoad}</CoachButton>}>
           <span>{copy.profileLoadWarning}</span>
-          <button
-            type="button"
-            onClick={loadProfile}
-            className="min-h-11 rounded-lg border border-amber-300 bg-white px-4 py-2 font-semibold text-amber-900 hover:bg-amber-100"
-          >
-            {copy.retryLoad}
-          </button>
-        </div>
+        </CoachAlert>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -486,7 +476,7 @@ export default function HealthProfile() {
                     <label
                       key={goal}
                       className={`flex cursor-pointer items-center gap-2.5 rounded-2xl border p-3 transition ${
-                        isChecked ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+                        isChecked ? 'border-[var(--vtl-color-border-strong)] bg-[var(--vtl-color-brand-50)]' : 'border-[var(--vtl-color-border)] bg-[var(--vtl-color-canvas)]'
                       }`}
                     >
                       <input
@@ -501,7 +491,7 @@ export default function HealthProfile() {
                         }}
                         className="h-[18px] w-[18px] cursor-pointer"
                       />
-                      <span className="text-sm font-medium text-slate-900">{copy.goalLabels[goalKey]}</span>
+                      <span className="text-sm font-medium text-[color:var(--vtl-color-ink)]">{copy.goalLabels[goalKey]}</span>
                     </label>
                   )
                 })}
@@ -511,8 +501,8 @@ export default function HealthProfile() {
 
           {/* Medical Flags - Important Context */}
           <CoachCard tone="attention" className="p-6 sm:p-8">
-            <h3 className="coach-title-lg mb-2 !text-rose-900">⚠️ {copy.conditionsTitle}</h3>
-            <p className="mb-5 text-sm text-rose-700">{copy.conditionsBody}</p>
+            <h3 className="coach-title-lg mb-2"><AlertTriangle className="mr-2 inline h-5 w-5 text-[color:var(--vtl-status-monitor)]" aria-hidden="true" />{copy.conditionsTitle}</h3>
+            <p className="mb-5 text-sm text-[color:var(--vtl-color-ink-secondary)]">{copy.conditionsBody}</p>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <CoachInput label={copy.medications}>
@@ -574,8 +564,8 @@ export default function HealthProfile() {
               </CoachInput>
             </div>
 
-            <p className="mt-4 text-xs text-rose-700">
-              ✓ {copy.privacyNote}
+            <p className="mt-4 text-xs text-[color:var(--vtl-status-monitor)]">
+              {copy.privacyNote}
             </p>
           </CoachCard>
 
@@ -588,9 +578,9 @@ export default function HealthProfile() {
         <div className="space-y-4">
           {/* Completion */}
           <CoachCard className="p-5">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.profileCompletion}</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--vtl-color-ink-secondary)]">{copy.profileCompletion}</p>
             <CoachProgress value={profileCompletion} />
-            <p className="mt-2 text-center text-xl font-extrabold text-slate-950">{profileCompletion}%</p>
+            <p className="mt-2 text-center text-xl font-extrabold text-[color:var(--vtl-color-ink)]">{profileCompletion}%</p>
           </CoachCard>
 
           {/* Biometrics Display */}
@@ -626,8 +616,8 @@ export default function HealthProfile() {
 
           {/* Info Box */}
           <CoachCard tone="soft" className="p-4">
-            <p className="mb-1.5 text-xs font-bold text-emerald-700">💡 {copy.tip}</p>
-            <p className="text-[13px] leading-relaxed text-emerald-900">{copy.tipBody}</p>
+            <p className="mb-1.5 text-xs font-bold text-[color:var(--vtl-color-brand-800)]"><Lightbulb className="mr-1 inline h-4 w-4" aria-hidden="true" />{copy.tip}</p>
+            <p className="text-[13px] leading-relaxed text-[color:var(--vtl-color-ink-secondary)]">{copy.tipBody}</p>
           </CoachCard>
         </div>
       </div>

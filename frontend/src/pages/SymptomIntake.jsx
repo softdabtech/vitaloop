@@ -8,6 +8,7 @@ import Seo from '../components/Seo.jsx'
 import api from '../lib/api.js'
 import { gaSignupIntent, gaSymptomAssessmentComplete } from '../lib/analytics.js'
 import { getPublicFunnelSessionId, trackPublicFunnelEvent } from '../lib/publicFunnel.js'
+import { stagePublicAssessmentHandoff } from '../lib/publicAssessmentHandoff.js'
 
 const SYMPTOMS = [
   { id: 'fatigue', label: 'Fatigue' },
@@ -76,6 +77,7 @@ export default function SymptomIntake() {
   const [sex, setSex] = useState('')
   const [loading, setLoading] = useState(false)
   const [recommendedLabs, setRecommendedLabs] = useState([])
+  const [assessmentStored, setAssessmentStored] = useState(false)
 
   const sessionId = useMemo(() => getPublicFunnelSessionId(), [])
 
@@ -131,6 +133,10 @@ export default function SymptomIntake() {
         source: 'vitaloop.today',
       })
       setRecommendedLabs(Array.isArray(data?.recommended_labs) ? data.recommended_labs : [])
+      setAssessmentStored(Boolean(data?.stored) && stagePublicAssessmentHandoff({
+        assessmentId: data?.assessment_id,
+        sessionId,
+      }))
       gaSymptomAssessmentComplete()
       setStep(4)
     } catch {
@@ -289,6 +295,15 @@ export default function SymptomIntake() {
                   </div>
                 </div>
 
+                <section className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="assessment-preview-title">
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Your preview</p>
+                  <h2 id="assessment-preview-title" className="mt-1 text-lg font-bold text-slate-950">A starting point for a clinician conversation</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    You selected {symptoms.map((symptom) => SYMPTOMS.find((item) => item.id === symptom)?.label).filter(Boolean).join(', ')}. The discussion directions below are ready to save with your account.
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-slate-800">Next step: create an account to keep this discussion guide and upload results when you have them.</p>
+                </section>
+
                 <div className="mt-5 grid gap-3">
                   {recommendedLabs.map((lab) => (
                     <div key={lab.key || lab.name} className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -310,9 +325,17 @@ export default function SymptomIntake() {
                 </div>
 
                 <div className="mt-5">
-                  <button type="button" onClick={() => { gaSignupIntent('symptom_assessment'); navigate('/login?signup=true') }} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
+                  <button type="button" onClick={() => {
+                    gaSignupIntent('symptom_assessment')
+                    navigate('/login?signup=true&returnUrl=%2Flab-plan%3Fsource%3Dsymptom-intake')
+                  }} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
                     Create free account to save your plan <ArrowRight className="h-4 w-4" />
                   </button>
+                  {!assessmentStored && (
+                    <p className="mt-2 text-center text-xs leading-5 text-slate-500">
+                      You can still create an account, but this browser could not prepare the assessment for saving.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

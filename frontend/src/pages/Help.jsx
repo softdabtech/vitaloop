@@ -4,6 +4,21 @@ import { HELP_SECTIONS, getArticle, searchArticles } from '../data/helpArticles.
 import Navbar from '../components/landing/Navbar.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import Seo from '../components/Seo.jsx'
+import { BookOpen, ChevronRight, CircleHelp, FileText, Home, Lightbulb, Menu, Search, X } from 'lucide-react'
+import { CoachAlert, CoachBadge, CoachButton, CoachCard, CoachInput, EmptyCoachState } from '../components/coach/CoachUI.jsx'
+import '../styles/coach-design-system.css'
+import '../styles/help-center.css'
+
+const SECTION_ICONS = {
+  getting_started: BookOpen,
+  lab_results: FileText,
+  default: CircleHelp,
+}
+
+function HelpSectionIcon({ sectionId, className = 'h-5 w-5' }) {
+  const Icon = SECTION_ICONS[sectionId] || SECTION_ICONS.default
+  return <Icon className={className} aria-hidden="true" />
+}
 
 // ─── Article content renderer ────────────────────────────────────────────────
 
@@ -13,7 +28,7 @@ function renderInline(text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>
+      return <strong key={i} className="font-semibold text-[color:var(--vtl-color-ink)]">{part.slice(2, -2)}</strong>
     }
     return part
   })
@@ -81,7 +96,7 @@ function ArticleBlock({ block }) {
       <ul className="space-y-2 mb-5 ml-1">
         {block.items.map((item, i) => (
           <li key={i} className="flex gap-3 text-slate-600 leading-relaxed">
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--vtl-color-brand-700)] flex-shrink-0" />
             <span>{renderInline(item)}</span>
           </li>
         ))}
@@ -92,7 +107,7 @@ function ArticleBlock({ block }) {
       <ol className="space-y-4 mb-6">
         {block.items.map((step, i) => (
           <li key={i} className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--vtl-action-primary-bg)] text-[var(--vtl-action-primary-fg)] text-sm font-bold flex items-center justify-center mt-0.5">
               {i + 1}
             </div>
             <div className="flex-1 pt-0.5">
@@ -107,20 +122,18 @@ function ArticleBlock({ block }) {
     )
   case 'tip':
     return (
-      <div className="flex gap-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl p-4 mb-5">
-        <span className="text-emerald-600 font-bold text-sm flex-shrink-0 mt-0.5">💡 Tip</span>
-        <p className="text-slate-700 text-sm leading-relaxed">{renderInline(block.text)}</p>
-      </div>
+      <CoachAlert className="mb-5" icon={Lightbulb}>
+        <p className="text-sm leading-relaxed"><strong>Tip.</strong> {renderInline(block.text)}</p>
+      </CoachAlert>
     )
   case 'status-table':
     return (
       <div className="space-y-2 mb-6">
         {block.items.map((row, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100" style={{ background: row.bg }}>
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: row.color }} />
-            <span className="font-semibold text-sm w-24 flex-shrink-0" style={{ color: row.color }}>{row.label}</span>
-            <span className="text-slate-600 text-sm">{row.desc}</span>
-          </div>
+          <CoachCard key={i} className="flex items-center gap-3 p-3">
+            <CoachBadge tone="neutral">{row.label}</CoachBadge>
+            <span className="text-sm text-[color:var(--vtl-color-ink-secondary)]">{row.desc}</span>
+          </CoachCard>
         ))}
       </div>
     )
@@ -144,13 +157,13 @@ function ArticleBlock({ block }) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         {block.items.map((item, i) => (
-          <div key={i} className="flex gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-2xl flex-shrink-0">{item.icon}</span>
+          <CoachCard key={i} className="flex gap-3 p-4">
+            <CircleHelp className="h-6 w-6 flex-shrink-0 text-[color:var(--vtl-color-brand-800)]" aria-hidden="true" />
             <div>
               <div className="font-semibold text-slate-900 text-sm mb-0.5">{item.title}</div>
               <div className="text-slate-500 text-sm leading-relaxed">{item.desc}</div>
             </div>
-          </div>
+          </CoachCard>
         ))}
       </div>
     )
@@ -196,19 +209,12 @@ function ArticleView({ articleId, onBack, helpBasePath }) {
 
   if (!article) {
     return (
-      <div className="text-center py-20">
-        <div className="text-5xl mb-4">🔍</div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Article not found</h2>
-        <p className="text-slate-500 mb-6">This article doesn't exist or may have moved.</p>
-        <button onClick={onBack} className="text-emerald-600 font-semibold hover:underline">
-          ← Back to Help Center
-        </button>
-      </div>
+      <EmptyCoachState icon={Search} title="Article not found" body="This article doesn't exist or may have moved." actionLabel="Back to Help Center" onAction={onBack} />
     )
   }
 
   return (
-    <div>
+    <div className="help-center-article">
       {/* Breadcrumb */}
       <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-2 sm:text-sm">
         <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Help Center</button>
@@ -221,9 +227,7 @@ function ArticleView({ articleId, onBack, helpBasePath }) {
       {/* Article header */}
       <div className="mb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-            {section?.icon} {section?.title}
-          </span>
+          <CoachBadge tone="primary"><HelpSectionIcon sectionId={section?.id} className="h-4 w-4" /> {section?.title}</CoachBadge>
           <span className="text-xs text-slate-400">{article.readTime} read</span>
         </div>
         <h1 className="text-2xl font-bold text-slate-900 leading-tight sm:text-3xl">{article.title}</h1>
@@ -251,7 +255,7 @@ function ArticleView({ articleId, onBack, helpBasePath }) {
                   onClick={() => navigate(buildHelpPath(helpBasePath, relId))}
                   className="text-left p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all group"
                 >
-                  <div className="text-xs text-slate-400 mb-1">{relSection?.icon} {relSection?.title}</div>
+                  <div className="flex items-center gap-1 text-xs text-slate-400 mb-1"><HelpSectionIcon sectionId={relSection?.id} className="h-3.5 w-3.5" /> {relSection?.title}</div>
                   <div className="font-semibold text-slate-800 text-sm group-hover:text-emerald-700 transition-colors">
                     {rel.title} →
                   </div>
@@ -279,17 +283,19 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
   ]
 
   return (
-    <div>
-      <section className="mb-8 rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6" aria-labelledby="medical-safety-heading">
-        <h2 id="medical-safety-heading" className="text-lg font-bold text-rose-950">Medical safety and urgent concerns</h2>
-        <p className="mt-2 text-sm leading-6 text-rose-900">
+    <div className="help-center-home">
+      <CoachAlert tone="critical" className="mb-8 p-5 sm:p-6">
+        <div>
+        <h2 id="medical-safety-heading" className="text-lg font-bold">Medical safety and urgent concerns</h2>
+        <p className="mt-2 text-sm leading-6">
           VITALOOP does not provide emergency care. If your symptoms may be urgent or severe, contact local emergency services or seek immediate medical care.
           Do not wait for VITALOOP analysis or a support response.
         </p>
-        <p className="mt-2 text-sm leading-6 text-rose-900">
+        <p className="mt-2 text-sm leading-6">
           For non-urgent questions about your results, discuss the findings with a qualified clinician.
         </p>
-      </section>
+        </div>
+      </CoachAlert>
 
       {/* Popular articles */}
       <div className="mb-10">
@@ -305,7 +311,7 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
                 onClick={() => navigate(buildHelpPath(helpBasePath, id))}
                 className="text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all group"
               >
-                <div className="text-xs text-slate-400 mb-1">{section?.icon} {section?.title}</div>
+                <div className="flex items-center gap-1 text-xs text-slate-400 mb-1"><HelpSectionIcon sectionId={section?.id} className="h-3.5 w-3.5" /> {section?.title}</div>
                 <div className="font-semibold text-slate-800 text-sm group-hover:text-emerald-700 transition-colors">
                   {article.title}
                 </div>
@@ -320,9 +326,9 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
       <h2 className="text-lg font-bold text-slate-900 mb-4">Browse by topic</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {HELP_SECTIONS.map(section => (
-          <div key={section.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <CoachCard key={section.id} className="overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-              <span className="text-2xl">{section.icon}</span>
+              <HelpSectionIcon sectionId={section.id} className="h-6 w-6 text-[color:var(--vtl-color-brand-800)]" />
               <span className="font-bold text-slate-900">{section.title}</span>
               <span className="ml-auto text-xs text-slate-400 font-medium">{section.articles.length} articles</span>
             </div>
@@ -352,11 +358,11 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
                 </li>
               )}
             </ul>
-          </div>
+          </CoachCard>
         ))}
       </div>
 
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6" aria-labelledby="support-paths-heading">
+      <CoachCard className="mt-8 p-5 sm:p-6" aria-labelledby="support-paths-heading">
         <h2 id="support-paths-heading" className="text-lg font-bold text-slate-900">Support paths</h2>
         <p className="mt-1 text-sm leading-6 text-slate-600">
           Email <a className="font-semibold text-emerald-700 underline underline-offset-2" href="mailto:info@softdab.tech">info@softdab.tech</a> for help with:
@@ -367,7 +373,7 @@ function HelpHome({ onSelectArticle, helpBasePath }) {
           <li><strong>Account issues:</strong> include the account email and what action failed.</li>
           <li><strong>Billing issues:</strong> include the account email and transaction date.</li>
         </ul>
-      </section>
+      </CoachCard>
     </div>
   )
 }
@@ -388,14 +394,14 @@ function SectionView({ sectionId, onBack, helpBasePath }) {
   }
 
   return (
-    <div>
+    <div className="help-center-section">
       <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-2 sm:text-sm">
         <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Help Center</button>
         <span>›</span>
         <span className="text-slate-700 font-medium">{section.title}</span>
       </div>
       <div className="mb-7 flex items-center gap-3 sm:mb-8">
-        <span className="text-3xl sm:text-4xl">{section.icon}</span>
+        <HelpSectionIcon sectionId={section.id} className="h-9 w-9 text-[color:var(--vtl-color-brand-800)]" />
         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{section.title}</h1>
       </div>
       <div className="space-y-2">
@@ -432,7 +438,7 @@ function SearchResults({ query, onClear, helpBasePath }) {
   const results = useMemo(() => searchArticles(query), [query])
 
   return (
-    <div>
+    <div className="help-center-search-results">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Search results</h2>
@@ -446,7 +452,7 @@ function SearchResults({ query, onClear, helpBasePath }) {
       </div>
       {results.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-5xl mb-4">🔍</div>
+          <Search className="mx-auto mb-4 h-12 w-12 text-[color:var(--vtl-color-brand-800)]" aria-hidden="true" />
           <h3 className="text-lg font-bold text-slate-900 mb-2">No results found</h3>
           <p className="text-slate-500 mb-6">Try different keywords or browse the sections below.</p>
           <button onClick={onClear} className="text-emerald-600 font-semibold hover:underline">
@@ -464,7 +470,7 @@ function SearchResults({ query, onClear, helpBasePath }) {
                 className="w-full text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition-all group flex items-center justify-between"
               >
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">{section?.icon} {section?.title}</div>
+                <div className="flex items-center gap-1 text-xs text-slate-400 mb-1"><HelpSectionIcon sectionId={section?.id} className="h-3.5 w-3.5" /> {section?.title}</div>
                   <div className="font-semibold text-slate-800 group-hover:text-emerald-700 transition-colors">
                     {article.title}
                   </div>
@@ -488,14 +494,14 @@ function Sidebar({ activeSection, activeArticle, helpBasePath }) {
   const navigate = useNavigate()
 
   return (
-    <nav className="space-y-1">
+    <nav className="help-center-sidebar space-y-1">
       <button
         onClick={() => navigate(buildHelpPath(helpBasePath))}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
           !activeSection && !activeArticle ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
         }`}
       >
-        🏠 All topics
+        <span className="inline-flex items-center gap-2"><Home className="h-4 w-4" aria-hidden="true" />All topics</span>
       </button>
 
       <div className="pt-2">
@@ -509,7 +515,7 @@ function Sidebar({ activeSection, activeArticle, helpBasePath }) {
                   isSectionActive ? 'text-emerald-700' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                {section.icon} {section.title}
+                <span className="inline-flex items-center gap-2"><HelpSectionIcon sectionId={section.id} className="h-4 w-4" />{section.title}</span>
               </button>
               {isSectionActive && (
                 <div className="ml-3 mt-0.5 space-y-0.5 border-l-2 border-emerald-100 pl-3">
@@ -567,7 +573,7 @@ export default function Help({ embedded = false, basePath = '/help' }) {
         description="Everything you need to know about using VITALOOP — symptom intake, lab uploads, protocols, billing, and more."
         path={canonicalPath}
       />
-      <div className={embedded ? 'min-h-full bg-transparent' : 'min-h-screen bg-slate-50'}>
+      <div className={embedded ? 'help-center-scope min-h-full bg-transparent' : 'min-h-screen bg-slate-50'}>
         {!embedded && <Navbar />}
 
         {!embedded && (
@@ -596,26 +602,21 @@ export default function Help({ embedded = false, basePath = '/help' }) {
 
               {/* Search bar */}
               <div className="relative mx-auto max-w-xl">
-                <svg
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[color:var(--vtl-color-ink-secondary)]" aria-hidden="true" />
                 <input
                   ref={searchRef}
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search articles… (e.g. symptoms, labs, protocol, billing)"
-                  className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="coach-input min-h-11 py-3.5 pl-12 pr-12 text-base"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[color:var(--vtl-color-ink-secondary)]"
                   >
-                    ✕
+                    <X className="h-5 w-5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -639,23 +640,22 @@ export default function Help({ embedded = false, basePath = '/help' }) {
 
             {/* Mobile sidebar toggle */}
             <div className="lg:hidden mb-1 w-full">
-              <button
+              <CoachButton
                 onClick={() => setMobileMenuOpen(v => !v)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
+                variant="secondary"
+                className="w-full"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <Menu className="h-4 w-4" aria-hidden="true" />
                 {mobileMenuOpen ? 'Hide topics' : 'Browse all topics'}
-              </button>
+              </CoachButton>
               {mobileMenuOpen && (
-                <div className="mt-2 max-h-[60svh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
+                <CoachCard className="mt-2 max-h-[60svh] overflow-y-auto p-4">
                   <Sidebar
                     helpBasePath={helpBasePath}
                     activeSection={sectionId}
                     activeArticle={articleId}
                   />
-                </div>
+                </CoachCard>
               )}
             </div>
 
@@ -674,14 +674,14 @@ export default function Help({ embedded = false, basePath = '/help' }) {
               </div>
 
               {/* Contact block */}
-              <div className={`${embedded ? 'mt-4 rounded-2xl' : 'mt-4 rounded-xl sm:mt-6 sm:rounded-2xl'} bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center text-white sm:p-6`}>
+              <div className={`${embedded ? 'mt-4 rounded-[var(--vtl-radius-card)]' : 'mt-4 rounded-xl sm:mt-6 sm:rounded-2xl'} bg-[var(--vtl-action-primary-bg)] p-5 text-center text-[color:var(--vtl-action-primary-fg)] sm:p-6`}>
                 <h3 className="text-lg font-bold mb-1">Still need help?</h3>
-                <p className="text-emerald-100 text-sm mb-4">
+                <p className="text-sm mb-4 opacity-85">
                   Email info@softdab.tech for upload, report, account, or billing questions. Our team usually replies within one business day.
                 </p>
                 <a
                   href="mailto:info@softdab.tech"
-                  className="inline-flex min-h-11 items-center gap-2 bg-white text-emerald-700 font-bold text-sm px-5 py-2.5 rounded-full hover:bg-emerald-50 transition-colors"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-[var(--vtl-radius-pill)] border border-[var(--vtl-action-secondary-border)] bg-[var(--vtl-action-secondary-bg)] px-5 py-2.5 text-sm font-bold text-[color:var(--vtl-action-secondary-fg)]"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

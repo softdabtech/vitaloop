@@ -1,5 +1,6 @@
 import api from '../lib/api.js'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
+import { claimPendingPublicAssessment } from '../lib/publicAssessmentHandoff.js'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
 const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL || 'https://vitaloop.today').replace(/\/$/, '')
@@ -87,7 +88,7 @@ function resolveLocalProductPath(mePayload, normalizedReturnUrl) {
   const role = resolveGlobalRole(mePayload)
   const onboardingCompleted = Boolean(mePayload?.user?.onboarding_completed ?? mePayload?.onboarding_completed)
 
-  if (normalizedReturnUrl && (normalizedReturnUrl.startsWith('/dashboard') || normalizedReturnUrl.startsWith('/onboarding') || normalizedReturnUrl.startsWith('/subscription'))) {
+  if (normalizedReturnUrl && (normalizedReturnUrl.startsWith('/dashboard') || normalizedReturnUrl.startsWith('/onboarding') || normalizedReturnUrl.startsWith('/subscription') || normalizedReturnUrl.startsWith('/lab-plan'))) {
     return normalizedReturnUrl
   }
 
@@ -99,6 +100,10 @@ function resolveLocalProductPath(mePayload, normalizedReturnUrl) {
 
 export async function resolvePostLoginDestination(returnUrl = null) {
   const normalized = normalizeReturnUrl(returnUrl)
+  const assessmentClaimed = await claimPendingPublicAssessment()
+  const effectiveReturnUrl = assessmentClaimed
+    ? '/lab-plan?source=symptom-intake'
+    : normalized
   let authMe = null
   let authMeFailed = false
 
@@ -112,7 +117,7 @@ export async function resolvePostLoginDestination(returnUrl = null) {
 
   // End-users should stay in B2C app instead of CRM.
   if (authMe && resolveGlobalRole(authMe) === 'end_user') {
-    const localPath = resolveLocalProductPath(authMe, normalized)
+    const localPath = resolveLocalProductPath(authMe, effectiveReturnUrl)
     if (isCrmHost()) {
       return {
         url: `${APP_BASE_URL}${localPath}`,
@@ -141,8 +146,8 @@ export async function resolvePostLoginDestination(returnUrl = null) {
 
       if (accessToken) {
         const target = new URL(AUTH_POST_LOGIN_PATH)
-        if (normalized) {
-          target.searchParams.set('returnUrl', normalized)
+        if (effectiveReturnUrl) {
+          target.searchParams.set('returnUrl', effectiveReturnUrl)
         }
         const baseTarget = target.toString()
 
@@ -160,8 +165,8 @@ export async function resolvePostLoginDestination(returnUrl = null) {
       }
     }
 
-    const localFallback = normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding') || normalized.startsWith('/subscription'))
-      ? normalized
+    const localFallback = effectiveReturnUrl && (effectiveReturnUrl.startsWith('/dashboard') || effectiveReturnUrl.startsWith('/onboarding') || effectiveReturnUrl.startsWith('/subscription') || effectiveReturnUrl.startsWith('/lab-plan'))
+      ? effectiveReturnUrl
       : '/dashboard'
 
     if (isCrmHost()) {
@@ -192,8 +197,8 @@ export async function resolvePostLoginDestination(returnUrl = null) {
 
   // Always hand off auth token via the dedicated auth bridge endpoint.
   const target = new URL(AUTH_POST_LOGIN_PATH)
-  if (normalized) {
-    target.searchParams.set('returnUrl', normalized)
+  if (effectiveReturnUrl) {
+    target.searchParams.set('returnUrl', effectiveReturnUrl)
   }
 
   const baseTarget = target.toString()

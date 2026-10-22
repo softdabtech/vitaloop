@@ -1,17 +1,17 @@
 :root {
-  --coach-primary: #2ABFAA;
-  --coach-primary-dark: #109581;
-  --coach-primary-soft: #DDF8F2;
-  --coach-success: #22C55E;
-  --coach-warning: #F59E0B;
-  --coach-critical: #EF4444;
-  --coach-text: #0F172A;
-  --coach-muted: #475569;
-  --coach-bg: #F8FAFC;
-  --coach-surface: #FFFFFF;
-  --coach-border: #E2E8F0;
-  --coach-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-  --coach-radius: 20px;
+  --coach-primary: var(--vtl-color-brand-600);
+  --coach-primary-dark: var(--vtl-color-brand-800);
+  --coach-primary-soft: var(--vtl-color-brand-100);
+  --coach-success: var(--vtl-status-stable);
+  --coach-warning: var(--vtl-status-monitor);
+  --coach-critical: var(--vtl-status-review);
+  --coach-text: var(--vtl-color-ink);
+  --coach-muted: var(--vtl-color-ink-secondary);
+  --coach-bg: var(--vtl-color-canvas);
+  --coach-surface: var(--vtl-color-surface);
+  --coach-border: var(--vtl-color-border);
+  --coach-shadow: var(--vtl-shadow-raised);
+  --coach-radius: var(--vtl-radius-panel);
 }
 
 .coach-shell {
@@ -77,13 +77,10 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 32px;
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
-    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
-    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
-  border: 1px solid rgba(42, 191, 170, 0.2);
+  padding: var(--vtl-space-8);
+  border-radius: var(--vtl-radius-panel);
+  background: linear-gradient(135deg, var(--vtl-color-surface) 0%, var(--vtl-color-brand-50) 100%);
+  border: 1px solid var(--vtl-color-border-strong);
   box-shadow: var(--coach-shadow);
 }
 
@@ -99,7 +96,7 @@
   width: 360px;
   height: 360px;
   border-radius: 50%;
-  background: rgba(42, 191, 170, 0.1);
+  background: var(--vtl-color-brand-100);
   pointer-events: none;
 }
 
@@ -154,6 +151,7 @@
 
 .coach-button:focus-visible,
 .coach-chip:focus-visible,
+.coach-segmented-control__option:focus-visible,
 .coach-link-button:focus-visible {
   outline: 3px solid var(--vtl-color-focus-ring);
   outline-offset: 3px;
@@ -233,7 +231,7 @@
   gap: 8px;
   border-radius: 999px;
   border: 1px solid var(--coach-border);
-  background: #fff;
+  background: var(--vtl-color-surface);
   padding: 0 16px;
   color: var(--coach-muted);
   font-size: 14px;
@@ -241,10 +239,78 @@
 }
 
 .coach-chip--active {
-  color: #0f766e;
-  border-color: rgba(42, 191, 170, 0.45);
+  color: var(--vtl-color-brand-800);
+  border-color: var(--vtl-color-border-strong);
   background: var(--coach-primary-soft);
 }
+
+.coach-segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--vtl-space-1);
+  padding: var(--vtl-space-1);
+  border: 1px solid var(--vtl-color-border);
+  border-radius: var(--vtl-radius-pill);
+  background: var(--vtl-color-canvas);
+}
+
+.coach-segmented-control__option {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vtl-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--vtl-radius-pill);
+  background: transparent;
+  color: var(--vtl-color-ink-secondary);
+  padding: 0 var(--vtl-space-4);
+  font: inherit;
+  font-size: var(--vtl-font-size-body);
+  font-weight: var(--vtl-font-weight-bold);
+  cursor: pointer;
+}
+
+.coach-segmented-control__option--active {
+  border-color: var(--vtl-color-border-strong);
+  background: var(--vtl-color-surface);
+  color: var(--vtl-color-brand-800);
+  box-shadow: var(--vtl-shadow-card);
+}
+
+.coach-segmented-control__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.coach-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--vtl-space-3);
+  border: 1px solid var(--vtl-color-border-strong);
+  border-radius: var(--vtl-radius-card);
+  padding: var(--vtl-space-4);
+  color: var(--vtl-color-ink);
+  background: var(--vtl-color-surface);
+}
+
+.coach-alert--info { background: var(--vtl-color-brand-50); }
+.coach-alert--warning { background: var(--vtl-status-monitor-bg); }
+.coach-alert--critical { background: var(--vtl-status-review-bg); }
+.coach-alert--success { background: var(--vtl-status-stable-bg); }
+
+.coach-alert__icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--vtl-color-brand-800);
+}
+
+.coach-alert--warning .coach-alert__icon { color: var(--vtl-status-monitor); }
+.coach-alert--critical .coach-alert__icon { color: var(--vtl-status-review); }
+.coach-alert--success .coach-alert__icon { color: var(--vtl-status-stable); }
+.coach-alert__content { min-width: 0; flex: 1; }
+.coach-alert__action { flex: 0 0 auto; }
 
 .coach-field {
   display: grid;
@@ -314,7 +380,7 @@
   overflow: hidden;
   height: 10px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--vtl-color-border);
 }
 
 .coach-progress__bar {
@@ -345,8 +411,8 @@
   max-width: calc(100vw - 32px);
   transform: translateY(4px);
   border-radius: 14px;
-  background: #0f172a;
-  color: #fff;
+  background: var(--vtl-color-ink);
+  color: var(--vtl-action-primary-fg);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.45;
@@ -370,7 +436,7 @@
 .coach-skeleton__line {
   height: 14px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%);
+  background: linear-gradient(90deg, var(--vtl-color-border) 0%, var(--vtl-color-canvas) 50%, var(--vtl-color-border) 100%);
   background-size: 220% 100%;
   animation: coach-shimmer 1.25s linear infinite;
 }
@@ -398,7 +464,7 @@
   width: 56px;
   height: 56px;
   border-radius: 20px;
-  color: #0f766e;
+  color: var(--vtl-color-brand-800);
   background: var(--coach-primary-soft);
 }
 
@@ -430,15 +496,15 @@
   height: 44px;
   border-radius: 16px;
   background: var(--coach-primary-soft);
-  color: #0f766e;
+  color: var(--vtl-color-brand-800);
 }
 
 .coach-kpi__icon--warning,
-.coach-insight__icon--warning { background: #fef3c7; color: #92400e; }
+.coach-insight__icon--warning { background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); }
 .coach-kpi__icon--success,
-.coach-insight__icon--success { background: #dcfce7; color: #15803d; }
+.coach-insight__icon--success { background: var(--vtl-status-stable-bg); color: var(--vtl-status-stable); }
 .coach-kpi__icon--critical,
-.coach-insight__icon--critical { background: #fee2e2; color: #b91c1c; }
+.coach-insight__icon--critical { background: var(--vtl-status-review-bg); color: var(--vtl-status-review); }
 
 .coach-kpi__label {
   margin: 0;
@@ -490,7 +556,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 10px;
-  color: #0f766e;
+  color: var(--vtl-color-brand-800);
   font-size: 14px;
   font-weight: 800;
 }
@@ -505,14 +571,14 @@
   min-height: 132px;
   border-radius: 20px;
   border: 1px solid var(--coach-border);
-  background: #fff;
+  background: var(--vtl-color-surface);
   padding: 16px;
 }
 
 .coach-journey__step--active {
-  border-color: rgba(42, 191, 170, 0.5);
-  background: linear-gradient(180deg, #ffffff 0%, #effdf9 100%);
-  box-shadow: 0 14px 32px rgba(42, 191, 170, 0.14);
+  border-color: var(--vtl-color-border-strong);
+  background: linear-gradient(180deg, var(--vtl-color-surface) 0%, var(--vtl-color-brand-50) 100%);
+  box-shadow: var(--vtl-shadow-raised);
 }
 
 .coach-journey__number {
@@ -521,14 +587,14 @@
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: var(--vtl-color-canvas);
   color: var(--coach-muted);
   font-size: 12px;
   font-weight: 900;
 }
 
 .coach-journey__step--active .coach-journey__number {
-  color: #fff;
+  color: var(--vtl-action-primary-fg);
   background: var(--coach-primary);
 }
 
@@ -613,7 +679,7 @@
   height: 30px;
   border-radius: 999px;
   border: 2px solid var(--coach-border);
-  background: #fff;
+  background: var(--vtl-color-surface);
   color: var(--coach-muted);
   font-size: 12px;
   font-weight: 900;
@@ -623,16 +689,16 @@
 .coach-stepper__node--done {
   border-color: var(--coach-primary);
   background: var(--coach-primary);
-  color: #fff;
+  color: var(--vtl-action-primary-fg);
 }
 
 .coach-stepper__node--active {
   width: 38px;
   height: 38px;
   border-color: var(--coach-primary);
-  background: #fff;
+  background: var(--vtl-color-surface);
   color: var(--coach-primary-dark);
-  box-shadow: 0 0 0 5px rgba(42, 191, 170, 0.16);
+  box-shadow: 0 0 0 5px var(--vtl-color-focus-ring);
 }
 
 .coach-stepper__label {

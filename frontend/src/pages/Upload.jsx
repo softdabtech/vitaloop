@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, UserCircle2 } from 'lucide-react'
+import { AlertCircle, FileText, Keyboard, UserCircle2 } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
-import { CoachBadge, CoachCard, CoachProgress } from '../components/coach/CoachUI.jsx'
+import { CoachAlert, CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSegmentedControl } from '../components/coach/CoachUI.jsx'
 import '../styles/dashboard2026.css'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -580,9 +580,9 @@ export default function Upload() {
         <CoachCard className="mb-6 p-5 sm:p-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{copy.pageTitle}</h1>
-              <p className="mt-1 text-sm leading-relaxed text-slate-500">{copy.pageSubtitle(activeConcern)}</p>
-              <p className="mt-1 text-xs text-slate-400">{copy.pageHelper}</p>
+              <h1 className="coach-title-xl">{copy.pageTitle}</h1>
+              <p className="coach-body mt-1 text-sm">{copy.pageSubtitle(activeConcern)}</p>
+              <p className="mt-1 text-xs text-[color:var(--vtl-color-ink-secondary)]">{copy.pageHelper}</p>
             </div>
             <CoachBadge tone={analyzing ? 'warning' : candidateReview ? 'primary' : 'neutral'}>
               {analyzing ? (isUk ? 'AI аналізує' : 'AI analysis') : candidateReview ? (isUk ? 'Перевірка' : 'Review') : (isUk ? 'Готово до завантаження' : 'Ready')}
@@ -591,7 +591,7 @@ export default function Upload() {
 
           <div className="mb-3">
             <p className="coach-eyebrow">{isUk ? 'Процес' : 'Upload flow'}</p>
-            <h2 className="text-base font-bold text-slate-900">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
+            <h2 className="coach-title-lg">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -600,192 +600,144 @@ export default function Upload() {
               { label: isUk ? 'AI-аналіз' : 'AI Analysis', body: isUk ? 'Показники, референси, контекст.' : 'Markers, ranges, context.', active: analyzing },
               { label: isUk ? 'Результати' : 'Results', body: isUk ? 'Підсумок, план, повторна перевірка.' : 'Summary, plan, retest timing.', active: Boolean(candidateReview) },
             ].map((item, index) => (
-              <div key={item.label} className={`rounded-2xl border p-4 ${item.active ? 'border-teal-300 bg-teal-50' : 'border-slate-200 bg-white'}`}>
+              <CoachCard key={item.label} tone={item.active ? 'soft' : 'default'} className="p-4">
                 <div className="mb-2 flex items-center gap-2">
-                  <span className={`grid h-8 w-8 place-items-center rounded-full text-xs font-black ${item.active ? 'bg-teal-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{index + 1}</span>
-                  <p className="font-extrabold text-slate-950">{item.label}</p>
+                  <span className={`grid h-8 w-8 place-items-center rounded-full text-xs font-black ${item.active ? 'bg-[var(--vtl-action-primary-bg)] text-[var(--vtl-action-primary-fg)]' : 'bg-[var(--vtl-color-canvas)] text-[var(--vtl-color-ink-secondary)]'}`}>{index + 1}</span>
+                  <p className="font-extrabold text-[color:var(--vtl-color-ink)]">{item.label}</p>
                 </div>
-                <p className="text-sm leading-6 text-slate-600">{item.body}</p>
-              </div>
+                <p className="text-sm leading-6 text-[color:var(--vtl-color-ink-secondary)]">{item.body}</p>
+              </CoachCard>
             ))}
           </div>
           {analyzing && <div className="mt-4"><CoachProgress value={66} label={isUk ? 'Обробка' : 'Processing'} tone="primary" /></div>}
         </CoachCard>
 
         {!activeConcern && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <CoachAlert className="mb-6" action={<CoachButton size="sm" onClick={() => navigate('/questionnaire')}>{isUk ? 'Почати з симптомів' : 'Start symptom check'}</CoachButton>}>
             <span>{isUk ? 'Найкраще працює шлях від симптомів: спочатку скарга, потім аналізи.' : 'Symptom-first path works best: start with a concern, then upload results.'}</span>
-            <button
-              onClick={() => navigate('/questionnaire')}
-              className="ml-4 rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-              {isUk ? 'Почати з симптомів' : 'Start symptom check'}
-            </button>
-          </div>
+          </CoachAlert>
         )}
 
-        {/* Tab Switcher */}
-        <div className="mb-6 flex gap-3 border-b border-slate-200">
-          <button
-            onClick={() => setUploadMode('pdf')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${
-              uploadMode === 'pdf'
-                ? 'border-b-2 border-emerald-500 text-emerald-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            📄 {isUk ? 'Завантажити PDF' : 'Upload Lab Report'}
-          </button>
-          <button
-            onClick={() => setUploadMode('manual')}
-            className={`pb-3 px-1 text-sm font-medium transition-colors ${
-              uploadMode === 'manual'
-                ? 'border-b-2 border-emerald-500 text-emerald-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            ✋ {isUk ? 'Ввести вручну' : 'Enter Manually'}
-          </button>
-        </div>
+        <CoachSegmentedControl
+          className="mb-6 max-w-xl"
+          label={isUk ? 'Спосіб введення результатів' : 'Result entry method'}
+          value={uploadMode}
+          onChange={setUploadMode}
+          options={[
+            { value: 'pdf', label: isUk ? 'Завантажити файл' : 'Upload lab report', icon: FileText },
+            { value: 'manual', label: isUk ? 'Ввести вручну' : 'Enter manually', icon: Keyboard },
+          ]}
+        />
 
         {uploadMode === 'pdf' && profileIncomplete && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">
-            <UserCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-            <div className="flex-1">
-              <p className="font-semibold text-blue-800">{isUk ? 'Профіль здоровʼя не заповнений' : 'Your health profile is incomplete'}</p>
-              <p className="mt-0.5 text-blue-700">
+          <CoachAlert className="mb-6" icon={UserCircle2} action={<CoachButton size="sm" onClick={() => navigate('/onboarding')}>{isUk ? 'Заповнити профіль' : 'Complete profile'}</CoachButton>}>
+            <div>
+              <p className="font-semibold">{isUk ? 'Профіль здоровʼя не заповнений' : 'Your health profile is incomplete'}</p>
+              <p className="mt-0.5 text-[color:var(--vtl-color-ink-secondary)]">
                 {isUk
                   ? 'Профіль із віком, вагою, цілями та ліками допомагає зробити аналіз точнішим. Ви можете завантажити файл зараз, але профіль краще заповнити.'
                   : 'A complete profile (height, weight, goals, medications) helps the AI and nutritionist give you more accurate, personalized analysis. You can still upload, but completing your profile first is recommended.'}
               </p>
             </div>
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="ml-1 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
-            >
-              {isUk ? 'Заповнити профіль' : 'Complete profile'}
-            </button>
-          </div>
+          </CoachAlert>
         )}
 
         {!subLoading && !isPremium && uploadsRemaining === 0 && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <CoachAlert tone="critical" className="mb-6" action={<CoachButton size="sm" onClick={() => triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED' })}>{isUk ? 'Оновити' : 'Upgrade'} {PREMIUM_PRICE_LABEL}</CoachButton>}>
             <span>
               {isUk
                 ? 'Ви вже використали свій 1 безкоштовний звіт (файл або ручне введення). Premium відкриває необмежені аналізи.'
                 : 'You\'ve already used your 1 free report (file upload or manual entry). Upgrade to Premium for unlimited analyses.'}
             </span>
-            <button
-              onClick={() => triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED' })}
-              className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
-            >
-              {isUk ? 'Оновити' : 'Upgrade'} {PREMIUM_PRICE_LABEL}
-            </button>
-          </div>
+          </CoachAlert>
         )}
 
         {!subLoading && !isPremium && uploadsRemaining > 0 && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <CoachAlert tone="warning" className="mb-6">
             {isUk ? 'Безкоштовний план: 1 аналіз показників через файл або ручне введення.' : 'Free plan: 1 biomarker entry allowed (via file upload or manual entry).'}
-          </div>
+          </CoachAlert>
         )}
 
         {uploadMode === 'pdf' ? (
           <>
             {candidateReview && (
-              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+              <CoachCard tone="attention" className="mb-6 p-4">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
-                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
+                    <h2 className="coach-title-lg">{copy.reviewTitle}</h2>
+                    <p className="mt-1 text-sm text-[color:var(--vtl-color-ink-secondary)]">{copy.reviewBody}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/results/${candidateReview.uploadId}`)}
-                    className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-amber-100"
-                  >
-                    {copy.reviewSkip}
-                  </button>
+                  <CoachButton variant="secondary" size="sm" onClick={() => navigate(`/results/${candidateReview.uploadId}`)}>{copy.reviewSkip}</CoachButton>
                 </div>
 
                 <div className="space-y-3">
                   {candidateReview.candidates.map(candidate => (
-                    <div key={candidate.id} className="rounded-xl border border-amber-200 bg-white p-3">
+                    <CoachCard key={candidate.id} className="p-3">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        <CoachBadge tone="warning">
                           {candidate.confidence_label === 'high'
                             ? copy.reviewHigh
                             : candidate.confidence_label === 'medium'
                               ? copy.reviewMedium
                               : copy.reviewLow}
-                        </span>
+                        </CoachBadge>
                         <div className="flex gap-2">
-                          <button
+                          <CoachButton
                             type="button"
                             onClick={() => updateReviewCandidate(candidate.id, { decision: 'confirmed' })}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                              candidate.decision !== 'rejected'
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
+                            size="sm"
+                            variant={candidate.decision !== 'rejected' ? 'primary' : 'secondary'}
                           >
                             {copy.reviewKeep}
-                          </button>
-                          <button
+                          </CoachButton>
+                          <CoachButton
                             type="button"
                             onClick={() => updateReviewCandidate(candidate.id, { decision: 'rejected' })}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                              candidate.decision === 'rejected'
-                                ? 'bg-rose-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
+                            size="sm"
+                            variant="secondary"
+                            aria-pressed={candidate.decision === 'rejected'}
                           >
                             {copy.reviewReject}
-                          </button>
+                          </CoachButton>
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
-                        <label className="text-xs font-semibold text-slate-600">
+                        <label className="coach-field text-xs">
                           {copy.reviewName}
                           <input
                             value={candidate.raw_name}
                             disabled={candidate.decision === 'rejected'}
                             onChange={(event) => updateReviewCandidate(candidate.id, { raw_name: event.target.value })}
-                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                            className="coach-input mt-1 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                           />
                         </label>
-                        <label className="text-xs font-semibold text-slate-600">
+                        <label className="coach-field text-xs">
                           {copy.reviewValue}
                           <input
                             value={candidate.raw_value}
                             disabled={candidate.decision === 'rejected'}
                             onChange={(event) => updateReviewCandidate(candidate.id, { raw_value: event.target.value })}
-                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                            className="coach-input mt-1 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                           />
                         </label>
-                        <label className="text-xs font-semibold text-slate-600">
+                        <label className="coach-field text-xs">
                           {copy.reviewUnit}
                           <input
                             value={candidate.raw_unit}
                             disabled={candidate.decision === 'rejected'}
                             onChange={(event) => updateReviewCandidate(candidate.id, { raw_unit: event.target.value })}
-                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                            className="coach-input mt-1 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                           />
                         </label>
                       </div>
-                    </div>
+                    </CoachCard>
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={confirmCandidateReview}
-                  disabled={confirmingCandidates}
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                >
+                <CoachButton type="button" onClick={confirmCandidateReview} disabled={confirmingCandidates} className="mt-4 w-full sm:w-auto">
                   {confirmingCandidates ? (isUk ? 'Оновлюємо…' : 'Updating…') : copy.reviewConfirm}
-                </button>
-              </div>
+                </CoachButton>
+              </CoachCard>
             )}
 
             <div className="mt-6">
@@ -793,51 +745,44 @@ export default function Upload() {
                 <div className="mb-6">
                   <AnalysisProgressIndicator analyzing={analyzing} elapsedSeconds={elapsedSeconds} />
                   {loadingWarning && (
-                    <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
-                      {loadingWarning}
-                    </div>
+                    <CoachAlert tone="warning" className="mt-4">{loadingWarning}</CoachAlert>
                   )}
                 </div>
               )}
 
               {errorInfo && (
-                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-rose-900">{errorInfo.title}</p>
-                      <p className="mt-0.5 text-sm text-rose-800">{errorInfo.message}</p>
-                      {errorInfo.hint && <p className="mt-1 text-xs text-rose-700">{errorInfo.hint}</p>}
+                <CoachAlert tone="critical" icon={AlertCircle} className="mb-4">
+                      <p className="text-sm font-bold">{errorInfo.title}</p>
+                      <p className="mt-0.5 text-sm">{errorInfo.message}</p>
+                      {errorInfo.hint && <p className="mt-1 text-xs">{errorInfo.hint}</p>}
                       <div className="mt-3 flex flex-wrap items-center gap-3">
                         {errorInfo.action === 'retry' && retryCount < 3 && selectedFile && (
-                          <button
+                          <CoachButton
                             onClick={handleRetry}
                             disabled={isBusy}
-                            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
+                            size="sm"
                           >
-                            ↻ {copy.retryAction(retryCount)}
-                          </button>
+                            {copy.retryAction(retryCount)}
+                          </CoachButton>
                         )}
                         {errorInfo.action === 'upgrade' && (
-                          <button
+                          <CoachButton
                             onClick={() => triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })}
-                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                            size="sm"
                           >
                             {copy.upgradeAction} {PREMIUM_PRICE_LABEL}
-                          </button>
+                          </CoachButton>
                         )}
                         {errorInfo.offerManualEntry && (
                           <button
                             onClick={() => setUploadMode('manual')}
-                            className="text-xs font-semibold text-rose-700 underline underline-offset-2 hover:text-rose-800"
+                            className="coach-link-button text-xs"
                           >
                             {copy.tryManualInstead}
                           </button>
                         )}
                       </div>
-                    </div>
-                  </div>
-                </div>
+                </CoachAlert>
               )}
 
               {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy} />}

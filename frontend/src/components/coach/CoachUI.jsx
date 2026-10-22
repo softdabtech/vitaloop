@@ -40,6 +40,40 @@ export function CoachChip({ children, active = false, icon: Icon, className = ''
   )
 }
 
+export function CoachSegmentedControl({ label, value, onChange, options, className = '' }) {
+  return (
+    <div className={`coach-segmented-control ${className}`} role="tablist" aria-label={label}>
+      {options.map(({ value: optionValue, label: optionLabel, icon: Icon, disabled = false }) => {
+        const active = optionValue === value
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            disabled={disabled}
+            className={`coach-segmented-control__option ${active ? 'coach-segmented-control__option--active' : ''}`}
+            onClick={() => onChange(optionValue)}
+          >
+            {Icon ? <Icon className="coach-button__icon" aria-hidden="true" /> : null}
+            {optionLabel}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export function CoachAlert({ children, tone = 'info', className = '', icon: Icon = Info, action }) {
+  return (
+    <div className={`coach-alert coach-alert--${tone} ${className}`} role={tone === 'critical' ? 'alert' : undefined}>
+      <Icon className="coach-alert__icon" aria-hidden="true" />
+      <div className="coach-alert__content">{children}</div>
+      {action ? <div className="coach-alert__action">{action}</div> : null}
+    </div>
+  )
+}
+
 export function CoachInput({ label, helper, error, className = '', children }) {
   return (
     <label className={`coach-field ${className}`}>

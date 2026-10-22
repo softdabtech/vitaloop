@@ -43,6 +43,9 @@ frontend/.env.production
 frontend/.env.staging
 frontend/.env.bak*
 
+# Local Playwright sessions contain authenticated cookies and tokens.
+frontend/.auth/
+
 # API keys and secrets (NEVER COMMIT)
 *.key
 *.pem

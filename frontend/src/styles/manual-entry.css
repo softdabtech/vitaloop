@@ -467,26 +467,59 @@
   }
 }
 
-/* Dark Mode Support (if needed in future) */
-@media (prefers-color-scheme: dark) {
-  .manual-entry-container {
-    color: #e2e8f0;
-  }
-
-  .field select,
-  .field input {
-    background-color: #1e293b;
-    color: #e2e8f0;
-    border-color: #334155;
-  }
-
-  .entry-card {
-    background-color: #0f172a;
-    border-color: #334155;
-  }
-
-  .entry-card.has-error {
-    background-color: #7f1d1d;
-    border-color: #fecaca;
-  }
-}
+/* Foundation override: the manual-entry flow predates the cabinet primitives.
+   Keep its stable class API, but make every rendered state consume the same
+   semantic surface, action, field, and status contract as Upload. */
+.manual-entry-container { color: var(--vtl-color-ink); font-family: var(--vtl-font-sans); }
+.manual-entry-loading p,
+.manual-entry-header .subtitle,
+.manual-entry-tips,
+.empty-state p,
+.hint-text { color: var(--vtl-color-ink-secondary); }
+.manual-entry-error,
+.alert.alert-error,
+.entry-card.has-error { border-color: var(--vtl-color-border-strong); background: var(--vtl-status-review-bg); }
+.manual-entry-error p,
+.alert.alert-error p,
+.error-text { color: var(--vtl-status-review); }
+.manual-entry-header h3,
+.field select,
+.field input { color: var(--vtl-color-ink); }
+.manual-entry-switch-link,
+.hint { color: var(--vtl-color-brand-800); }
+.manual-entry-switch-link:hover { color: var(--vtl-color-brand-700); }
+.manual-entry-tips summary,
+.field label,
+.alert p,
+.btn-add-entry { color: var(--vtl-color-ink-secondary); }
+.few-markers-notice { border-color: var(--vtl-color-border-strong); background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); }
+.alert,
+.empty-state,
+.btn-add-entry { border-color: var(--vtl-color-border); background: var(--vtl-color-canvas); }
+.empty-state { border-color: var(--vtl-color-border-strong); }
+.entry-card { border-color: var(--vtl-color-border); background: var(--vtl-color-surface); border-radius: var(--vtl-radius-card); box-shadow: var(--vtl-shadow-card); }
+.entry-card:hover { border-color: var(--vtl-color-border-strong); box-shadow: var(--vtl-shadow-raised); }
+.field select,
+.field input { min-height: 44px; border-color: var(--vtl-color-border-strong); background: var(--vtl-color-surface); border-radius: var(--vtl-radius-field); }
+.field select:hover:not(:disabled),
+.field input:hover:not(:disabled) { border-color: var(--vtl-color-brand-700); }
+.field select:focus,
+.field input:focus { border-color: var(--vtl-color-brand-700); box-shadow: 0 0 0 3px var(--vtl-color-focus-ring); }
+.field select:disabled { background: var(--vtl-status-unavailable-bg); color: var(--vtl-status-unavailable); }
+.field input.has-error,
+.field select.has-error { border-color: var(--vtl-status-review); background: var(--vtl-status-review-bg); }
+.field input.has-error:focus,
+.field select.has-error:focus { box-shadow: 0 0 0 3px var(--vtl-color-focus-ring); }
+.btn-remove { min-width: 44px; min-height: 44px; border-color: var(--vtl-color-border-strong); background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); border-radius: var(--vtl-radius-field); }
+.btn-remove:hover { border-color: var(--vtl-status-monitor); background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); }
+.badge { background: var(--vtl-status-unavailable-bg); color: var(--vtl-status-unavailable); border-radius: var(--vtl-radius-pill); }
+.hint.converting { color: var(--vtl-status-monitor); }
+.error-messages { background: var(--vtl-status-review-bg); border-left-color: var(--vtl-status-review); }
+.btn-add-entry { min-height: 44px; border-radius: var(--vtl-radius-pill); }
+.btn-add-entry:hover { border-color: var(--vtl-color-border-strong); background: var(--vtl-color-canvas); }
+.btn-add-entry.btn-primary { border-color: var(--vtl-color-brand-700); background: var(--vtl-color-brand-50); color: var(--vtl-color-brand-800); }
+.btn-add-entry.btn-primary:hover { background: var(--vtl-color-brand-100); }
+.entry-actions { border-top-color: var(--vtl-color-border); }
+.btn-analyze { min-height: 44px; border-radius: var(--vtl-radius-pill); background: var(--vtl-action-primary-bg); color: var(--vtl-action-primary-fg); }
+.btn-analyze:hover:not(:disabled) { background: var(--vtl-action-primary-bg-hover); box-shadow: var(--vtl-shadow-primary); }
+.btn-analyze:disabled { background: var(--vtl-status-unavailable-bg); color: var(--vtl-status-unavailable); }

@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { FileText } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { CoachButton } from './coach/CoachUI.jsx'
 
 function resolveRejectionMessage(rejection, isUk = false) {
   const code = rejection?.errors?.[0]?.code
@@ -63,21 +64,21 @@ export default function UploadZone({ onFile, onError, disabled = false }) {
     >
       <input {...getInputProps()} />
       <div className="vtl-upload-zone__icon mb-4" aria-hidden="true"><FileText size={36} strokeWidth={1.75} /></div>
-      <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
+      <p className="text-xl font-semibold text-[color:var(--vtl-color-ink)] sm:text-2xl">
         {isDragActive
           ? (isUk ? 'Відпустіть файл тут' : 'Drop your lab report here')
           : (isUk ? 'Перетягніть файл з аналізами' : 'Drag and drop your lab report')}
       </p>
-      <p className="mt-2 text-sm text-slate-500">{isUk ? 'PDF, зображення, XLS/XLSX або CSV. До 20MB.' : 'PDF, images, XLS/XLSX, or CSV. Max 20MB.'}</p>
+      <p className="mt-2 text-sm text-[color:var(--vtl-color-ink-secondary)]">{isUk ? 'PDF, зображення, XLS/XLSX або CSV. До 20MB.' : 'PDF, images, XLS/XLSX, or CSV. Max 20MB.'}</p>
 
-      <button
+      <CoachButton
         type="button"
         disabled={disabled}
         onClick={open}
-        className="cabinet-btn cabinet-btn--primary mt-5 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-5"
       >
         {isUk ? 'Обрати файл' : 'Choose File'}
-      </button>
+      </CoachButton>
 
       <p className="mt-3 text-xs text-[color:var(--vtl-color-brand-800)]">
         {isUk ? 'Файл безпечно завантажується для структурованого аналізу показників.' : 'Your file is securely uploaded for structured biomarker analysis.'}

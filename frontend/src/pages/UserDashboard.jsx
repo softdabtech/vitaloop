@@ -3,7 +3,7 @@ import { Activity, AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clipb
 import { useDashboardSummary, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { CoachBadge, CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
+import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import { buildTodayViewModel } from '../lib/todayViewModel.js'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -643,7 +643,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />{copy.ui.safetyNote}</h2>
           <p>{localizedSafetyText(safety.questionnaire.text, isUk)}</p>
           <p className="cockpit-safety-note__reason">{copy.ui.safetyReason}</p>
-          <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-primary-action mt-3">{copy.safety.reviewSymptomAnswersAction}</button>
+          <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-link mt-3">{copy.safety.reviewSymptomAnswersAction} &rarr;</button>
         </section>
       )}
 
@@ -792,10 +792,9 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
                     <p className="cockpit-row__title">{row.title}</p>
                     {row.why && <p className="cockpit-row__why">{row.why}</p>}
                   </div>
-                  {/* Keep exactly one visually dominant next action. When the
-                      symptom safety card already owns that role, every row
-                      here remains a secondary text action. */}
-                  <button type="button" onClick={() => navigate(row.actionTo)} className={row.isPrimary ? 'cockpit-primary-action cockpit-primary-action--compact' : 'cockpit-link cockpit-link--row'}>{row.actionLabel} &rarr;</button>
+                  {/* The dashboard-level NextBestAction is the only primary
+                      task. Contextual rows remain useful secondary links. */}
+                  <button type="button" onClick={() => navigate(row.actionTo)} className="cockpit-link cockpit-link--row">{row.actionLabel} &rarr;</button>
                 </div>
               ))}
             </div>
@@ -968,7 +967,7 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety, is
             <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl xl:text-5xl">{t.hero}</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">{t.heroBody}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link to={primaryAction.to} className="coach-button coach-button--primary coach-button--md w-full justify-center whitespace-nowrap sm:w-auto">
+              <Link to={primaryAction.to} className="coach-button coach-button--secondary coach-button--md w-full justify-center whitespace-nowrap sm:w-auto">
                 <primaryAction.Icon className="coach-button__icon" aria-hidden="true" />
                 <span>{primaryAction.label}</span>
                 <ArrowRight className="coach-button__icon" aria-hidden="true" />
@@ -1105,6 +1104,44 @@ export function uploadLifecycleState(upload) {
   return 'queued'
 }
 
+// Dashboard owns one clear next step. This accepts only existing state flags;
+// it never derives clinical meaning, creates a retest date, or changes data.
+export function getNextBestAction({
+  hasSymptomContext = false,
+  hasLabPlan = false,
+  hasUpload = false,
+  hasResult = false,
+  hasProtocol = false,
+  retestDue = false,
+  uploadId,
+}) {
+  if (retestDue) return { key: 'retest', label: 'Review retest plan', to: uploadId ? `/protocol/${uploadId}` : '/lab-plan' }
+  if (hasProtocol) return { key: 'protocol', label: 'Continue action plan', to: uploadId ? `/protocol/${uploadId}` : '/lab-plan' }
+  if (hasResult) return { key: 'results', label: 'Review results', to: uploadId ? `/results/${uploadId}` : '/lab-results' }
+  if (hasLabPlan || hasUpload) return { key: 'upload', label: 'Upload lab results', to: '/upload' }
+  if (hasSymptomContext) return { key: 'lab_plan', label: 'Build lab plan', to: '/lab-plan' }
+  return { key: 'symptoms', label: 'Start symptom check', to: '/questionnaire' }
+}
+
+function NextBestAction({ action, isUk, navigate }) {
+  const labels = isUk
+    ? {
+      symptoms: 'Почати перевірку симптомів', lab_plan: 'Створити план аналізів', upload: 'Завантажити результати аналізів',
+      results: 'Переглянути результати', protocol: 'Продовжити план дій', retest: 'Переглянути план повторної перевірки',
+    }
+    : {}
+  const label = labels[action.key] || action.label
+  return (
+    <CoachCard className="mb-5 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between" aria-label={isUk ? 'Наступний крок' : 'Next best action'}>
+      <div>
+        <p className="coach-eyebrow mb-1">{isUk ? 'Наступний крок' : 'Next step'}</p>
+        <p className="text-base font-bold text-[color:var(--vtl-color-ink)]">{label}</p>
+      </div>
+      <CoachButton onClick={() => navigate(action.to)} trailingIcon={ArrowRight}>{label}</CoachButton>
+    </CoachCard>
+  )
+}
+
 function UploadLifecycleNotice({ upload, isUk }) {
   const state = uploadLifecycleState(upload)
   if (!upload || state === 'ready') return null
@@ -1231,11 +1268,26 @@ export default function UserDashboard() {
   // below; it's never shown for a ready report merely because reportDetails
   // is still loading or failed.
   const cockpit = viewModel.cockpit
+  const latestUpload = summary?.blocks?.latest_upload || summary?.today_contract?.latest_ready_report || null
+  const retestEntries = Array.isArray(reportDetails?.knowledge_report?.retest_plan)
+    ? reportDetails.knowledge_report.retest_plan
+    : []
+  const retestDue = retestEntries.some((entry) => entry?.is_due === true || entry?.due === true || entry?.status === 'due')
+  const nextBestAction = getNextBestAction({
+    hasSymptomContext: hasConcern,
+    hasLabPlan: Boolean(summary?.blocks?.lab_plan || summary?.today_contract?.lab_plan),
+    hasUpload: Boolean(latestUpload),
+    hasResult: Boolean(readyUploadId),
+    hasProtocol: summary?.today_contract?.plan_exists_for_latest_ready_report === true,
+    retestDue,
+    uploadId: readyUploadId,
+  })
 
   return (
     <div className="coach-shell">
       <CabinetPageFrame>
         <UploadLifecycleNotice upload={summary?.blocks?.latest_upload} isUk={isUk} />
+        <NextBestAction action={nextBestAction} isUk={isUk} navigate={navigate} />
         {viewModel.status === 'contract_error' ? (
           <LimitedDashboard summary={summary} symptomContext={symptomContext} safety={viewModel.safety} navigate={navigate} refetch={refetch} copy={copy} isUk={isUk} />
         ) : cockpit ? (

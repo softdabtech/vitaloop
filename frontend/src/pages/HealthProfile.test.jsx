@@ -34,6 +34,7 @@ vi.mock('../components/dashboard/CabinetPageHeader.jsx', () => ({
   default: ({ title }) => <h1>{title}</h1>,
 }))
 vi.mock('../components/coach/CoachUI.jsx', () => ({
+  CoachAlert: ({ children, action, tone, ...props }) => <div role={tone === 'warning' ? 'alert' : undefined} {...props}>{children}{action}</div>,
   CoachButton: ({ children, ...props }) => <button {...props}>{children}</button>,
   CoachCard: ({ children }) => <section>{children}</section>,
   CoachInput: ({ label, children }) => <label>{label}{children}</label>,
