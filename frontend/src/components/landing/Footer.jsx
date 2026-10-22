@@ -31,6 +31,8 @@ const TRUST_LINKS = [
 
 const SOCIAL_LINKS = [
   { label: 'Instagram', href: 'https://www.instagram.com/vitaloop_today/' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/vitaloop-today' },
+  { label: 'Facebook', href: 'https://www.facebook.com/vitaloop.today' },
 ]
 
 function InstagramIcon() {
@@ -41,6 +43,28 @@ function InstagramIcon() {
       <circle cx="17.5" cy="6.5" r="1.5" />
     </svg>
   )
+}
+
+function LinkedInIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6.94 8.5A1.94 1.94 0 1 0 6.94 4.62a1.94 1.94 0 0 0 0 3.88ZM5.25 9.99h3.38V19H5.25V9.99ZM10.74 9.99h3.24v1.23h.05c.45-.86 1.56-1.77 3.22-1.77 3.44 0 4.08 2.27 4.08 5.22V19h-3.38v-3.84c0-.92-.02-2.1-1.28-2.1-1.28 0-1.48 1-1.48 2.03V19h-3.38V9.99Z" />
+    </svg>
+  )
+}
+
+function FacebookIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13.65 20v-7.3h2.45l.37-2.84h-2.82V8.05c0-.82.23-1.39 1.41-1.39h1.5V4.12c-.26-.04-1.15-.12-2.19-.12-2.17 0-3.66 1.32-3.66 3.76v2.1H8.25v2.84h2.46V20h2.94Z" />
+    </svg>
+  )
+}
+
+const SOCIAL_ICONS = {
+  Instagram: InstagramIcon,
+  LinkedIn: LinkedInIcon,
+  Facebook: FacebookIcon,
 }
 
 export default function Footer() {
@@ -104,18 +128,21 @@ export default function Footer() {
             </a>
           </p>
           <div className="flex items-center gap-3">
-            {SOCIAL_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={link.label}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface)] text-[color:var(--vtl-color-ink-secondary)] transition hover:border-[color:var(--vtl-color-brand-500)] hover:text-[color:var(--vtl-color-brand-700)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
-              >
-                <InstagramIcon />
-              </a>
-            ))}
+            {SOCIAL_LINKS.map((link) => {
+              const Icon = SOCIAL_ICONS[link.label]
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.label}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--vtl-radius-field)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface)] text-[color:var(--vtl-color-ink-secondary)] transition hover:border-[color:var(--vtl-color-brand-500)] hover:text-[color:var(--vtl-color-brand-700)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--vtl-color-focus-ring)]"
+                >
+                  <Icon />
+                </a>
+              )
+            })}
           </div>
         </div>
       </div>
