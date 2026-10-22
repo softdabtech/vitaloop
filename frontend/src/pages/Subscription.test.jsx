@@ -39,6 +39,9 @@ describe('Subscription checkout', () => {
   it('opens Creem billing portal for an active Premium subscription', async () => {
     subscriptionMock.mockReturnValue({ ...freeState, isPremium: true, subStatus: 'active', uploadLimit: Infinity, uploadsRemaining: Infinity })
     render(<Subscription />)
+    expect(screen.getByRole('heading', { name: 'Manage Premium' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Billing history' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Free' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel subscription' }))
     fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel' }))
     await waitFor(() => expect(creemMock.openCreemBillingPortal).toHaveBeenCalledOnce())

@@ -246,11 +246,31 @@ function statusGroupTone(group) {
   return 'border-slate-200 bg-slate-50 text-slate-600'
 }
 
+export function selectProgressMarkers({ topChanges = [], newMarkers = [], filter = 'attention' }) {
+  const changed = topChanges.map((marker) => ({ marker, kind: 'changed' }))
+  const insufficient = newMarkers.map((marker) => ({ marker, kind: 'insufficient' }))
+  const all = [...changed, ...insufficient]
+  const matches = filter === 'attention'
+    ? all.filter(({ marker }) => marker?.current_status_group === 'needs_review')
+    : filter === 'changed'
+      ? changed
+      : filter === 'insufficient'
+        ? insufficient
+        : all
+
+  return matches.filter(({ marker }, index) => {
+    const identity = marker?.canonical_name || marker?.name
+    return matches.findIndex(({ marker: candidate }) => (candidate?.canonical_name || candidate?.name) === identity) === index
+  })
+}
+
 // Stage 2D-2: renders the backend's already-computed `/progress/overview`
 // data. Formatting only — direction, dates, and values below are read
 // directly from the overview payload, never derived in this component.
 function ClinicalProgressPanel({ overview, loading, t, copy }) {
   const labels = t.labProgress
+  const isUk = isUkrainianLocale()
+  const [activeFilter, setActiveFilter] = useState('attention')
 
   if (loading) {
     return (
@@ -287,6 +307,13 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
     markers.findIndex((candidate) => candidate.canonical_name === marker.canonical_name) === index
   ))
   const timelineEligible = overview?.timeline_eligible === true
+  const progressMarkers = selectProgressMarkers({ topChanges, newMarkers, filter: activeFilter })
+  const filters = [
+    { id: 'attention', label: isUk ? 'Потребує уваги' : 'Requires attention' },
+    { id: 'changed', label: labels.changed },
+    { id: 'insufficient', label: isUk ? 'Недостатньо даних' : 'Not enough data' },
+    { id: 'all', label: isUk ? 'Усі' : 'All' },
+  ]
 
   let helperText = labels.helperEmpty
   if (mode === 'undated') helperText = labels.helperUndated
@@ -298,24 +325,44 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
       <h2 id="lab-progress-title" className="text-base font-semibold tracking-tight text-slate-800">{labels.title}</h2>
       <p className="mt-3 text-sm text-slate-500">{helperText}</p>
 
-      {timelineEligible && topChanges.length > 0 && (
+      {(topChanges.length > 0 || newMarkers.length > 0) && (
         <div className="mt-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{labels.changed}</p>
-          {topChanges.map((change) => (
-            <div key={change.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={isUk ? 'Фільтр динаміки' : 'Progress filter'}>
+            {filters.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => setActiveFilter(filter.id)}
+                aria-pressed={activeFilter === filter.id}
+                className={`min-h-11 rounded-[var(--vtl-radius-pill)] border px-3 text-xs font-semibold transition ${activeFilter === filter.id
+                  ? 'border-[var(--vtl-color-brand-700)] bg-[var(--vtl-color-brand-700)] text-[var(--vtl-action-primary-fg)]'
+                  : 'border-[var(--vtl-color-border-strong)] bg-[var(--vtl-color-surface)] text-[var(--vtl-color-ink-secondary)] hover:border-[var(--vtl-color-brand-600)]'}`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          {progressMarkers.length ? progressMarkers.map(({ marker, kind }) => (
+            <div key={`${kind}-${marker.canonical_name || marker.name}`} className="rounded-[var(--vtl-radius-field)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{change.name}</p>
-                <span className={`vtl-status-pill border ${statusGroupTone(change.current_status_group)}`}>
-                  {labels.direction[change.direction] || change.direction}
+                <p className="lab-progress-name min-w-0 flex-1 text-sm font-semibold text-slate-800">{marker.name}</p>
+                <span className={`vtl-status-pill border ${statusGroupTone(marker.current_status_group)}`}>
+                  {kind === 'changed' ? (labels.direction[marker.direction] || marker.direction) : labels.insufficientHistory}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500">
-                {labels.previousLabel} {change.previous_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.previous_date})
-                {' → '}
-                {labels.latestLabel} {change.latest_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.latest_date})
-              </p>
+              {kind === 'changed' && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {labels.previousLabel} {marker.previous_value}{marker.unit ? ` ${marker.unit}` : ''} ({labels.onLabel} {marker.previous_date})
+                  {' → '}
+                  {labels.latestLabel} {marker.latest_value}{marker.unit ? ` ${marker.unit}` : ''} ({labels.onLabel} {marker.latest_date})
+                </p>
+              )}
             </div>
-          ))}
+          )) : (
+            <p className="text-sm text-[var(--vtl-color-text-muted)]">
+              {isUk ? 'Немає результатів для цього фільтра.' : 'No results match this filter.'}
+            </p>
+          )}
         </div>
       )}
 
@@ -326,8 +373,11 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
       )}
 
       {historyMarkers.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">History</p>
+        <details className="mt-4 rounded-[var(--vtl-radius-field)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--vtl-color-ink)]">
+            {isUk ? `Показати історію показників (${historyMarkers.length})` : `Show marker history (${historyMarkers.length})`}
+          </summary>
+          <div className="mt-3 space-y-3">
           {historyMarkers.map((marker) => {
             const history = marker.history
             const hasUnsafeComparison = Boolean(marker.comparison_reason)
@@ -357,24 +407,8 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
               </div>
             )
           })}
-        </div>
-      )}
-
-      {newMarkers.length > 0 && (
-        <div className="mt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{labels.newMarkers}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {newMarkers.slice(0, 8).map((marker) => (
-              <span
-                key={marker.canonical_name}
-                className={`vtl-status-pill border ${statusGroupTone(marker.current_status_group)}`}
-                title={labels.insufficientHistory}
-              >
-                {marker.name}
-              </span>
-            ))}
           </div>
-        </div>
+        </details>
       )}
 
       <div className="mt-4 space-y-3">

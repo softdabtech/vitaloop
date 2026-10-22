@@ -178,6 +178,14 @@ export default function Subscription() {
     }
   }
 
+  async function handleManageBilling() {
+    try {
+      await openCreemBillingPortal()
+    } catch {
+      toast.error('Could not open subscription management. Please contact support if the problem continues.')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <CabinetPageHeader
@@ -295,37 +303,63 @@ export default function Subscription() {
         </div>
       </motion.section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {isPremium ? (
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className={`rounded-[20px] border p-6 shadow-sm ${isPremium ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}
+          className="rounded-[var(--vtl-radius-card)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-6 shadow-[var(--vtl-shadow-card)]"
         >
-          <h3 className="mb-2 text-lg font-bold text-slate-950">Premium</h3>
-          <p className="mb-5 text-sm leading-6 text-slate-600">
+          <h3 className="text-lg font-bold text-[var(--vtl-color-ink)]">{isUk ? 'Керування Premium' : 'Manage Premium'}</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--vtl-color-ink-secondary)]">
             {isUk
-              ? 'Створено для постійної роботи з результатами аналізів, звітами, планами дій, відстеженням прогресу та подальшими кроками.'
-              : 'Designed for ongoing work with lab results, reports, action plans, progress tracking, and follow-up loops.'}
+              ? 'Ваш доступ Premium активний. Перегляньте історію оплат або зверніться до підтримки, якщо потрібна допомога з підпискою.'
+              : 'Your Premium access is active. Review your billing history or contact support if you need help with your subscription.'}
           </p>
-          <FeatureList items={isUk ? PREMIUM_FEATURES.uk : PREMIUM_FEATURES.en} />
+          <div className="mt-5 flex flex-wrap gap-3">
+            {!isUk && (
+              <button type="button" onClick={handleManageBilling} className="cabinet-btn cabinet-btn--secondary min-h-11">
+                {isUk ? 'Керувати оплатою' : 'Manage billing'}
+              </button>
+            )}
+            <a href="/billing-history" className="cabinet-btn cabinet-btn--secondary min-h-11">
+              {isUk ? 'Історія оплат' : 'Billing history'}
+            </a>
+          </div>
         </motion.section>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="rounded-[var(--vtl-radius-card)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-6 shadow-[var(--vtl-shadow-card)]"
+          >
+            <h3 className="mb-2 text-lg font-bold text-[var(--vtl-color-ink)]">Premium</h3>
+            <p className="mb-5 text-sm leading-6 text-[var(--vtl-color-ink-secondary)]">
+              {isUk
+                ? 'Створено для постійної роботи з результатами аналізів, звітами, планами дій, відстеженням прогресу та подальшими кроками.'
+                : 'Designed for ongoing work with lab results, reports, action plans, progress tracking, and follow-up loops.'}
+            </p>
+            <FeatureList items={isUk ? PREMIUM_FEATURES.uk : PREMIUM_FEATURES.en} />
+          </motion.section>
 
-        <motion.section
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          <h3 className="mb-2 text-lg font-bold text-slate-950">{isUk ? 'Безкоштовний' : 'Free'}</h3>
-          <p className="mb-5 text-sm leading-6 text-slate-600">
-            {isUk
-              ? 'Легкий старт, щоб спробувати VITALOOP перед запитом повного доступу Premium.'
-              : 'A lightweight starting point for trying VITALOOP before requesting full Premium access.'}
-          </p>
-          <FeatureList items={isUk ? FREE_FEATURES.uk : FREE_FEATURES.en} />
-        </motion.section>
-      </div>
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rounded-[var(--vtl-radius-card)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-6 shadow-[var(--vtl-shadow-card)]"
+          >
+            <h3 className="mb-2 text-lg font-bold text-[var(--vtl-color-ink)]">{isUk ? 'Безкоштовний' : 'Free'}</h3>
+            <p className="mb-5 text-sm leading-6 text-[var(--vtl-color-ink-secondary)]">
+              {isUk
+                ? 'Легкий старт, щоб спробувати VITALOOP перед запитом повного доступу Premium.'
+                : 'A lightweight starting point for trying VITALOOP before requesting full Premium access.'}
+            </p>
+            <FeatureList items={isUk ? FREE_FEATURES.uk : FREE_FEATURES.en} />
+          </motion.section>
+        </div>
+      )}
 
       <motion.section
         initial={{ opacity: 0, y: 18 }}

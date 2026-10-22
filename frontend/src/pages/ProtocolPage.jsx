@@ -10,6 +10,7 @@ import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-dis
 import { gaProtocolView } from '../lib/analytics.js'
 import { createRetestCopy, formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
 import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
+import DecisionHeader, { decisionRetestSummary } from '../components/dashboard/DecisionHeader.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
 // so each page using CoachUI must import it directly or it renders as
@@ -111,6 +112,12 @@ const PROTOCOL_COPY = {
     summaryEyebrow: 'Protocol Summary',
     summaryTitle: 'Your plan, organized by when to act.',
     summaryBody: 'Educational next steps based on this report. Confirm supplements, medication interactions, and dosing with a qualified clinician when relevant.',
+    decision: {
+      title: 'What matters now',
+      why: 'Why',
+      nextAction: 'Next action',
+      retest: 'Retest',
+    },
     exporting: 'Exporting...',
     exportPdf: 'Export PDF',
     markComplete: 'Mark complete',
@@ -220,6 +227,12 @@ const PROTOCOL_COPY = {
     summaryEyebrow: 'Підсумок плану',
     summaryTitle: 'Ваш план, згрупований за часом дії.',
     summaryBody: 'Освітні наступні кроки на основі звіту. Підтвердьте добавки, взаємодії та дозування з кваліфікованим фахівцем.',
+    decision: {
+      title: 'Що важливо зараз',
+      why: 'Чому',
+      nextAction: 'Наступна дія',
+      retest: 'Повторна перевірка',
+    },
     exporting: 'Експортуємо...',
     exportPdf: 'Експорт PDF',
     markComplete: 'Позначити виконаним',
@@ -1068,6 +1081,8 @@ export default function ProtocolPage() {
     persistedRetestPlan,
     reportRetestPlan: retestPlan,
   })
+  const decisionRetest = decisionRetestSummary(visibleRetestPlan, copy.retestFallback)
+  const nextProtocolAction = sortedProtocol[0]?.title || sortedProtocol[0]?.label || copy.continueTracking
 
   async function handleComplete(item) {
     if (!reportVersionId || !item?.action_id || savingActionId || completedActionIds.has(item.action_id)) return
@@ -1147,6 +1162,14 @@ export default function ProtocolPage() {
             <p className="coach-body mt-4 max-w-2xl">
               {copy.summaryBody}
             </p>
+            <DecisionHeader
+              title={copy.decision.title}
+              summary={copy.summaryTitle}
+              why={copy.summaryBody}
+              nextAction={nextProtocolAction}
+              retest={decisionRetest}
+              labels={copy.decision}
+            />
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <CoachButton variant="secondary" icon={ArrowLeft} onClick={() => navigate(`/results/${uploadId}`)}>{copy.backResults}</CoachButton>
               <CoachButton icon={Download} disabled={!canExport || exporting} onClick={handleExportPdf}>{exporting ? copy.exporting : copy.exportPdf}</CoachButton>

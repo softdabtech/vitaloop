@@ -8,6 +8,7 @@ import { labPlanItemLabel } from '../lib/labPlanStatus.js'
 import FeatureGate from '../components/FeatureGate.jsx'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import DecisionHeader, { decisionRetestSummary } from '../components/dashboard/DecisionHeader.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { gaResultsView } from '../lib/analytics.js'
 import {
@@ -199,6 +200,12 @@ const RESULTS_COPY = {
     discussFallback: 'Ask whether the priority markers fit your symptoms, medications, history, and recent lifestyle changes.',
     retest: 'Retest plan',
     retestFallback: 'Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.',
+    decision: {
+      title: 'What matters now',
+      why: 'Why',
+      nextAction: 'Next action',
+      retest: 'Retest',
+    },
     tableTitle: 'Full biomarker table',
     tableSummary: (optimal, watch, out, unknown) => `${optimal} in range · ${watch} worth watching · ${out} out of range · ${unknown} not classified`,
     biomarker: 'Biomarker',
@@ -423,6 +430,12 @@ const RESULTS_COPY = {
     discussFallback: 'Запитайте, чи відповідають пріоритетні показники вашим симптомам, лікам, історії та змінам способу життя.',
     retest: 'План повторної перевірки',
     retestFallback: 'Повторна перевірка залежить від показника, симптомів і рекомендацій лікаря. Збережіть звіт для порівняння.',
+    decision: {
+      title: 'Що важливо зараз',
+      why: 'Чому',
+      nextAction: 'Наступна дія',
+      retest: 'Повторна перевірка',
+    },
     tableTitle: 'Повна таблиця показників',
     tableSummary: (optimal, watch, out, unknown) => `${optimal} у референсі · ${watch} потребують спостереження · ${out} поза референсом · ${unknown} не класифіковано`,
     biomarker: 'Показник',
@@ -2184,6 +2197,7 @@ export default function Results() {
   const formattedReportDate = formatReportDate(reportMeta.date, reportDateLocale, copy.unknownReportDate)
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
+  const decisionRetest = decisionRetestSummary(reportRetest, copy.retestFallback)
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
   const handleAddToLabPlan = async (item) => {
     const testName = String(item?.marker || '').trim()
@@ -2392,6 +2406,14 @@ export default function Results() {
               <p className="results-report-narrative mt-4 text-base leading-7 text-slate-600">
                 {reportFoundSummary || copy.intro}
               </p>
+              <DecisionHeader
+                title={copy.decision.title}
+                summary={biomarkerSummaryHeadline || copy.fallbackHeadline}
+                why={reportFoundSummary || copy.intro}
+                nextAction={copy.actionPlan}
+                retest={decisionRetest}
+                labels={copy.decision}
+              />
               {(reportMeta.source || formattedReportDate) && (
                 <dl className="results-report-meta mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
                   {reportMeta.source && (

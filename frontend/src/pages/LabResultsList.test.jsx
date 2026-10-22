@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFetchResultsError, canViewResults, getBiomarkerCounts, lifecycleState, patientFacingLabName, shouldShowBiomarkerCounts, sortProgressItems } from './LabResultsList.jsx'
+import { buildFetchResultsError, canViewResults, getBiomarkerCounts, lifecycleState, patientFacingLabName, selectProgressMarkers, shouldShowBiomarkerCounts, sortProgressItems } from './LabResultsList.jsx'
 
 describe('LabResultsList lifecycle state', () => {
   it('keeps uploads in real clinical-date order and leaves undated records last', () => {
@@ -95,5 +95,22 @@ describe('LabResultsList lifecycle state', () => {
     expect(patientFacingLabName('b2c_file')).toBe('Lab result')
     expect(patientFacingLabName('4b825dc642cb6eb9a060e54bf8d69288')).toBe('Lab result')
     expect(patientFacingLabName('Quest Diagnostics')).toBe('Quest Diagnostics')
+  })
+
+  it('keeps progress filters grounded in backend-provided statuses and history', () => {
+    const topChanges = [
+      { canonical_name: 'bilirubin', name: 'Bilirubin', current_status_group: 'needs_review' },
+      { canonical_name: 'ast', name: 'AST', current_status_group: 'stable' },
+    ]
+    const newMarkers = [
+      { canonical_name: 'crp', name: 'CRP', current_status_group: 'needs_review' },
+    ]
+
+    expect(selectProgressMarkers({ topChanges, newMarkers, filter: 'attention' }).map(({ marker }) => marker.name))
+      .toEqual(['Bilirubin', 'CRP'])
+    expect(selectProgressMarkers({ topChanges, newMarkers, filter: 'changed' }).map(({ marker }) => marker.name))
+      .toEqual(['Bilirubin', 'AST'])
+    expect(selectProgressMarkers({ topChanges, newMarkers, filter: 'insufficient' }).map(({ marker }) => marker.name))
+      .toEqual(['CRP'])
   })
 })
