@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Loader2, Mail, ShieldCheck, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Loader2, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 import BrandMark from '../components/landing/BrandMark.jsx'
@@ -75,10 +75,7 @@ export default function SymptomIntake() {
   const [ageRange, setAgeRange] = useState('')
   const [sex, setSex] = useState('')
   const [loading, setLoading] = useState(false)
-  const [assessmentId, setAssessmentId] = useState('')
   const [recommendedLabs, setRecommendedLabs] = useState([])
-  const [email, setEmail] = useState('')
-  const [emailSaved, setEmailSaved] = useState(false)
 
   const sessionId = useMemo(() => getPublicFunnelSessionId(), [])
 
@@ -133,44 +130,14 @@ export default function SymptomIntake() {
         sex: sex || null,
         source: 'vitaloop.today',
       })
-      setAssessmentId(data?.assessment_id || '')
       setRecommendedLabs(Array.isArray(data?.recommended_labs) ? data.recommended_labs : [])
-      gaSymptomAssessmentComplete({
-        assessmentId: data?.assessment_id,
-        labCount: Array.isArray(data?.recommended_labs) ? data.recommended_labs.length : 0,
-      })
+      gaSymptomAssessmentComplete()
       setStep(4)
     } catch {
       toast.error('Could not save the assessment. Try again.')
     } finally {
       setLoading(false)
     }
-  }
-
-  async function saveEmail() {
-    if (!email || !assessmentId) return
-
-    try {
-      await api.post('/assessment/email', {
-        session_id: sessionId,
-        assessment_id: assessmentId,
-        email,
-      })
-      setEmailSaved(true)
-      toast.success('Saved.')
-    } catch {
-      toast.error('Could not save your email.')
-    }
-  }
-
-  function skipEmail() {
-    trackPublicFunnelEvent('email_skipped', { assessment_id: assessmentId })
-    setEmailSaved(true)
-  }
-
-  function goUpload() {
-    trackPublicFunnelEvent('upload_clicked', { assessment_id: assessmentId })
-    navigate('/upload')
   }
 
   return (
@@ -342,34 +309,9 @@ export default function SymptomIntake() {
                   VITALOOP does not diagnose or prescribe. Use this list as preparation for a clinician conversation.
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-emerald-700" />
-                    <p className="font-bold text-slate-950">Save this recommendation list</p>
-                  </div>
-                  {emailSaved ? (
-                    <p className="mt-3 text-sm font-semibold text-emerald-700">Saved. You can upload labs or create an account next.</p>
-                  ) : (
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        placeholder="you@example.com"
-                        className="min-h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                      />
-                      <button type="button" onClick={saveEmail} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Save</button>
-                      <button type="button" onClick={skipEmail} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700">Skip</button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <button type="button" onClick={goUpload} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
-                    <Upload className="h-4 w-4" /> Upload PDF
-                  </button>
-                  <button type="button" onClick={() => { gaSignupIntent('symptom_assessment'); navigate('/login?signup=true') }} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:border-emerald-300">
-                    Create account <ArrowRight className="h-4 w-4" />
+                <div className="mt-5">
+                  <button type="button" onClick={() => { gaSignupIntent('symptom_assessment'); navigate('/login?signup=true') }} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
+                    Create free account to save your plan <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>

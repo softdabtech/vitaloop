@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import App, { isCabinetRoutePath, shouldRedirectToOnboarding } from './App.jsx'
+import App, { isCabinetRoutePath, PublicAssessmentLoading, shouldRedirectToOnboarding } from './App.jsx'
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: { get: vi.fn() },
@@ -41,6 +41,15 @@ describe('cabinet route classification', () => {
   it('keeps public Help outside the cabinet shell', () => {
     expect(isCabinetRoutePath('/help')).toBe(false)
     expect(isCabinetRoutePath('/help/section/billing')).toBe(false)
+  })
+})
+
+describe('public assessment loading', () => {
+  it('uses public assessment copy instead of cabinet loading copy', () => {
+    render(<PublicAssessmentLoading />)
+
+    expect(screen.getByText('Preparing your assessment…')).toBeTruthy()
+    expect(screen.queryByText('Loading your health dashboard...')).toBeNull()
   })
 })
 

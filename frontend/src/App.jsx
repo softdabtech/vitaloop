@@ -218,6 +218,24 @@ function RouteFallback() {
   return <AppLoadingScreen />
 }
 
+export function PublicAssessmentLoading() {
+  return (
+    <main className="min-h-screen bg-[var(--vtl-color-canvas)] px-4 py-8 text-[var(--vtl-color-ink)] sm:px-6">
+      <div className="mx-auto max-w-[1120px] animate-pulse">
+        <div className="h-8 w-36 rounded-full bg-[var(--vtl-color-brand-50)]" />
+        <div className="mt-8 rounded-[var(--vtl-radius-card)] border border-[var(--vtl-color-border)] bg-[var(--vtl-color-surface)] p-6 shadow-[var(--vtl-shadow-card)] sm:p-8">
+          <p className="text-sm font-semibold text-[var(--vtl-color-text-muted)]">Preparing your assessment…</p>
+          <div className="mt-4 h-9 max-w-xl rounded bg-[var(--vtl-color-brand-50)]" />
+          <div className="mt-3 h-5 max-w-2xl rounded bg-[var(--vtl-color-brand-50)]" />
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((item) => <div key={item} className="h-14 rounded-[var(--vtl-radius-field)] bg-[var(--vtl-color-brand-50)]" />)}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
 function RegisterRedirect() {
   const location = useLocation()
   const params = new URLSearchParams(location.search)
@@ -479,7 +497,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
-          <Route path="/symptom-intake" element={<SymptomIntake />} />
+          <Route path="/symptom-intake" element={<Suspense fallback={<PublicAssessmentLoading />}><SymptomIntake /></Suspense>} />
           <Route path="/health-hub" element={<HealthHub />} />
           <Route path="/site-map" element={<SiteMap />} />
           <Route path="/health-hub/topics/:clusterSlug" element={<HealthHubCluster />} />

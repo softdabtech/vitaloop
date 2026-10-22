@@ -1306,8 +1306,8 @@ export default function Landing() {
               Move from uncertainty to a clear plan with symptom intake, lab interpretation, and adaptive weekly execution.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                Start with symptoms
+              <button onClick={() => navigate('/symptom-intake')} className={`${ctaBase} bg-[color:var(--vtl-action-primary-bg)] text-[color:var(--vtl-action-primary-fg)] hover:bg-[color:var(--vtl-action-primary-bg-hover)]`}>
+                Get your personal assessment
               </button>
               <button onClick={() => navigate('/example-report')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 See example report

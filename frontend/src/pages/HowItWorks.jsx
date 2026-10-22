@@ -137,8 +137,8 @@ export default function HowItWorks() {
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
-              Start free
+            <button onClick={() => navigate('/symptom-intake')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
+              Get your personal assessment
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
             <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
@@ -275,8 +275,8 @@ export default function HowItWorks() {
             <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
               See example report
             </button>
-            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
-              Get started free
+            <button onClick={() => navigate('/symptom-intake')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
+              Get your personal assessment
             </button>
           </div>
         </div>
