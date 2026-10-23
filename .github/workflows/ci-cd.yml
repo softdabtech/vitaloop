@@ -427,14 +427,16 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
           VITE_API_BASE_URL: https://api.vitaloop.today
+          VITE_APP_BASE_URL: https://app.vitaloop.today
           VITE_CRM_BASE_URL: https://crm.vitaloop.today
-          VITE_EMAIL_CONFIRMATION_PATH: https://vitaloop.today/auth/confirmation
+          VITE_EMAIL_CONFIRMATION_PATH: https://app.vitaloop.today/auth/confirmation
         run: |
           docker build -t vitaloop-backend:${{ github.sha }} ./backend
           docker build \
             --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
             --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
             --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+            --build-arg VITE_APP_BASE_URL="$VITE_APP_BASE_URL" \
             --build-arg VITE_CRM_BASE_URL="$VITE_CRM_BASE_URL" \
             --build-arg VITE_EMAIL_CONFIRMATION_PATH="$VITE_EMAIL_CONFIRMATION_PATH" \
             -t vitaloop-frontend:${{ github.sha }} \
@@ -456,6 +458,14 @@ jobs:
       - name: Install and reload nginx routing
         run: |
           scp nginx.vitaloop.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/vitaloop.today
+          # API vhost keeps CORS at the edge; app.vitaloop.today must be
+          # allowlisted here as well as in FastAPI settings.
+          scp ops/nginx/api.vitaloop.today.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/api.vitaloop.today
+          # Stage the app vhost only. It is deliberately not enabled here:
+          # DNS and an origin certificate must be in place before cutover.
+          scp ops/nginx/app.vitaloop.today.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/app.vitaloop.today
+          # Stage, but do not include, English cabinet legacy redirects.
+          scp ops/nginx/vitaloop-cabinet-legacy-redirects.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/snippets/vitaloop-cabinet-legacy-redirects.conf
           ssh root@${{ secrets.PROD_HOST }} 'nginx -t && systemctl reload nginx'
 
       - name: Health check

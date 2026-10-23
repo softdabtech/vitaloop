@@ -17,6 +17,7 @@ import {
   FileText,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
 
 const FEATURES = [
   {
@@ -177,7 +178,7 @@ export default function Features() {
               Start with symptoms or upload a blood test report. No credit card required.
             </p>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigateToApp('/login')}
               className="vtl-public-button vtl-public-button--primary vtl-public-button--large gap-2 px-8 text-lg"
             >
               Get Started Free

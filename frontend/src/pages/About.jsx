@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
 
 const HERO_OBJECTS = [
   { icon: BrainCircuit, label: 'Symptom-first intake flow' },
@@ -87,7 +87,6 @@ const ROADMAP = [
 ]
 
 export default function About() {
-  const navigate = useNavigate()
   const [imageError, setImageError] = useState(false)
 
   const FounderAvatarFallback = () => (
@@ -141,7 +140,7 @@ export default function About() {
                 VITALOOP was built to turn scattered symptoms and lab reports into a clear, repeatable health execution loop.
               </p>
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigateToApp('/symptom-intake/')}
                 className="vtl-public-button vtl-public-button--primary vtl-public-button--large"
               >
                 Start with symptoms
@@ -388,7 +387,7 @@ export default function About() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigateToApp('/symptom-intake/')}
                 className="vtl-public-button vtl-public-button--primary vtl-public-button--large"
               >
                 Start with symptoms

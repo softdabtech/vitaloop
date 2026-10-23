@@ -2,8 +2,11 @@
 import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
+from starlette.requests import Request
 from app.main import app
+from app.config import settings
 from app.dependencies import get_current_user
+from app.routers.identity.auth import _welcome_dashboard_url
 from app.services import supabase_service as svc
 
 
@@ -197,6 +200,19 @@ class TestAuthWelcome:
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post("/auth/registration/welcome")
             assert response.status_code == 401
+
+    def test_welcome_email_uses_app_for_english_and_keeps_ua_origin_unchanged(self):
+        english_request = Request({
+            "type": "http", "method": "POST", "path": "/auth/registration/welcome",
+            "headers": [(b"origin", b"https://app.vitaloop.today")],
+        })
+        ua_request = Request({
+            "type": "http", "method": "POST", "path": "/auth/registration/welcome",
+            "headers": [(b"origin", b"https://ua.vitaloop.today")],
+        })
+
+        assert _welcome_dashboard_url(english_request) == "https://app.vitaloop.today/dashboard"
+        assert _welcome_dashboard_url(ua_request) == f"{settings.frontend_base_url.rstrip('/')}/dashboard"
 
 
 class TestAuthOrganization:

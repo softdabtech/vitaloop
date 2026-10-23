@@ -1,9 +1,10 @@
 import api from '../lib/api.js'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 import { claimPendingPublicAssessment } from '../lib/publicAssessmentHandoff.js'
+import { getAppBaseUrl } from '../lib/appUrl.js'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
-const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL || 'https://vitaloop.today').replace(/\/$/, '')
+const APP_BASE_URL = getAppBaseUrl()
 const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'client_admin', 'manager', 'practitioner'])
 
 export const AUTH_POST_LOGIN_PATH = import.meta.env.VITE_AUTH_POST_LOGIN_PATH || `${CRM_BASE_URL}/auth/post-login`

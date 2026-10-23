@@ -11,6 +11,7 @@ import {
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
 
 const CABINET_SCREENS = [
   ['01-dashboard.png', 'VITALOOP dashboard screen'],
@@ -91,7 +92,7 @@ export default function ExampleReport() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigateToApp('/login?signup=true')}
                 className="vtl-public-button vtl-public-button--primary vtl-public-button--large px-8"
               >
                 Start with your results
@@ -224,7 +225,7 @@ export default function ExampleReport() {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigateToApp('/login?signup=true')}
                 className="vtl-public-button vtl-public-button--primary"
               >
                 Get started free

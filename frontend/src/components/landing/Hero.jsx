@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList, CheckCircle2, FileText, Upload, X } from 'lucide-react'
 import { stagger, staggerChild, buttonHoverProps, EASE } from '../../lib/motion.js'
+import { navigateToApp } from '../../lib/appUrl.js'
 
 const CABINET_STEPS = [
   {
@@ -481,7 +482,7 @@ export default function Hero() {
       {/* CTA row под картинкой */}
       <div style={{ marginTop: 32, textAlign: 'center' }}>
         <button
-          onClick={() => navigate('/login?signup=true')}
+          onClick={() => navigateToApp('/login?signup=true')}
           aria-label="Start free — no card needed"
           className="btn-primary hero-cta-primary"
           style={{

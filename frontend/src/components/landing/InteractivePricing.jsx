@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { navigateToApp } from '../../lib/appUrl.js'
 import { Check } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
@@ -56,7 +56,6 @@ const PRICING = {
 }
 
 export function InteractivePricing() {
-  const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const { planName } = useSubscription()
   const [isAnnual, setIsAnnual] = useState(false)
@@ -78,21 +77,21 @@ export function InteractivePricing() {
 
     if (planId === SUBSCRIPTION_PLAN_IDS.FREE) {
       if (!user) {
-        navigate(buildSignupPath())
+        navigateToApp(buildSignupPath())
         return
       }
 
-      navigate('/dashboard')
+      navigateToApp('/dashboard')
       return
     }
 
     const targetUrl = buildSubscriptionPath({ planId, billingCycle })
     if (!user) {
-      navigate(buildSignupRedirect({ planId, billingCycle }))
+      navigateToApp(buildSignupRedirect({ planId, billingCycle }))
       return
     }
 
-    navigate(targetUrl)
+    navigateToApp(targetUrl)
   }
 
   return (

@@ -1,6 +1,7 @@
 import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
+import { navigateToApp } from '../../lib/appUrl.js'
 
 const HERO_SCREEN = {
   src: '/images/vitaloop-mobile-dashboard-hero.png?v=20261020',
@@ -51,7 +52,7 @@ export function LightHero() {
             {/* CTA Buttons */}
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
               <button
-                onClick={() => navigate('/symptom-intake')}
+                onClick={() => navigateToApp('/symptom-intake')}
                 className="group vtl-public-button vtl-public-button--primary shrink-0 px-6 text-sm sm:text-base"
               >
                 Start assessment

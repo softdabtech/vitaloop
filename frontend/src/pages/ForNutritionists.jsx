@@ -24,6 +24,7 @@ import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 import { fadeUp, fadeUpBlur, stagger, staggerChild, EASE } from '../lib/motion.js'
 import { gaEvent } from '../lib/analytics.js'
+import { navigateToApp } from '../lib/appUrl.js'
 
 /* ─── Data ──────────────────────────────────────────────── */
 
@@ -339,7 +340,7 @@ export default function ForNutritionists() {
               <button
                 onClick={() => {
                   gaEvent('nutritionist_cta_click', { location: 'hero', label: 'start_free' })
-                  navigate('/login?signup=true')
+                  navigateToApp('/login?signup=true')
                 }}
                 className="vtl-public-button vtl-public-button--primary gap-2 px-6"
               >
@@ -682,7 +683,7 @@ export default function ForNutritionists() {
             <button
               onClick={() => {
                 gaEvent('nutritionist_pricing_click', { plan: 'free' })
-                navigate('/login?signup=true')
+                navigateToApp('/login?signup=true')
               }}
               className="vtl-public-button vtl-public-button--secondary w-full"
             >
@@ -725,7 +726,7 @@ export default function ForNutritionists() {
             <button
               onClick={() => {
                 gaEvent('nutritionist_pricing_click', { plan: 'practitioner_pro' })
-                navigate('/login?signup=true')
+                navigateToApp('/login?signup=true')
               }}
               className="vtl-public-button vtl-public-button--primary w-full"
             >
@@ -787,7 +788,7 @@ export default function ForNutritionists() {
               <button
                 onClick={() => {
                   gaEvent('nutritionist_cta_click', { location: 'bottom_cta', label: 'signup' })
-                  navigate('/login?signup=true')
+                  navigateToApp('/login?signup=true')
                 }}
                 className="vtl-public-button vtl-public-button--primary w-full gap-2 px-7 sm:w-auto"
               >

@@ -1,5 +1,6 @@
 import { Activity, ArrowRight, CheckCircle2, FileUp, LineChart, Sparkles, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { navigateToApp } from '../../lib/appUrl.js'
 import { motion, useReducedMotion } from 'framer-motion'
 import { fadeUp, stagger, staggerChild, viewport } from '../../lib/motion.js'
 
@@ -110,7 +111,7 @@ export default function HowItWorksSection() {
             </ul>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigateToApp('/login?signup=true')}
                 className="vtl-public-button vtl-public-button--primary px-4"
               >
                 Start free <ArrowRight size={14} aria-hidden="true" />

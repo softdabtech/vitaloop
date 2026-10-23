@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import BrandMark from './BrandMark.jsx'
+import { navigateToApp } from '../../lib/appUrl.js'
 
 const NAV_LINKS = [
   { id: 'how-it-works', label: 'How it works', route: '/#problem' },
@@ -57,7 +58,7 @@ export function PageHeader() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Log in link — only for non-authenticated visitors */}
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigateToApp('/login')}
             className="hidden sm:inline-flex vtl-public-button vtl-public-button--secondary px-4"
             style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
             tabIndex={(!authLoading && user) ? -1 : 0}
@@ -68,7 +69,7 @@ export function PageHeader() {
 
           {/* Cabinet / Sign Up button */}
           <button
-            onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
+            onClick={() => navigateToApp(user ? '/dashboard' : '/login?signup=true')}
             className={`hidden sm:inline-flex ${ctaBase} vtl-public-button--primary`}
           >
             {user ? 'Dashboard' : 'Sign Up'}
@@ -112,7 +113,7 @@ export function PageHeader() {
                 <button
                   onClick={() => {
                     closeMobileMenu()
-                    navigate('/dashboard')
+                    navigateToApp('/dashboard')
                   }}
                   className="mt-1 w-full vtl-public-button vtl-public-button--primary"
                 >
@@ -123,7 +124,7 @@ export function PageHeader() {
                   <button
                     onClick={() => {
                       closeMobileMenu()
-                      navigate('/login?signup=true')
+                      navigateToApp('/login?signup=true')
                     }}
                     className="w-full vtl-public-button vtl-public-button--primary"
                   >
@@ -132,7 +133,7 @@ export function PageHeader() {
                   <button
                     onClick={() => {
                       closeMobileMenu()
-                      navigate('/login')
+                      navigateToApp('/login')
                     }}
                     className="w-full vtl-public-button vtl-public-button--secondary"
                   >

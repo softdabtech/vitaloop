@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     recovery_worker_batch_size: int = Field(default=8, ge=1, le=32)
     recovery_worker_concurrency: int = Field(default=2, ge=1, le=4)
     frontend_base_url: str = "https://vitaloop.today"
+    # English end-user cabinet. Keep `frontend_base_url` as the public-site
+    # origin so UA and public links are not silently moved with this setting.
+    end_user_app_base_url: str = "https://app.vitaloop.today"
     crm_base_url: str = "https://crm.vitaloop.today"
     webpush_vapid_public_key: str = ""
     webpush_vapid_private_key: str = ""
@@ -126,6 +129,7 @@ class Settings(BaseSettings):
         fallback_origins = [
             "https://vitaloop.today",
             "https://www.vitaloop.today",
+            "https://app.vitaloop.today",
             "https://ua.vitaloop.today",
             "https://www.ua.vitaloop.today",
             "https://crm.vitaloop.today",

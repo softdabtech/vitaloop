@@ -4,12 +4,13 @@ import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
 import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../data/healthHubContent.js'
 import { ALL_ARTICLE_IDS, HELP_ARTICLES, HELP_SECTIONS } from '../data/helpArticles.js'
+import { appUrl } from '../lib/appUrl.js'
 
 const PRODUCT_PAGES = [
   ['Home', '/'],
   ['How VITALOOP works', '/how-it-works/'],
   ['Features', '/features/'],
-  ['Symptom intake', '/symptom-intake/'],
+  ['Symptom intake', appUrl('/symptom-intake/')],
   ['Example report', '/example-report/'],
   ['For nutritionists', '/for-nutritionists/'],
   ['FAQ', '/faq/'],
@@ -31,7 +32,13 @@ function LinkGroup({ title, links }) {
     <section className="rounded-[28px] border border-slate-200 bg-white p-7">
       <h2 className="text-2xl font-black">{title}</h2>
       <ul className="mt-5 space-y-3">
-        {links.map(([label, href]) => <li key={href}><Link className="font-semibold text-emerald-700 hover:underline" to={href}>{label}</Link></li>)}
+        {links.map(([label, href]) => (
+          <li key={href}>
+            {href.startsWith('http')
+              ? <a className="font-semibold text-emerald-700 hover:underline" href={href}>{label}</a>
+              : <Link className="font-semibold text-emerald-700 hover:underline" to={href}>{label}</Link>}
+          </li>
+        ))}
       </ul>
     </section>
   )

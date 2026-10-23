@@ -435,7 +435,9 @@ function PublicSymptomPrompt({ disabled = false }) {
 }
 
 export default function App() {
-  const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
+  const hostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : ''
+  const isUaHost = hostname === 'ua.vitaloop.today'
+  const isAppHost = hostname === 'app.vitaloop.today'
   const isUaPreviewPath = typeof window !== 'undefined' && (window.location.pathname === '/ua' || window.location.pathname.startsWith('/ua/'))
   const isUaLandingShell = isUaHost || isUaPreviewPath
 
@@ -458,7 +460,7 @@ export default function App() {
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
+          <Route path="/" element={isUaHost ? <UaLanding /> : isAppHost ? <Navigate to="/dashboard" replace /> : <Landing />} />
           <Route path="/ua" element={<UaLanding />} />
           <Route path="/ua/:pageSlug" element={<UaPage />} />
           {/* UA Health Hub */}

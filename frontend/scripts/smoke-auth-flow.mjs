@@ -89,7 +89,7 @@ async function main() {
       email,
       password,
       options: {
-        emailRedirectTo: 'https://vitaloop.today/auth/confirmation',
+        emailRedirectTo: 'https://app.vitaloop.today/auth/confirmation',
       },
     })
 

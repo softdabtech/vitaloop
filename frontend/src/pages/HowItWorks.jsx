@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, FileText, FlaskConic
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
 
 export default function HowItWorks() {
   const navigate = useNavigate()
@@ -137,7 +138,7 @@ export default function HowItWorks() {
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/symptom-intake')} className="vtl-public-button vtl-public-button--primary">
+            <button onClick={() => navigateToApp('/symptom-intake')} className="vtl-public-button vtl-public-button--primary">
               Get your personal assessment
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
@@ -275,7 +276,7 @@ export default function HowItWorks() {
             <button onClick={() => navigate('/example-report')} className="vtl-public-button vtl-public-button--secondary">
               See example report
             </button>
-            <button onClick={() => navigate('/symptom-intake')} className="vtl-public-button vtl-public-button--primary">
+            <button onClick={() => navigateToApp('/symptom-intake')} className="vtl-public-button vtl-public-button--primary">
               Get your personal assessment
             </button>
           </div>

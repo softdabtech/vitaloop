@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.dependencies import get_current_user
@@ -138,6 +138,14 @@ class _RegistrationNotifyRequest(BaseModel):
     flow: str = "signup"
 
 
+def _welcome_dashboard_url(request: Request) -> str:
+    """Choose the English cabinet URL without changing UA email behavior."""
+    origin = (request.headers.get("origin") or "").rstrip("/").lower()
+    if origin in {"https://ua.vitaloop.today", "https://www.ua.vitaloop.today"}:
+        return f"{settings.frontend_base_url.rstrip('/')}/dashboard"
+    return f"{settings.end_user_app_base_url.rstrip('/')}/dashboard"
+
+
 @router.post("/onboarding/organization", status_code=201)
 async def onboarding_create_organization(
     req: _OrgSetupRequest,
@@ -246,6 +254,7 @@ async def notify_registration(
 
 @router.post("/registration/welcome")
 async def send_welcome_email_to_user(
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -265,7 +274,7 @@ async def send_welcome_email_to_user(
 
     # For now, use a simple organization name. In the future, could be customized.
     organization_name = "VITALOOP"
-    dashboard_url = f"{settings.frontend_base_url.rstrip('/')}/dashboard"
+    dashboard_url = _welcome_dashboard_url(request)
 
     sent = await send_welcome_email(
         to_email=email,

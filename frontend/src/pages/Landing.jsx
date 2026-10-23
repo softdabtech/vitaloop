@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
@@ -646,7 +647,7 @@ export default function Landing() {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Log in link — only for non-authenticated visitors; visibility keeps space reserved during auth check */}
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigateToApp('/login')}
               className="hidden sm:inline-flex vtl-public-button vtl-public-button--secondary"
               style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
               tabIndex={(!authLoading && user) ? -1 : 0}
@@ -657,7 +658,7 @@ export default function Landing() {
 
             {/* Cabinet / Sign Up button */}
             <button
-              onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
+              onClick={() => navigateToApp(user ? '/dashboard' : '/login?signup=true')}
               className={`hidden sm:inline-flex ${ctaBase} vtl-public-button--primary`}
             >
               {user ? 'Dashboard' : 'Sign Up'}
@@ -699,7 +700,7 @@ export default function Landing() {
                 <div className="my-2 h-px bg-slate-100" />
                 {user ? (
                   <button
-                    onClick={() => { closeMobileMenu(); navigate('/dashboard') }}
+                    onClick={() => { closeMobileMenu(); navigateToApp('/dashboard') }}
                     className="mt-1 w-full vtl-public-button vtl-public-button--primary"
                   >
                     Dashboard
@@ -707,13 +708,13 @@ export default function Landing() {
                 ) : (
                   <div className="mt-1 flex flex-col gap-2">
                     <button
-                      onClick={() => { closeMobileMenu(); navigate('/login?signup=true') }}
+                      onClick={() => { closeMobileMenu(); navigateToApp('/login?signup=true') }}
                       className="w-full vtl-public-button vtl-public-button--primary"
                     >
                       Sign Up — Free
                     </button>
                     <button
-                      onClick={() => { closeMobileMenu(); navigate('/login') }}
+                      onClick={() => { closeMobileMenu(); navigateToApp('/login') }}
                       className="w-full vtl-public-button vtl-public-button--secondary"
                     >
                       Log in

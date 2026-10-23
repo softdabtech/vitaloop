@@ -7,6 +7,7 @@ import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
 import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../data/healthHubContent.js'
 import { gaEvent } from '../lib/analytics.js'
+import { appUrl } from '../lib/appUrl.js'
 
 export default function HealthHub() {
   const [query, setQuery] = useState('')
@@ -72,9 +73,9 @@ export default function HealthHub() {
                 Practical, evidence-aware guides for connecting symptoms, blood tests, biomarker context, and better clinician conversations.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link onClick={() => gaEvent('health_hub_cta_click', { destination: 'symptom_intake' })} to="/symptom-intake/" className="vtl-public-button vtl-public-button--primary">
+                <a onClick={() => gaEvent('health_hub_cta_click', { destination: 'symptom_intake' })} href={appUrl('/symptom-intake/')} className="vtl-public-button vtl-public-button--primary">
                   Get your personal assessment <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                </a>
                 <Link to="/example-report/" className="vtl-public-button vtl-public-button--secondary">
                   See an example report
                 </Link>

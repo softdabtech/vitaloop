@@ -9,6 +9,7 @@ import api from '../lib/api.js'
 import { gaSignupIntent, gaSymptomAssessmentComplete } from '../lib/analytics.js'
 import { getPublicFunnelSessionId, trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 import { stagePublicAssessmentHandoff } from '../lib/publicAssessmentHandoff.js'
+import { navigateToPublicSite } from '../lib/appUrl.js'
 
 const SYMPTOMS = [
   { id: 'fatigue', label: 'Fatigue' },
@@ -70,6 +71,7 @@ function OptionButton({ selected, children, onClick }) {
 
 export default function SymptomIntake() {
   const navigate = useNavigate()
+  const isAppHost = typeof window !== 'undefined' && window.location.hostname === 'app.vitaloop.today'
   const [step, setStep] = useState(1)
   const [symptoms, setSymptoms] = useState([])
   const [duration, setDuration] = useState('')
@@ -80,6 +82,14 @@ export default function SymptomIntake() {
   const [assessmentStored, setAssessmentStored] = useState(false)
 
   const sessionId = useMemo(() => getPublicFunnelSessionId(), [])
+
+  function navigateToMarketingPage(path) {
+    if (isAppHost) {
+      navigateToPublicSite(path)
+      return
+    }
+    navigate(path)
+  }
 
   useEffect(() => {
     trackPublicFunnelEvent('symptom_started', { path: '/symptom-intake' })
@@ -155,7 +165,7 @@ export default function SymptomIntake() {
       />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex min-h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2">
+          <button type="button" onClick={() => navigateToMarketingPage('/')} className="flex items-center gap-2">
             <BrandMark />
           </button>
           <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
@@ -163,7 +173,7 @@ export default function SymptomIntake() {
               <button
                 key={item.path}
                 type="button"
-                onClick={() => navigate(item.path)}
+                onClick={() => navigateToMarketingPage(item.path)}
                 className="text-sm font-semibold text-slate-600 transition hover:text-slate-950"
               >
                 {item.label}
@@ -173,7 +183,7 @@ export default function SymptomIntake() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigateToMarketingPage('/')}
               className="hidden rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:text-slate-950 sm:inline-flex"
             >
               Back to site

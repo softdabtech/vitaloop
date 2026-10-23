@@ -8,6 +8,7 @@ describe('analytics safety', () => {
 
   it('detects main and UA surfaces from hostname', () => {
     expect(getProductSurface('vitaloop.today')).toBe('main')
+    expect(getProductSurface('app.vitaloop.today')).toBe('main')
     expect(getProductSurface('ua.vitaloop.today')).toBe('ua')
   })
 

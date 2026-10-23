@@ -604,10 +604,10 @@ export const HELP_ARTICLES = {
       {
         type: 'steps',
         items: [
-          { title: 'Go to the Sign Up page', body: 'Click **"Sign Up Free"** on the landing page or visit vitaloop.today/login?signup=true.' },
+          { title: 'Go to the Sign Up page', body: 'Click **"Sign Up Free"** on the landing page or visit app.vitaloop.today/login?signup=true.' },
           { title: 'Enter your email and password', body: 'Use any valid email address. Password must be at least 8 characters.' },
           { title: 'Confirm your email', body: 'Check your inbox for a confirmation link from info@softdab.tech. Click the link to activate your account.' },
-          { title: 'Sign in', body: 'Return to vitaloop.today/login and sign in with your email and password. You can also continue with Google.' },
+          { title: 'Sign in', body: 'Return to app.vitaloop.today/login and sign in with your email and password. You can also continue with Google.' },
         ],
       },
       {

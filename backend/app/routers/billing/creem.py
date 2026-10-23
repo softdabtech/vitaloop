@@ -46,7 +46,9 @@ def _safe_success_url(request: Request) -> str:
     allowed = {item.rstrip("/") for item in settings.origins_list}
     if origin in allowed and urlparse(origin).scheme == "https":
         return f"{origin}/subscription?upgraded=true"
-    return f"{settings.frontend_base_url.rstrip('/')}/subscription?upgraded=true"
+    # Creem is EN-only (UA remains on WayForPay), so its fallback may safely
+    # target the dedicated English cabinet without changing UA return URLs.
+    return f"{settings.end_user_app_base_url.rstrip('/')}/subscription?upgraded=true"
 
 
 def _reject_ua_origin(request: Request) -> None:
