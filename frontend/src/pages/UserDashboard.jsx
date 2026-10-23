@@ -972,7 +972,7 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety, is
                 <span>{primaryAction.label}</span>
                 <ArrowRight className="coach-button__icon" aria-hidden="true" />
               </Link>
-              <Link to={secondaryAction.to} className="whitespace-nowrap text-center text-sm font-bold text-teal-700 hover:text-teal-900 sm:text-left">
+              <Link to={secondaryAction.to} className="mt-1 whitespace-nowrap text-center text-sm font-bold text-teal-700 hover:text-teal-900 sm:mt-2 sm:text-left">
                 {secondaryAction.label} &rarr;
               </Link>
             </div>

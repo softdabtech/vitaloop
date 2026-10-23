@@ -2008,6 +2008,15 @@ async def analyze_manual_biomarkers(
                     report_version_id=(pipeline_result.get("report_version") or {}).get("id"),
                 )
 
+        # A user can arrive here from a dashboard that was read moments ago.
+        # The summary endpoint has a per-user TTL cache, so without clearing
+        # it this successful manual entry can still render the old "1 of 3"
+        # onboarding/demo state even though its report is already persisted.
+        # File analysis clears the same cache; manual analysis must do so too.
+        from app.routers.analysis.dashboard import invalidate_summary_cache
+
+        invalidate_summary_cache(user_id)
+
         return {
             "upload_id": upload_id,
             "analysis_status": analysis_status,

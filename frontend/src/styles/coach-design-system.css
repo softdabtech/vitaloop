@@ -85,6 +85,11 @@
 }
 
 .coach-hero > * {
+  /* The decorative circle is a pseudo-element of this hero. Keep every
+     real child above it, otherwise the circle can cover the step label or
+     progress control at wide desktop breakpoints. */
+  position: relative;
+  z-index: 1;
   min-width: 0;
   max-width: 100%;
 }
