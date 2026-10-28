@@ -1,0 +1,745 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Loader2, RefreshCw, Upload } from 'lucide-react'
+import { CoachBadge, CoachButton, CoachCard, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
+import { listLabPlanItems } from '../api/labPlan.js'
+import api from '../lib/api.js'
+import { useDashboardSummary, useLabResults, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
+import { biomarkerDisplayName } from '../lib/biomarker-display.js'
+import { isUkrainianLocale } from '../lib/locale.js'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
+
+const CORE_LABS = [
+  { name: 'CBC', why: 'Baseline blood pattern and inflammation context.', related: 'Fatigue, dizziness, recovery', priority: 'Core' },
+  { name: 'Ferritin', why: 'Iron storage can affect energy, hair shedding, stamina, and mood.', related: 'Fatigue, hair shedding, low stamina', priority: 'Core' },
+  { name: 'CRP', why: 'Helps understand whether inflammation may be part of the picture.', related: 'Pain, swelling, persistent symptoms', priority: 'Core' },
+  { name: 'Vitamin D', why: 'Supports immunity, mood, muscle function, and recovery.', related: 'Low mood, aches, fatigue', priority: 'Core' },
+]
+
+const REPORT_TEST_LABELS = {
+  mch: 'MCH',
+  free_t4: 'Free T4',
+  free_t3: 'Free T3',
+  transferrin_saturation: 'Transferrin Saturation',
+  iron: 'Iron',
+  crp: 'C-Reactive Protein (CRP)',
+  vitamin_d: 'Vitamin D',
+  ferritin: 'Ferritin',
+}
+
+function normalizeTestKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^canonical_/, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+/, '')
+    .replace(/_+$/, '')
+}
+
+export function reportTestDisplayName(value) {
+  const key = normalizeTestKey(value)
+  return REPORT_TEST_LABELS[key] || String(value || '').replace(/^canonical_/, '').replaceAll('_', ' ')
+}
+
+const RECOMMENDED_LABS = [
+  { name: 'TSH + fT4', why: 'Thyroid context matters when fatigue, cold intolerance, or brain fog persist.', related: 'Energy, focus, temperature sensitivity', priority: 'Recommended' },
+  { name: 'B12 + Folate', why: 'Supports nerve function, red blood cell production, and cognitive energy.', related: 'Fatigue, numbness, brain fog', priority: 'Recommended' },
+  { name: 'Glucose + HbA1c', why: 'Shows whether blood sugar patterns may affect energy and cravings.', related: 'Energy dips, cravings, sleepiness after meals', priority: 'Recommended' },
+]
+
+const OPTIONAL_LABS = [
+  { name: 'Omega-3 Index', why: 'Useful when inflammation, recovery, or cardiometabolic goals are important.', related: 'Recovery, inflammation, cardiovascular context', priority: 'Optional' },
+  { name: 'Magnesium', why: 'Can be relevant for sleep quality, cramps, and stress response.', related: 'Sleep, cramps, tension', priority: 'Optional' },
+]
+
+const LAB_COPY_UK = {
+  priorities: {
+    Core: 'Базовий',
+    Recommended: 'Рекомендовано',
+    Optional: 'Додатково',
+  },
+  status: {
+    uploaded: 'завантажено',
+    suggested: 'рекомендовано',
+    inLatestReport: 'вже у вашому звіті',
+  },
+  alreadyHave: 'Уже у вашому останньому звіті',
+  labs: {
+    CBC: {
+      why: 'Базова картина крові та контекст запалення.',
+      related: 'Втома, запаморочення, відновлення',
+    },
+    Ferritin: {
+      why: 'Запаси заліза можуть впливати на енергію, випадіння волосся, витривалість і настрій.',
+      related: 'Втома, випадіння волосся, низька витривалість',
+    },
+    CRP: {
+      why: 'Допомагає зрозуміти, чи може запалення бути частиною картини.',
+      related: 'Біль, набряк, стійкі симптоми',
+    },
+    'Vitamin D': {
+      why: 'Підтримує імунітет, настрій, функцію мʼязів і відновлення.',
+      related: 'Знижений настрій, ломота, втома',
+    },
+    'TSH + fT4': {
+      why: 'Контекст щитоподібної залози важливий, коли зберігаються втома, мерзлякуватість або туман у голові.',
+      related: 'Енергія, фокус, чутливість до температури',
+    },
+    'B12 + Folate': {
+      why: 'Підтримує нервову систему, утворення еритроцитів і когнітивну енергію.',
+      related: 'Втома, оніміння, туман у голові',
+    },
+    'Glucose + HbA1c': {
+      why: 'Показує, чи можуть патерни цукру крові впливати на енергію та тягу до їжі.',
+      related: 'Спади енергії, тяга до солодкого, сонливість після їжі',
+    },
+    'Omega-3 Index': {
+      why: 'Корисно, коли важливі запалення, відновлення або кардіометаболічні цілі.',
+      related: 'Відновлення, запалення, серцево-судинний контекст',
+    },
+    Magnesium: {
+      why: 'Може бути релевантним для якості сну, судом і реакції на стрес.',
+      related: 'Сон, судоми, напруга',
+    },
+  },
+}
+
+function reportRecommendationKey(item) {
+  return normalizeTestKey(item?.canonical_marker || item?.marker || item?.name)
+}
+
+function reportRecommendationMatchesActiveReport(item, activeMarkerNames) {
+  const recommendationKey = reportRecommendationKey(item)
+  if (!recommendationKey) return false
+  return [...activeMarkerNames].some((markerKey) => markerKey === recommendationKey || markerKey.includes(recommendationKey) || recommendationKey.includes(markerKey))
+}
+
+function reportRecommendationToCatalogItem(item) {
+  const name = reportTestDisplayName(item?.canonical_marker || item?.marker || item?.name)
+  return {
+    name,
+    why: item?.reason || 'This report identified an evidence gap worth discussing with a clinician.',
+    related: item?.domain || 'Current report evidence',
+    priority: String(item?.priority || 'Recommended').replace(/^./, (value) => value.toUpperCase()),
+    source_recommendation_id: item?.recommendation_id || item?.source_recommendation_id || null,
+    source_report_version_id: item?.source_report_version_id || null,
+  }
+}
+
+export function selectReportSpecificRecommendations(
+  recommendations,
+  activeMarkerNames = new Set(),
+  plannedKeys = new Set(),
+) {
+  return (Array.isArray(recommendations) ? recommendations : [])
+    .filter((item) => item && !reportRecommendationMatchesActiveReport(item, activeMarkerNames))
+    .filter((item) => !plannedKeys.has(reportRecommendationKey(item)))
+    .map(reportRecommendationToCatalogItem)
+}
+
+function LabCard({ item, status, isUk, context = {} }) {
+  const tone = item.priority === 'Core' ? 'primary' : item.priority === 'Recommended' ? 'warning' : 'neutral'
+  const localized = isUk ? (LAB_COPY_UK.labs[item.name] || {}) : {}
+  const why = context.historical
+    ? (isUk ? 'Цей аналіз було додано на основі попереднього звіту.' : 'This test was added from an earlier report.')
+    : item.why
+  return (
+    <CoachCard className="p-4" interactive>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <CoachBadge tone={tone}>{isUk ? (LAB_COPY_UK.priorities[item.priority] || item.priority) : item.priority}</CoachBadge>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${status === 'uploaded' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+          {status === 'uploaded' ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+          {isUk ? (LAB_COPY_UK.status[status] || status) : status}
+        </span>
+      </div>
+      <h3 className="text-xl font-extrabold text-slate-950">{item.name}</h3>
+      <p className="mt-3 text-sm font-bold text-slate-700">{isUk ? 'Навіщо' : 'Why'}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{context.historical ? why : localized.why || why}</p>
+      <p className="mt-3 text-sm font-bold text-slate-700">{isUk ? 'Повʼязані симптоми' : 'Related symptoms'}</p>
+      <p className="mt-1 text-sm leading-6 text-slate-600">{localized.related || item.related}</p>
+    </CoachCard>
+  )
+}
+
+// P43: tests already present in the latest uploaded report are pulled out
+// of the "best first pass" grid (re-suggesting a test you already have
+// results for reads as VITALOOP not having looked) and listed here
+// instead -- a quiet strip, not a full card, since there's nothing left
+// to decide about them.
+function AlreadyHaveStrip({ items, isUk }) {
+  if (!items.length) return null
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+      <span className="text-xs font-bold uppercase tracking-wide text-slate-400">{isUk ? LAB_COPY_UK.alreadyHave : 'Already in your latest report'}</span>
+      {items.map((item) => (
+        <span key={item.name} className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-green-700">
+          <CheckCircle2 className="h-3 w-3" />
+          {item.name}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// P43: catalog names are consumer-facing groupings ("TSH + fT4", "CBC"),
+// not literal biomarker names from the report -- a panel name like "CBC"
+// in particular has no single matching marker at all, it's a bundle of
+// several (WBC, RBC, Hemoglobin, ...). This intentionally only catches the
+// cases where a catalog entry's own token is literally present in a
+// reported marker's name (TSH, Ferritin, CRP, Vitamin D, Magnesium, B12,
+// Glucose, HbA1c) -- a false negative (not flagged as "already have" when
+// it technically is) is the safe failure direction here, never a false
+// positive. A real panel-to-marker mapping is out of scope for this pass.
+function inLatestReport(item, activeMarkerNames) {
+  if (!activeMarkerNames.size) return false
+  const tokens = item.name
+    .toLowerCase()
+    .split(/\s*\+\s*/)
+    .map(normalizeTestKey)
+    .filter((part) => part.length > 2)
+  return tokens.some((token) => {
+    for (const markerName of activeMarkerNames) {
+      if (markerName.includes(token) || token.includes(markerName)) return true
+    }
+    return false
+  })
+}
+
+function labPlanItemKey(item) {
+  return String(
+    item?.canonical_normalized_test_name
+      || item?.normalized_test_name
+      || item?.canonical_marker
+      || item?.test_name
+      || ''
+  ).trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function isFulfilledPlanStatus(status) {
+  return ['fulfilled', 'completed', 'complete'].includes(String(status || '').trim().toLowerCase())
+}
+
+export function classifyLabRecommendationContext(
+  item,
+  { activeReportVersionId = null, plannedItems = [] } = {},
+) {
+  const recommendationKey = reportRecommendationKey(item)
+  const matchingPlanItem = plannedItems.find((planItem) => (
+    normalizeTestKey(labPlanItemKey(planItem)) === recommendationKey
+  ))
+  const sourceReportVersionId = item?.source_report_version_id
+  return {
+    historical: Boolean(
+      sourceReportVersionId
+      && (!activeReportVersionId || String(sourceReportVersionId) !== String(activeReportVersionId)),
+    ),
+    fulfilled: isFulfilledPlanStatus(matchingPlanItem?.status),
+  }
+}
+
+export function normalizeLabPlanItems(items) {
+  const byKey = new Map()
+  for (const item of Array.isArray(items) ? items : []) {
+    const key = labPlanItemKey(item)
+    if (!key || byKey.has(key)) continue
+    byKey.set(key, item)
+  }
+  return [...byKey.values()]
+}
+
+function planItemName(item) {
+  const rawName = String(item?.test_name || item?.canonical_marker || item?.normalized_test_name || '').trim()
+  return biomarkerDisplayName(rawName) || 'Planned test'
+}
+
+export function clinicalResultDate(result) {
+  const candidates = [
+    result?.test_date,
+    result?.measurement_date,
+    result?.collected_at,
+    result?.reported_at,
+    result?.upload?.test_date,
+    result?.upload?.measurement_date,
+    result?.upload?.collected_at,
+    result?.upload?.reported_at,
+    result?.lab_upload?.test_date,
+    result?.lab_upload?.measurement_date,
+    result?.lab_upload?.collected_at,
+    result?.lab_upload?.reported_at,
+    result?.report?.test_date,
+    result?.report?.measurement_date,
+    result?.metadata?.test_date,
+    result?.metadata?.collected_at,
+    result?.metadata?.reported_at,
+    ...(Array.isArray(result?.biomarkers) ? result.biomarkers.flatMap((item) => [
+      item?.test_date,
+      item?.measurement_date,
+      item?.collected_at,
+      item?.reported_at,
+    ]) : []),
+  ]
+  return candidates.find((value) => typeof value === 'string' && value.trim()) || null
+}
+
+export function isHistoricalLabPlanItem(item, activeReportVersionId = null) {
+  const sourceReportVersionId = item?.source_report_version_id
+  return Boolean(
+    sourceReportVersionId
+    && activeReportVersionId
+    && String(sourceReportVersionId) !== String(activeReportVersionId),
+  )
+}
+
+function LabPlanItemCard({ item, isUk, copy, resultDate, resultError, activeReportVersionId = null }) {
+  const fulfilled = item?.status === 'fulfilled'
+  const historical = Boolean(
+    item?.source_report_version_id
+    && (!activeReportVersionId || isHistoricalLabPlanItem(item, activeReportVersionId)),
+  )
+  return (
+    <article className="lab-plan-item-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="lab-plan-item-card__header flex flex-wrap items-start justify-between gap-3">
+        <h3 className="lab-plan-item-card__name min-w-0 break-words text-lg font-extrabold text-slate-950">{planItemName(item)}</h3>
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${fulfilled ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+          {fulfilled ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+          {fulfilled ? copy.fulfilled : copy.planned}
+        </span>
+      </div>
+      {!!(item?.reason || historical) && (
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+            {historical ? copy.historicalReason : copy.reason}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {historical ? copy.historicalReasonBody : item.reason}
+          </p>
+        </div>
+      )}
+      {!!item?.timing_text && (
+        <p className="lab-plan-item-card__timing mt-3 text-sm leading-6 text-slate-600">
+          <span className="font-bold text-slate-700">{copy.timing}:</span> {item.timing_text}
+        </p>
+      )}
+      <p className="mt-3 text-xs font-semibold text-slate-500">
+        {historical ? copy.fromEarlierReport : copy.fromReport}
+        {item?.source_recommendation_id ? ' · ' : ''}
+        {item?.source_recommendation_id ? (isUk ? 'рекомендація' : 'recommendation') : ''}
+      </p>
+      {fulfilled && (
+        <div className="mt-4 rounded-xl bg-green-50 p-3 text-sm leading-6 text-green-800">
+          <p>
+            {resultDate
+              ? `${copy.fulfilledBy} ${resultDate}`
+              : copy.fulfilledBody}
+          </p>
+          {resultError && <p className="mt-1 text-xs text-green-700">{copy.resultUnavailable}</p>}
+          {item?.fulfilled_by_upload_id && (
+            <a
+              href={`/results/${item.fulfilled_by_upload_id}`}
+              className="mt-2 inline-block font-bold underline underline-offset-2"
+            >
+              {copy.viewResult}
+            </a>
+          )}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function FulfilledLabPlanGroup({ items, uploadId, isUk, copy, activeReportVersionId }) {
+  const { data: result, isError } = useLabResults(uploadId)
+  const resultDate = clinicalResultDate(result)
+  return (
+    <>
+      {items.map((item) => (
+        <LabPlanItemCard
+          key={labPlanItemKey(item)}
+          item={item}
+          isUk={isUk}
+          copy={copy}
+          resultDate={resultDate}
+          resultError={isError}
+          activeReportVersionId={activeReportVersionId}
+        />
+      ))}
+    </>
+  )
+}
+
+export function PersonalLabPlan({ items, isUk, loading, error, onRetry, activeReportVersionId = null }) {
+  const copy = isUk
+    ? {
+      title: 'Ваш особистий план аналізів',
+      intro: 'Збережені аналізи та їхній актуальний статус.',
+      emptyTitle: 'У вашому плані аналізів ще немає тестів',
+      emptyBody: 'Коли ви додасте рекомендований аналіз, він зʼявиться тут.',
+      retry: 'Спробувати ще раз',
+      loadError: 'Не вдалося завантажити ваш план аналізів.',
+      planned: 'Заплановано',
+      fulfilled: 'Виконано',
+      reason: 'Чому це у плані',
+      historicalReason: 'Історичний контекст',
+      historicalReasonBody: 'Цей аналіз було додано на основі попереднього звіту.',
+      timing: 'Коли',
+      fulfilledBody: 'Виконано пізнішим результатом.',
+      fulfilledBy: 'Виконано результатом від',
+      resultUnavailable: 'Деталі результату зараз недоступні.',
+      viewResult: 'Переглянути результат',
+      fromReport: 'На основі вашого звіту',
+      fromEarlierReport: 'На основі попереднього звіту',
+    }
+    : {
+      title: 'Your saved Lab Plan',
+      intro: 'Tests saved for you and their current status.',
+      emptyTitle: 'No tests in your Lab Plan yet',
+      emptyBody: 'When you add a recommended test, it will appear here.',
+      retry: 'Try again',
+      loadError: 'We could not load your saved Lab Plan.',
+      planned: 'Planned',
+      fulfilled: 'Completed',
+      reason: 'Why it is in your plan',
+      historicalReason: 'Historical context',
+      historicalReasonBody: 'This test was added from an earlier report.',
+      timing: 'Timing',
+      fulfilledBody: 'Fulfilled by a later result.',
+      fulfilledBy: 'Fulfilled by result from',
+      resultUnavailable: 'Result details are temporarily unavailable.',
+      viewResult: 'View later result',
+      fromReport: 'Based on your report',
+      fromEarlierReport: 'From an earlier report',
+    }
+
+  if (loading) {
+    return (
+      <CoachCard className="p-5 sm:p-6" aria-busy="true">
+        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+          <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
+          {isUk ? 'Завантаження вашого плану аналізів…' : 'Loading your saved Lab Plan…'}
+        </div>
+      </CoachCard>
+    )
+  }
+
+  if (error) {
+    return (
+      <CoachCard className="p-5 sm:p-6">
+        <div role="alert" className="flex flex-col items-start gap-3">
+          <p className="text-sm leading-6 text-amber-900">{copy.loadError}</p>
+          <button type="button" onClick={onRetry} className="coach-button coach-button--secondary coach-button--md">
+            <RefreshCw className="h-4 w-4" />
+            {copy.retry}
+          </button>
+        </div>
+      </CoachCard>
+    )
+  }
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-5">
+        <p className="coach-eyebrow">{copy.title}</p>
+        <h2 className="coach-title-lg">{copy.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{copy.intro}</p>
+      </div>
+      {!items.length ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+          <h3 className="text-base font-extrabold text-slate-950">{copy.emptyTitle}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{copy.emptyBody}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {(() => {
+            const groups = []
+            const fulfilledGroups = new Map()
+            for (const item of items) {
+              const uploadId = item?.status === 'fulfilled' ? item?.fulfilled_by_upload_id : null
+              if (!uploadId) {
+                groups.push({ items: [item], uploadId: null })
+                continue
+              }
+              const existing = fulfilledGroups.get(uploadId)
+              if (existing) {
+                existing.items.push(item)
+              } else {
+                const group = { items: [item], uploadId }
+                fulfilledGroups.set(uploadId, group)
+                groups.push(group)
+              }
+            }
+            return groups.map((group) => group.uploadId ? (
+              <FulfilledLabPlanGroup
+                key={`fulfilled-${group.uploadId}`}
+                items={group.items}
+                uploadId={group.uploadId}
+                isUk={isUk}
+                copy={copy}
+                activeReportVersionId={activeReportVersionId}
+              />
+            ) : (
+              <LabPlanItemCard
+                key={labPlanItemKey(group.items[0])}
+                item={group.items[0]}
+                isUk={isUk}
+                copy={copy}
+                activeReportVersionId={activeReportVersionId}
+              />
+            ))
+          })()}
+        </div>
+      )}
+    </CoachCard>
+  )
+}
+
+export default function LabPlan() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isUk = isUkrainianLocale()
+  const [planItems, setPlanItems] = useState([])
+  const [planLoading, setPlanLoading] = useState(true)
+  const [planError, setPlanError] = useState(false)
+  const [publicAssessment, setPublicAssessment] = useState(null)
+  const [publicAssessmentLoading, setPublicAssessmentLoading] = useState(searchParams.get('source') === 'symptom-intake')
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
+  const concern = sessionContext?.active_concern || ''
+  const concernSummary = sessionContext?.summary || null
+
+  const loadPlan = useCallback(async () => {
+    setPlanLoading(true)
+    setPlanError(false)
+    try {
+      const data = await listLabPlanItems()
+      setPlanItems(normalizeLabPlanItems(data))
+    } catch {
+      setPlanError(true)
+    } finally {
+      setPlanLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPlan()
+  }, [loadPlan])
+
+  useEffect(() => {
+    if (searchParams.get('source') !== 'symptom-intake') return undefined
+    let active = true
+    api.get('/assessment/current')
+      .then(({ data }) => {
+        if (active) setPublicAssessment(data?.assessment || null)
+      })
+      .catch(() => {
+        if (active) setPublicAssessment(null)
+      })
+      .finally(() => {
+        if (active) setPublicAssessmentLoading(false)
+      })
+    return () => { active = false }
+  }, [searchParams])
+
+  const uploaded = useMemo(() => new Set(Array.isArray(concernSummary?.linkedLabs) ? concernSummary.linkedLabs : []), [concernSummary])
+  const statusFor = (item) => uploaded.has(item.name.toLowerCase()) ? 'uploaded' : 'suggested'
+
+  // P43: same activeReport source Dashboard already reads (today_contract's
+  // latest_ready_report -> GET /results/:uploadId) -- not a new entity, the
+  // same one contract reused here so Lab Plan and Dashboard never disagree
+  // about which report is active.
+  const { data: summary } = useDashboardSummary()
+  const readyUploadId = summary?.today_contract?.latest_ready_report_status === 'ready'
+    ? summary?.today_contract?.latest_ready_report?.upload_id
+    : null
+  const { data: reportDetails } = useReportDetails(readyUploadId)
+  const activeReportVersionId = reportDetails?.report_version?.id
+    ?? reportDetails?.final_analysis?.report_version?.id
+    ?? null
+  const activeMarkerNames = useMemo(() => {
+    const biomarkers = Array.isArray(reportDetails?.biomarkers) ? reportDetails.biomarkers : []
+    return new Set(
+      biomarkers
+        .map((b) => b?.name || b?.canonical_name || b?.name_en)
+        .filter(Boolean)
+        .map(normalizeTestKey)
+    )
+  }, [reportDetails])
+  const plannedKeys = useMemo(() => new Set(
+    planItems.map((item) => labPlanItemKey(item)).filter(Boolean)
+  ), [planItems])
+  const plannedRecommendationKeys = useMemo(
+    () => new Set([...plannedKeys].map(normalizeTestKey)),
+    [plannedKeys],
+  )
+  const reportRecommendations = useMemo(() => {
+    const recommendations = reportDetails?.next_best_tests?.recommended_tests
+      || reportDetails?.final_analysis?.next_best_tests?.recommended_tests
+      || []
+    return selectReportSpecificRecommendations(recommendations, activeMarkerNames, plannedRecommendationKeys)
+      .map((item) => ({
+        item,
+        context: classifyLabRecommendationContext(item, {
+          activeReportVersionId,
+          plannedItems: planItems,
+        }),
+      }))
+      .filter(({ context }) => !context.fulfilled)
+  }, [activeMarkerNames, activeReportVersionId, planItems, plannedRecommendationKeys, reportDetails])
+  const splitByLatestReport = useCallback((items) => ({
+    needed: items.filter((item) => !inLatestReport(item, activeMarkerNames)),
+    haveAlready: items.filter((item) => inLatestReport(item, activeMarkerNames)),
+  }), [activeMarkerNames])
+  const coreSplit = useMemo(() => splitByLatestReport(CORE_LABS), [splitByLatestReport])
+  const recommendedSplit = useMemo(() => splitByLatestReport(RECOMMENDED_LABS), [splitByLatestReport])
+  const optionalSplit = useMemo(() => splitByLatestReport(OPTIONAL_LABS), [splitByLatestReport])
+
+  if (!concern && !publicAssessmentLoading && !publicAssessment) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState
+          icon={FlaskConical}
+          title={isUk ? 'Почніть із симптомів' : 'Start with symptoms first'}
+          body={isUk ? 'Точний план аналізів працює краще, коли VITALOOP знає, що саме ви хочете зрозуміти.' : 'A focused lab plan works best when VITALOOP knows what you are trying to understand.'}
+          actionLabel={isUk ? 'Почати перевірку симптомів' : 'Start symptom check'}
+          onAction={() => navigate('/questionnaire')}
+        />
+      </div>
+    )
+  }
+
+  const hasSavedPublicGuide = !concern && Boolean(publicAssessment)
+  const savedDiscussionLabs = Array.isArray(publicAssessment?.recommended_labs)
+    ? publicAssessment.recommended_labs
+    : []
+
+  return (
+    <div className="coach-shell coach-grid">
+      <section className="coach-hero">
+        <div className="lab-plan-hero relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="coach-eyebrow">{isUk ? 'План аналізів' : 'Lab Plan'}</p>
+            <h1 className="coach-title-xl">{isUk ? 'Аналізи, які мають сенс для вашого поточного запиту.' : 'Tests that make sense for your current question.'}</h1>
+            <p className="coach-body mt-4 max-w-2xl">
+              {isUk ? 'На основі: ' : 'Based on: '}<strong>{concern || (isUk ? 'збереженої перевірки симптомів' : 'your saved symptom check')}</strong>{/\.\s*$/.test(concern) ? '' : '.'}
+              {' '}
+              {isUk ? 'Це не діагноз. Це пріоритетний список для обговорення з лікарем і завантаження результатів.' : 'This is not a diagnosis. It is a prioritized checklist for clinician discussion and result upload.'}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <CoachButton icon={Upload} trailingIcon={ArrowRight} onClick={() => navigate('/upload')}>{isUk ? 'Завантажити наявні результати' : 'Upload existing results'}</CoachButton>
+              <CoachButton variant="secondary" icon={HelpCircle} onClick={() => document.getElementById('why-tests')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{isUk ? 'Чому ці аналізи?' : 'Why these tests?'}</CoachButton>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {hasSavedPublicGuide && (
+        <CoachCard className="p-5 sm:p-6" aria-live="polite">
+          <p className="coach-eyebrow">{isUk ? 'Збережений стартовий план' : 'Your saved starting plan'}</p>
+          <h2 className="coach-title-lg">{isUk ? 'Напрямки для обговорення вже збережені' : 'Your discussion directions are already saved'}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {isUk ? 'Це не діагноз. Використайте цей список для розмови з лікарем або завантажте наявні результати.' : 'This is not a diagnosis. Use this list to prepare a clinician conversation or upload results you already have.'}
+          </p>
+          {savedDiscussionLabs.length > 0 && (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2" aria-label={isUk ? 'Збережені напрямки' : 'Saved discussion directions'}>
+              {savedDiscussionLabs.map((lab) => (
+                <li key={lab?.key || lab?.name} className="rounded-[var(--vtl-radius-control)] border border-[color:var(--vtl-color-border)] bg-[color:var(--vtl-color-surface-subtle)] p-3 text-sm font-semibold text-[color:var(--vtl-color-ink)]">
+                  {lab?.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CoachCard>
+      )}
+
+      <PersonalLabPlan
+        items={planItems}
+        isUk={isUk}
+        loading={planLoading}
+        error={planError}
+        onRetry={loadPlan}
+        activeReportVersionId={activeReportVersionId}
+      />
+
+      {readyUploadId && reportDetails && (
+        <CoachCard className="lab-plan-report-recommendations p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{isUk ? 'На основі останнього звіту' : 'Based on your latest report'}</p>
+            <h2 className="coach-title-lg">{isUk ? 'Аналізи, які можуть уточнити цей звіт' : 'Tests that may clarify this report'}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {isUk
+                ? 'Це рекомендації саме для цього звіту, а не загальний каталог.'
+                : 'These are report-specific recommendations, not a general catalog.'}
+            </p>
+          </div>
+          {reportRecommendations.length ? (
+            <div className="lab-plan-recommendation-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {reportRecommendations.map(({ item, context }) => (
+                <LabCard key={item.name} item={item} status="suggested" isUk={isUk} context={context} />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm leading-6 text-slate-700">
+              {isUk
+                ? 'Наразі додаткові аналізи саме для цього звіту не запропоновані.'
+                : 'No additional report-specific tests are currently suggested.'}
+            </p>
+          )}
+        </CoachCard>
+      )}
+
+      <div className="coach-grid coach-grid--3">
+        <InsightCard icon={Beaker} title={isUk ? 'Базові аналізи' : 'Core tests'} body={isUk ? 'Почніть тут, якщо потрібен широкий сигнал без зайвої складності.' : 'Start here when you want the broadest signal with the lowest complexity.'} />
+        <InsightCard icon={FlaskConical} tone="warning" title={isUk ? 'Рекомендовані аналізи' : 'Recommended tests'} body={isUk ? 'Додайте їх, коли симптоми вказують на певну систему або бракує контексту.' : 'Add these when symptoms point to a likely system or missing context.'} />
+        <InsightCard icon={Coins} title={isUk ? 'Нотатка про бюджет' : 'Budget note'} body={isUk ? 'Якщо бюджет обмежений, почніть із базових аналізів. Додавайте рекомендовані, коли це клінічно доречно.' : 'Start with core tests if budget is limited. Add recommended tests when clinically reasonable.'} />
+      </div>
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-5">
+          <p className="coach-eyebrow">{isUk ? 'Каталог аналізів' : 'Explore tests to add'}</p>
+          <h2 className="coach-title-lg">{isUk ? 'Загальний каталог' : 'General catalog'}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {isUk
+              ? 'Довідковий список, а не персональна рекомендація для поточного звіту.'
+              : 'An educational reference list, not a personalized recommendation for the current report.'}
+          </p>
+        </div>
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {coreSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+        </div>
+        <AlreadyHaveStrip items={coreSplit.haveAlready} isUk={isUk} />
+      </CoachCard>
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-5">
+          <p className="coach-eyebrow">{isUk ? 'Рекомендовані аналізи' : 'Recommended Tests'}</p>
+          <h2 className="coach-title-lg">{isUk ? 'Додайте, коли вони відповідають патерну симптомів' : 'Add when they match your symptom pattern'}</h2>
+        </div>
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-3">
+          {recommendedSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+        </div>
+        <AlreadyHaveStrip items={recommendedSplit.haveAlready} isUk={isUk} />
+      </CoachCard>
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-5">
+          <p className="coach-eyebrow">{isUk ? 'Додаткові аналізи' : 'Optional Tests'}</p>
+          <h2 className="coach-title-lg">{isUk ? 'Корисні для глибшого контексту, але не завжди потрібні спочатку' : 'Useful for deeper context, not always necessary first'}</h2>
+        </div>
+        <div className="lab-plan-catalog-grid grid gap-4 md:grid-cols-2">
+          {optionalSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+        </div>
+        <AlreadyHaveStrip items={optionalSplit.haveAlready} isUk={isUk} />
+      </CoachCard>
+
+      <CoachCard id="why-tests" className="p-5 sm:p-6">
+        <p className="coach-eyebrow">{isUk ? 'Чому ці аналізи' : 'Why These Tests'}</p>
+        <h2 className="coach-title-lg">{isUk ? 'Мета - пріоритет, а не більше даних.' : 'The goal is priority, not more data.'}</h2>
+        <p className="coach-body mt-3">{isUk ? 'VITALOOP групує аналізи за питаннями, на які вони допомагають відповісти: енергія та відновлення, запалення, нутрієнтний статус, контекст щитоподібної залози та метаболічна стабільність. Завантажте результати, коли будете готові, і звіт повʼяже маркери із симптомами.' : 'VITALOOP groups tests by the question they help answer: energy and recovery, inflammation, nutrient status, thyroid context, and metabolic stability. Upload results when ready and the report will connect markers back to symptoms.'}</p>
+      </CoachCard>
+    </div>
+  )
+}

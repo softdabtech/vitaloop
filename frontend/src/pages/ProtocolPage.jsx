@@ -1,0 +1,1379 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react'
+import api from '../lib/api.js'
+import { completeProtocolAction, listInterventions } from '../api/interventions.js'
+import { useFeature } from '../hooks/useFeature.js'
+import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
+import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
+import { gaProtocolView } from '../lib/analytics.js'
+import { createRetestCopy, formatRetestDate, reliableClinicalDate, retestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
+import DecisionHeader, { decisionRetestSummary } from '../components/dashboard/DecisionHeader.jsx'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
+
+const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+const TIMING_LABELS = {
+  morning: 'Morning',
+  with_breakfast: 'With breakfast',
+  before_breakfast: 'Before breakfast',
+  with_food: 'With food',
+  with_lunch: 'With lunch',
+  afternoon: 'Afternoon',
+  with_dinner: 'With dinner',
+  evening: 'Evening',
+  night: 'Night',
+  before_bed: 'Before bed',
+  bedtime: 'Before bed',
+}
+
+const TIMING_LABELS_UK = {
+  morning: 'Ранок',
+  with_breakfast: 'Зі сніданком',
+  before_breakfast: 'До сніданку',
+  with_food: 'З їжею',
+  with_lunch: 'З обідом',
+  afternoon: 'Після обіду',
+  with_dinner: 'З вечерею',
+  evening: 'Вечір',
+  night: 'Ніч',
+  before_bed: 'Перед сном',
+  bedtime: 'Перед сном',
+}
+
+const CATEGORY_LABELS = {
+  nutrition: 'Nutrition',
+  nutrition_context: 'Nutrition',
+  nutrients: 'Nutrients',
+  vitamins: 'Vitamins',
+  supplements: 'Supplements',
+  supplement: 'Supplement',
+  supplement_safety: 'Supplement safety',
+  training_recovery: 'Training & recovery',
+  lifestyle: 'Lifestyle',
+  profile: 'Profile',
+  stress: 'Stress',
+}
+
+const CATEGORY_LABELS_UK = {
+  nutrition: 'Харчування',
+  nutrition_context: 'Харчування',
+  nutrients: 'Нутрієнти',
+  vitamins: 'Вітаміни',
+  supplements: 'Добавки',
+  supplement: 'Добавка',
+  supplement_safety: 'Безпека добавок',
+  training_recovery: 'Тренування й відновлення',
+  lifestyle: 'Спосіб життя',
+  profile: 'Профіль',
+  stress: 'Стрес',
+}
+
+const RETEST_COPY = {
+  en: createRetestCopy(
+    'Not due yet',
+    'Due now',
+    'Overdue',
+    'Pending',
+    'Completed',
+    (start, end) => `Retest window: ${start} – ${end}`,
+    'Based on this report',
+    (date) => date ? `Completed by a later result on ${date}.` : 'Completed by a later result.',
+    'View later result',
+  ),
+  uk: createRetestCopy(
+    'Ще не час',
+    'Час повторити',
+    'Прострочено',
+    'Очікується',
+    'Завершено',
+    (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    'На основі цього звіту',
+    (date) => date ? `Завершено наступним результатом ${date}.` : 'Завершено наступним результатом.',
+    'Переглянути наступний результат',
+  ),
+}
+
+const PROTOCOL_COPY = {
+  en: {
+    errorTitle: 'Protocol is not available',
+    notFound: 'This upload was not found or is no longer available.',
+    premium: 'This protocol requires Premium access.',
+    genericError: 'Unable to load this protocol right now.',
+    backResults: 'Back to results',
+    noProtocol: 'No protocol yet',
+    noProtocolBody: 'Open your result first. If the report has no generated actions yet, VITALOOP will show them after analysis completes.',
+    openResult: 'Open result',
+    summaryEyebrow: 'Protocol Summary',
+    summaryTitle: 'Your plan, organized by when to act.',
+    summaryBody: 'Educational next steps based on this report. Confirm supplements, medication interactions, and dosing with a qualified clinician when relevant.',
+    decision: {
+      title: 'What matters now',
+      why: 'Why',
+      nextAction: 'Next action',
+      retest: 'Retest',
+    },
+    exporting: 'Exporting...',
+    exportPdf: 'Export PDF',
+    markComplete: 'Mark complete',
+    completing: 'Saving...',
+    completed: 'Completed',
+    completionFailed: "We couldn't save this update. Try again.",
+    planContext: 'Plan Context',
+    actions: 'Actions',
+    biomarkers: 'Biomarkers reviewed',
+    retestItems: 'Retest items',
+    safetyWarning: 'Safety warning',
+    sections: {
+      today: ['Today', 'Small actions to start with now.'],
+      week: ['This Week', 'Actions that need a few days of consistency.'],
+      month: ['This Month', 'Follow-up actions and review windows.'],
+      longTerm: ['Long-Term Habits', 'Repeatable habits that support the loop.'],
+    },
+    shoppingEyebrow: 'Suggested iHerb searches',
+    shoppingTitle: 'Optional shopping aids connected to this protocol.',
+    shoppingBody: 'These links are educational search shortcuts, not prescriptions. Confirm supplements, dosing, and interactions with a qualified clinician before use.',
+    findIherb: 'Find on iHerb',
+    retestPlan: 'Retest Plan',
+    retestPlanIntro: 'Add these to your calendar, or bring the list to your next appointment.',
+    marker: 'Marker',
+    discussTiming: 'Discuss timing with a clinician.',
+    retestFallback: 'No specific retest dates yet — timing depends on symptoms and clinician guidance.',
+    ...RETEST_COPY.en,
+    uploadWhenRepeated: 'Upload your next report when you repeat these tests',
+    safetyDiscussion: 'Safety and Clinician Discussion',
+    discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
+    closingBody: 'Keep tracking how you feel, and revisit your results whenever it helps.',
+    continueTracking: 'Continue tracking',
+    premiumTeaser: 'Premium helps you keep this plan moving: repeat checks, progress trends, and doctor discussion prep across reports.',
+    premiumTeaserCta: 'See what Premium adds',
+    doctorEscalationTitle: 'Doctor discussion',
+    doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Needs prompt medical attention',
+      doctor: 'Worth discussing with a doctor',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'As soon as possible',
+      prompt: 'Within the next few days',
+      soon: 'In the near term',
+      routine: 'At your next routine check-in',
+    },
+    doctorEscalationMarkersLabel: 'Related markers',
+    doctorEscalationDisclaimer: 'This is educational information, not a diagnosis, and does not replace a doctor.',
+    evidenceTitle: 'Evidence / Why this appears',
+    evidenceBody: 'When available, each action shows timing, priority, category, evidence, effort, safety notes, and intended outcome from the existing report data. Empty fields are hidden instead of fabricated.',
+    effort: 'Effort',
+    evidence: 'Evidence',
+    outcome: 'Intended outcome',
+    basedOn: 'Based on',
+    dataUsed: 'Data used',
+    healthDomains: 'Health domains',
+    expectedTimeline: 'Expected timeline',
+    retestMarkers: 'Retest markers',
+    safetyNotes: 'Safety notes',
+    kbContext: 'Knowledge-base context',
+    technicalDetails: 'Analysis details',
+    pdfTitle: 'VITALOOP Action Protocol',
+    pdfUpload: 'Upload',
+    pdfGenerated: 'Generated',
+    pdfSummary: '1. Protocol Summary',
+    pdfSummaryBody: (count) => `This educational protocol contains ${count} action item${count === 1 ? '' : 's'} grouped by practical timing.`,
+    pdfActions: '2. Actions',
+    pdfDiscussion: '3. Clinician Discussion',
+    pdfRetest: '4. Retest Plan',
+    pdfDisclaimer: '5. Disclaimer',
+    disclaimer: 'VITALOOP provides educational information only. It does not diagnose, treat, prescribe, or replace professional medical advice.',
+    reasoningTitle: 'Clinical Reasoning',
+    reasoningIntro: 'How each finding behind this plan was reached — the markers and symptoms behind it, how confident we are, and what would change the picture.',
+    reasoningBasedOn: 'Based on',
+    reasoningSupporting: 'Supporting',
+    reasoningContradicting: 'Argues against',
+    reasoningGaps: "What we still don't know",
+    reasoningNextTests: 'Suggested next tests',
+    reasoningDoctorFlag: 'Discuss with a doctor',
+    reasoningSafety: {
+      high_confidence_urgent: 'Needs prompt attention',
+      moderate_confidence: 'Worth reviewing',
+      low_confidence: 'Early signal, limited certainty',
+      blocked_by_missing_data: 'Not enough data for a confident read',
+      doctor_only: 'Discuss with a doctor',
+    },
+    progressTitle: 'What to Change in Your Plan',
+    progressIntro: 'Based on how your patterns changed since your last report.',
+    progressNoPrevious: null,
+    progressAction: {
+      strengthened: 'Re-check soon — this needs closer attention now, not less.',
+      weakened: 'Good progress — keep doing what you’re doing.',
+      new_signal: 'New — consider adding this to your plan.',
+      resolved_or_improved: 'Resolved — you can likely stop related actions for this.',
+      stable: 'No change — continue your current plan.',
+    },
+  },
+  uk: {
+    errorTitle: 'План дій недоступний',
+    notFound: 'Це завантаження не знайдено або воно більше недоступне.',
+    premium: 'Для цього плану потрібен Premium.',
+    genericError: 'Не вдалося завантажити план дій зараз.',
+    backResults: 'До результатів',
+    noProtocol: 'Плану дій ще немає',
+    noProtocolBody: 'Спочатку відкрийте результат. Якщо звіт ще не має дій, VITALOOP покаже їх після завершення аналізу.',
+    openResult: 'Відкрити результат',
+    summaryEyebrow: 'Підсумок плану',
+    summaryTitle: 'Ваш план, згрупований за часом дії.',
+    summaryBody: 'Освітні наступні кроки на основі звіту. Підтвердьте добавки, взаємодії та дозування з кваліфікованим фахівцем.',
+    decision: {
+      title: 'Що важливо зараз',
+      why: 'Чому',
+      nextAction: 'Наступна дія',
+      retest: 'Повторна перевірка',
+    },
+    exporting: 'Експортуємо...',
+    exportPdf: 'Експорт PDF',
+    markComplete: 'Позначити виконаним',
+    completing: 'Зберігаємо...',
+    completed: 'Виконано',
+    completionFailed: 'Не вдалося зберегти оновлення. Спробуйте ще раз.',
+    planContext: 'Контекст плану',
+    actions: 'Дій',
+    biomarkers: 'Показників переглянуто',
+    retestItems: 'Повторних перевірок',
+    safetyWarning: 'Попередження безпеки',
+    sections: {
+      today: ['Сьогодні', 'Невеликі кроки, з яких можна почати зараз.'],
+      week: ['Цього тижня', 'Дії, яким потрібна кількаденна послідовність.'],
+      month: ['Цього місяця', 'Кроки для перегляду й повторної перевірки.'],
+      longTerm: ['Довгострокові звички', 'Повторювані дії, що підтримують цикл.'],
+    },
+    shoppingEyebrow: 'Пошук на iHerb',
+    shoppingTitle: 'Опційні підказки для покупок, повʼязані з цим планом.',
+    shoppingBody: 'Це освітні пошукові посилання, не призначення. Підтвердьте добавки, дозування й взаємодії з фахівцем перед використанням.',
+    findIherb: 'Знайти на iHerb',
+    retestPlan: 'План повторної перевірки',
+    retestPlanIntro: 'Додайте це до календаря або візьміть список на наступний прийом.',
+    marker: 'Показник',
+    discussTiming: 'Обговоріть терміни з фахівцем.',
+    retestFallback: 'Конкретних дат повторної перевірки поки немає — терміни залежать від симптомів і рекомендацій фахівця.',
+    ...RETEST_COPY.uk,
+    uploadWhenRepeated: 'Завантажте новий звіт, коли повторите ці аналізи',
+    safetyDiscussion: 'Безпека та питання до фахівця',
+    discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
+    closingBody: 'Продовжуйте відстежувати самопочуття і повертайтеся до результатів, коли це корисно.',
+    continueTracking: 'Продовжити відстеження',
+    premiumTeaser: 'Premium допомагає підтримувати цей план: повторні перевірки, динаміка прогресу та підготовка до розмови з лікарем між звітами.',
+    premiumTeaserCta: 'Дізнатись, що дає Premium',
+    doctorEscalationTitle: 'Обговорення з лікарем',
+    doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Потребує швидкої медичної уваги',
+      doctor: 'Варто обговорити з лікарем',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'Якнайшвидше',
+      prompt: 'Протягом кількох днів',
+      soon: 'Найближчим часом',
+      routine: 'У плановому порядку',
+    },
+    doctorEscalationMarkersLabel: 'Пов’язані показники',
+    doctorEscalationDisclaimer: 'VITALOOP не ставить діагноз і не замінює лікаря.',
+    evidenceTitle: 'Доказовість / Чому це показано',
+    evidenceBody: 'Коли дані доступні, кожна дія показує час, пріоритет, категорію, доказовість, зусилля, примітки безпеки й очікуваний результат. Порожні поля приховані, а не вигадані.',
+    effort: 'Зусилля',
+    evidence: 'Доказовість',
+    outcome: 'Очікуваний результат',
+    basedOn: 'На основі',
+    dataUsed: 'Використані дані',
+    healthDomains: 'Домени здоровʼя',
+    expectedTimeline: 'Очікуваний строк',
+    retestMarkers: 'Повторні аналізи',
+    safetyNotes: 'Примітки безпеки',
+    kbContext: 'Контекст бази знань',
+    technicalDetails: 'Деталі аналізу',
+    pdfTitle: 'VITALOOP План дій',
+    pdfUpload: 'Завантаження',
+    pdfGenerated: 'Сформовано',
+    pdfSummary: '1. Підсумок плану',
+    pdfSummaryBody: (count) => `Цей освітній план містить ${count} ${count === 1 ? 'дію' : 'дій'}, згрупованих за практичним часом виконання.`,
+    pdfActions: '2. Дії',
+    pdfDiscussion: '3. Обговорення з фахівцем',
+    pdfRetest: '4. Повторна перевірка',
+    pdfDisclaimer: '5. Дисклеймер',
+    disclaimer: 'VITALOOP надає лише освітню інформацію. Він не ставить діагноз, не лікує, не призначає терапію і не замінює професійну медичну консультацію.',
+    reasoningTitle: 'Клінічне обґрунтування',
+    reasoningIntro: 'Як зроблено кожен висновок, на якому базується план, — які показники й симптоми його підтверджують, наскільки ми впевнені і що може змінити картину.',
+    reasoningBasedOn: 'На основі',
+    reasoningSupporting: 'Підтверджують',
+    reasoningContradicting: 'Проти цього свідчить',
+    reasoningGaps: 'Чого ще не вистачає для впевненості',
+    reasoningNextTests: 'Рекомендовані наступні аналізи',
+    reasoningDoctorFlag: 'Обговорити з лікарем',
+    reasoningSafety: {
+      high_confidence_urgent: 'Потребує швидкої уваги',
+      moderate_confidence: 'Варто переглянути',
+      low_confidence: 'Ранній сигнал, обмежена впевненість',
+      blocked_by_missing_data: 'Недостатньо даних для впевненого висновку',
+      doctor_only: 'Обговорити з лікарем',
+    },
+    progressTitle: 'Що змінити у вашому плані',
+    progressIntro: 'На основі того, як змінилися ваші патерни з попереднього звіту.',
+    progressNoPrevious: null,
+    progressAction: {
+      strengthened: 'Перевірте найближчим часом — це потребує більшої уваги, а не меншої.',
+      weakened: 'Хороший прогрес — продовжуйте те, що робите.',
+      new_signal: 'Нове — варто додати до плану.',
+      resolved_or_improved: 'Вирішено — можна припинити повʼязані дії.',
+      stable: 'Без змін — продовжуйте поточний план.',
+    },
+  },
+}
+
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  liver: 'Печінка',
+  'liver stress context': 'Печінка',
+  kidney: 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
+}
+
+const ACTION_SOURCE_LABELS = {
+  en: {
+    protocol: 'Protocol guidance',
+    pattern: 'Pattern insight',
+    next_best_tests: 'Recommended follow-up',
+    evidence_gap: 'Evidence gap',
+  },
+  uk: {
+    protocol: 'Рекомендація протоколу',
+    pattern: 'Виявлена закономірність',
+    next_best_tests: 'Рекомендований наступний крок',
+    evidence_gap: 'Брак даних',
+  },
+}
+
+export function actionSourceLabel(source, isUk = false) {
+  const key = String(source || '').trim().toLowerCase()
+  return ACTION_SOURCE_LABELS[isUk ? 'uk' : 'en'][key] || ''
+}
+
+function formatPriority(priority, isUk = false) {
+  return String(priority || 'LOW').toUpperCase()
+    .replace('HIGH', isUk ? 'ВИСОКИЙ' : 'HIGH')
+    .replace('MEDIUM', isUk ? 'СЕРЕДНІЙ' : 'MEDIUM')
+    .replace('LOW', isUk ? 'НИЗЬКИЙ' : 'LOW')
+}
+
+function sortProtocolByPriority(protocol) {
+  return [...protocol].sort((a, b) => (PRIORITY_ORDER[formatPriority(a.priority)] ?? 9) - (PRIORITY_ORDER[formatPriority(b.priority)] ?? 9))
+}
+
+function normalizeProtocolRows(protocol) {
+  if (Array.isArray(protocol)) return protocol
+  if (!protocol || typeof protocol !== 'object') return []
+  const sectionOrder = ['nutrition', 'supplements', 'lifestyle', 'training_recovery', 'trainingRecovery']
+  const rows = []
+  const seenSections = new Set()
+  sectionOrder.forEach((section) => {
+    seenSections.add(section)
+    const items = protocol[section]
+    if (Array.isArray(items)) {
+      items.forEach((item) => rows.push({ section, ...(item || {}) }))
+    }
+  })
+  Object.entries(protocol).forEach(([section, items]) => {
+    if (seenSections.has(section) || !Array.isArray(items)) return
+    items.forEach((item) => rows.push({ section, ...(item || {}) }))
+  })
+  return rows
+}
+
+export function selectProtocolRows({ coreProtocol, storedProtocol, actionPlan }) {
+  if (actionPlan.some((item) => item?.action_id != null)) return actionPlan
+  return coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan
+}
+
+export function selectAuthoritativeProtocol(data) {
+  const frozenProtocol = normalizeProtocolRows(data?.report_version?.protocol)
+  return frozenProtocol.length
+    ? frozenProtocol
+    : normalizeProtocolRows(data?.final_analysis?.protocol)
+}
+
+export function selectProtocolRetestPlan({ interventionsAvailable, persistedRetestPlan, reportRetestPlan }) {
+  return interventionsAvailable && persistedRetestPlan.length ? persistedRetestPlan : reportRetestPlan
+}
+
+async function loadProtocolData(uploadId) {
+  const { data } = await api.get(`/results/${uploadId}`)
+  const biomarkers = data?.biomarkers ?? []
+  const coreProtocol = selectAuthoritativeProtocol(data)
+  const storedProtocol = normalizeProtocolRows(data?.protocol)
+  const actionPlan = Array.isArray(data?.knowledge_report?.action_plan) ? data.knowledge_report.action_plan : []
+  const doctorDiscussion = Array.isArray(data?.knowledge_report?.doctor_discussion) ? data.knowledge_report.doctor_discussion : []
+  const retestPlan = Array.isArray(data?.knowledge_report?.retest_plan) ? data.knowledge_report.retest_plan : []
+  const safetyAlerts = Array.isArray(data?.knowledge_report?.safety_alerts) ? data.knowledge_report.safety_alerts : []
+  const shoppingLinks = Array.isArray(data?.shopping_links)
+    ? data.shopping_links
+    : Array.isArray(data?.final_analysis?.shopping_links)
+      ? data.final_analysis.shopping_links
+      : []
+  const clinicalReasoningTraces = Array.isArray(data?.clinical_reasoning_traces)
+    ? data.clinical_reasoning_traces
+    : Array.isArray(data?.final_analysis?.clinical_reasoning_traces)
+      ? data.final_analysis.clinical_reasoning_traces
+      : []
+  const progressIntelligence = data?.progress_intelligence ?? data?.final_analysis?.progress_intelligence ?? null
+  // P29: doctor_escalation_precision (backend/app/services/doctor_escalation_precision.py)
+  // -- see P29a exposure review (docs/P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md)
+  // for why both the top-level and final_analysis fallbacks are checked.
+  const doctorEscalationPrecision = data?.doctor_escalation_precision ?? data?.final_analysis?.doctor_escalation_precision ?? null
+  const reportVersionId = data?.report_version?.id ?? data?.final_analysis?.report_version?.id ?? null
+  let interventions = []
+  let interventionsAvailable = true
+  try {
+    interventions = await listInterventions()
+  } catch {
+    interventionsAvailable = false
+  }
+  const retestObligations = selectRetestObligations(interventions, reportVersionId)
+  const retestResultDates = await loadRetestResultDates(retestObligations)
+  const completedActionIds = completedProtocolActionIds(interventions, reportVersionId)
+  return {
+    biomarkers,
+    protocol: selectProtocolRows({ coreProtocol, storedProtocol, actionPlan }),
+    doctorDiscussion,
+    retestPlan,
+    retestObligations,
+    retestResultDates,
+    interventionsAvailable,
+    safetyAlerts,
+    shoppingLinks,
+    knowledgeReport: data?.knowledge_report ?? null,
+    clinicalReasoningTraces,
+    progressIntelligence,
+    doctorEscalationPrecision,
+    reportVersionId,
+    completedActionIds,
+  }
+}
+
+async function loadRetestResultDates(obligations) {
+  const uploadIds = [...new Set(
+    obligations
+      .map((item) => item.fulfilled_by_upload_id)
+      .filter(Boolean),
+  )]
+  const entries = await Promise.all(uploadIds.map(async (uploadId) => {
+    try {
+      const { data } = await api.get(`/results/${uploadId}`)
+      return [uploadId, reliableClinicalDate(data)]
+    } catch {
+      return [uploadId, null]
+    }
+  }))
+  return Object.fromEntries(entries)
+}
+
+export function buildProtocolActionCompletionPayload(item, reportVersionId) {
+  return {
+    event_type: 'protocol_action',
+    action_id: item.action_id,
+    source_report_version_id: reportVersionId,
+    label: protocolTitle(item),
+    description: protocolBody(item) || undefined,
+  }
+}
+
+export function completedProtocolActionIds(interventions, reportVersionId) {
+  return new Set(
+    (Array.isArray(interventions) ? interventions : [])
+      .filter((event) => event?.source_report_version_id === reportVersionId && event?.related_recommendation_id)
+      .map((event) => event.related_recommendation_id)
+  )
+}
+
+function protocolTitle(item) {
+  return item?.title || item?.supplement || item?.name || 'Action item'
+}
+
+function protocolBody(item) {
+  return item?.body || item?.rationale || item?.explanation || item?.reason || ''
+}
+
+function protocolTiming(item, isUk = false) {
+  const raw = String(item?.timing || item?.schedule || '').trim()
+  const labels = isUk ? TIMING_LABELS_UK : TIMING_LABELS
+  return labels[raw] || raw.replaceAll('_', ' ') || ''
+}
+
+function retestStateLabel(state, copy) {
+  return {
+    pending_not_open: copy.retestNotDue,
+    due_now: copy.retestDueNow,
+    overdue: copy.retestOverdue,
+    fulfilled: copy.retestCompleted,
+    pending_no_window: copy.retestPending,
+  }[state] || copy.retestPending
+}
+
+export function RetestObligationCard({ item, resultDate, copy, isUk, today }) {
+  const state = retestState(item, today)
+  const marker = item.marker || retestMarker(item)
+  const timing = item.timing || item.metadata?.timing
+  const resultLocale = isUk ? 'uk-UA' : 'en-US'
+  const formattedResultDate = resultDate ? formatRetestDate(resultDate, resultLocale) : null
+  const start = formatRetestDate(item.retest_window_start, isUk ? 'uk-UA' : 'en-US')
+  const end = formatRetestDate(item.retest_window_end, isUk ? 'uk-UA' : 'en-US')
+  const resultHref = item.fulfilled_by_upload_id ? `/results/${item.fulfilled_by_upload_id}` : null
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="font-bold text-slate-950">{displayBiomarker(marker, isUk) || copy.marker}</p>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-700">{retestStateLabel(state, copy)}</span>
+      </div>
+      {start && end && <p className="mt-2 text-sm text-slate-700">{copy.retestWindow(start, end)}</p>}
+      {timing && <p className="mt-1 text-xs text-slate-500">{timing}</p>}
+      <p className="mt-1 text-xs text-slate-500">{copy.retestSource}</p>
+      {state === 'fulfilled' && (
+        <p className="mt-2 text-sm text-emerald-700">
+          {copy.retestCompletedBy(formattedResultDate)}
+        </p>
+      )}
+      {resultHref && (
+        <a
+          href={resultHref}
+          className="mt-2 inline-flex max-w-full flex-wrap items-center gap-1 text-sm font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+        >
+          {copy.viewLaterResult}
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+        </a>
+      )}
+    </div>
+  )
+}
+
+function protocolCategory(item, isUk = false) {
+  const raw = String(item?.category || item?.type || '').trim()
+  if (!raw) return ''
+  const labels = isUk ? CATEGORY_LABELS_UK : CATEGORY_LABELS
+  return labels[raw.toLowerCase()] || raw.replaceAll('_', ' ')
+}
+
+function effortLabel(item) {
+  return item?.effort || item?.expected_effort || null
+}
+
+function outcomeLabel(item) {
+  return item?.intended_outcome || item?.outcome || null
+}
+
+function evidenceLabel(item) {
+  return item?.evidence_level || item?.evidence || item?.confidence || null
+}
+
+function safetyLabel(item) {
+  return item?.safety_note || item?.warning || item?.clinician_note || null
+}
+
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => {
+        if (!item) return []
+        if (typeof item === 'string') return [item]
+        if (typeof item !== 'object') return [String(item)]
+        return [item.label || item.name || item.marker || item.biomarker || item.domain || item.key || item.reason || item.summary || item.title || ''].filter(Boolean)
+      })
+      .filter(Boolean)
+  }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+// P31d: asTextList()'s object fallback chain (label/name/.../domain) can
+// map two distinct gap entries onto the same display string (e.g. two
+// gaps in the same domain with no more specific label) -- this collapses
+// those into one, preserving first-seen order, before the list is
+// rendered. Presentation-only: never touches the source trace data.
+function dedupeTextList(list) {
+  const seen = new Set()
+  const result = []
+  for (const item of list) {
+    if (seen.has(item)) continue
+    seen.add(item)
+    result.push(item)
+  }
+  return result
+}
+
+function basedOnList(item) {
+  const basedOn = item?.based_on || {}
+  return [
+    ...asTextList(basedOn.biomarkers || basedOn.markers || item?.biomarkers),
+    ...asTextList(basedOn.symptoms || item?.symptoms),
+    ...asTextList(basedOn.rules || basedOn.knowledge_rules),
+  ].slice(0, 6)
+}
+
+function displayEvidence(value, isUk) {
+  return evidenceDisplayLabel(value, isUk)
+}
+
+function displayBiomarker(value, isUk) {
+  return biomarkerDisplayName(value, isUk) || String(value || '')
+}
+
+function healthDomainList(item) {
+  return asTextList(
+    item?.knowledge_domain_context
+    || item?.health_domains
+    || item?.based_on?.health_domains
+    || item?.based_on?.domains
+  ).slice(0, 5)
+}
+
+function safetyNotesList(item) {
+  return asTextList(item?.safety_notes || item?.safety_note || item?.warnings || item?.warning).slice(0, 4)
+}
+
+function retestMarkersList(item) {
+  return asTextList(item?.retest_markers || item?.retest_marker || item?.follow_up_markers).slice(0, 5)
+}
+
+function localizeDomainLabel(value, isUk) {
+  const raw = String(value || '').trim()
+  if (!raw || !isUk) return raw
+  const key = raw.toLowerCase().replace(/\s+/g, '_')
+  const textKey = raw.toLowerCase()
+  return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
+}
+
+function groupProtocol(rows) {
+  const groups = {
+    today: [],
+    week: [],
+    month: [],
+    longTerm: [],
+  }
+  rows.forEach((item, index) => {
+    const text = `${item?.timing || ''} ${item?.category || ''} ${item?.title || ''} ${item?.body || ''}`.toLowerCase()
+    if (index < 2 || text.includes('today') || text.includes('morning') || text.includes('breakfast') || text.includes('daily')) groups.today.push(item)
+    else if (text.includes('week') || text.includes('sleep') || text.includes('nutrition') || text.includes('food')) groups.week.push(item)
+    else if (text.includes('month') || text.includes('retest') || text.includes('follow')) groups.month.push(item)
+    else groups.longTerm.push(item)
+  })
+  return groups
+}
+
+function priorityTone(priority) {
+  const p = formatPriority(priority)
+  if (p === 'HIGH') return 'critical'
+  if (p === 'MEDIUM') return 'warning'
+  return 'neutral'
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+// Same clinical_reasoning_trace object Results.jsx surfaces (see
+// backend/app/services/clinical_reasoning_trace.py) — mirrored here so the
+// plan on this page is backed by the same visible reasoning as the report
+// it came from, instead of the two pages telling a different story.
+function ReasoningTraceCard({ trace, copy, isUk }) {
+  const confidence = formatPercent(trace?.confidence)
+  const safetyKey = String(trace?.safety_level || '').trim()
+  const safetyLabel = copy.reasoningSafety?.[safetyKey]
+  const supporting = asTextList(trace?.supporting_markers).slice(0, 5)
+  const contradicting = asTextList(trace?.contradicting_markers).slice(0, 4)
+  const gaps = dedupeTextList(asTextList(trace?.evidence_gaps)).slice(0, 4)
+  const nextTests = asTextList(trace?.next_best_tests).slice(0, 4)
+  const matchedBiomarkers = asTextList(trace?.matched_biomarkers).slice(0, 5)
+
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-extrabold text-slate-950">
+          {trace?.user_explanation?.headline || trace?.pattern_name || trace?.pattern_id}
+        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidence && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {confidence}
+            </span>
+          )}
+          {(trace?.doctor_flag || safetyLabel) && (
+            <CoachBadge
+              tone={
+                trace?.doctor_flag || safetyKey === 'high_confidence_urgent'
+                  ? 'critical'
+                  : safetyKey === 'moderate_confidence'
+                    ? 'warning'
+                    : 'neutral'
+              }
+            >
+              {trace?.doctor_flag ? copy.reasoningDoctorFlag : safetyLabel}
+            </CoachBadge>
+          )}
+        </div>
+      </div>
+      {!!trace?.user_explanation?.summary && (
+        <p className="mt-2 text-sm leading-6 text-slate-600">{trace.user_explanation.summary}</p>
+      )}
+      {!!matchedBiomarkers.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningBasedOn}:</span> {matchedBiomarkers.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!supporting.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningSupporting}:</span> {supporting.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!contradicting.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.reasoningContradicting}:</span> {contradicting.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!gaps.length && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <HelpCircle className="h-3.5 w-3.5" /> {copy.reasoningGaps}
+          </p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {gaps.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningNextTests}:</span> {nextTests.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const DOCTOR_ESCALATION_LEVEL_ORDER = { urgent: 0, doctor: 1 }
+const DOCTOR_ESCALATION_MAX_ITEMS = 3
+
+// P31b: same relevance check DoctorEscalationCard uses internally, so the
+// legacy "Safety discussion" card (below) can defer to it and only
+// render as a fallback when there is nothing to show there -- see the
+// P31a audit finding that both cards otherwise show doctor/urgent
+// discussion content side by side.
+function hasDoctorEscalationContent(doctorEscalationPrecision) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  return escalations.some((item) => item?.level === 'urgent' || item?.level === 'doctor')
+}
+const DOCTOR_ESCALATION_LEVEL_TONE = { urgent: 'critical', doctor: 'warning' }
+
+// P29: renders doctor_escalation_precision (backend/app/services/
+// doctor_escalation_precision.py) as a small, restrained "doctor
+// discussion" card near the existing safety/reasoning area -- never a
+// full-width panic banner, even for an "urgent" entry. Renders nothing
+// when there is no doctor/urgent level escalation: a practitioner/self-
+// only report is already covered by the protocol/action-plan sections
+// above. Deliberately does not display reason_codes, internal ids,
+// related_profiles, related_hypotheses, raw contradictions, or
+// pattern_escalation_reasons -- see P29's scope (docs/
+// P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md).
+function DoctorEscalationCard({ doctorEscalationPrecision, copy }) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  const relevant = escalations
+    .filter((item) => item?.level === 'urgent' || item?.level === 'doctor')
+    .sort((a, b) => DOCTOR_ESCALATION_LEVEL_ORDER[a.level] - DOCTOR_ESCALATION_LEVEL_ORDER[b.level])
+    .slice(0, DOCTOR_ESCALATION_MAX_ITEMS)
+
+  if (!relevant.length) return null
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <Stethoscope className="h-5 w-5 text-teal-600" />
+        <h2 className="text-lg font-extrabold text-slate-950">{copy.doctorEscalationTitle}</h2>
+      </div>
+      <p className="mb-4 text-sm leading-6 text-slate-600">{copy.doctorEscalationIntro}</p>
+      <div className="space-y-3">
+        {relevant.map((item, index) => {
+          const markers = asTextList(item.related_markers).slice(0, 6)
+          const timingLabel = copy.doctorEscalationTimingLabels?.[item.recommended_timing]
+          return (
+            <div key={item.id || index} className="rounded-2xl bg-slate-50 p-3">
+              <CoachBadge tone={DOCTOR_ESCALATION_LEVEL_TONE[item.level]} className="mb-2">
+                {copy.doctorEscalationLevelLabels?.[item.level]}
+              </CoachBadge>
+              <DoctorEscalationDetails
+                reason={item.human_readable_reason}
+                markers={markers}
+                timingLabel={timingLabel}
+                copy={copy}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">{copy.doctorEscalationDisclaimer}</p>
+    </CoachCard>
+  )
+}
+
+const PROGRESS_STATUS_TONE = {
+  strengthened: 'warning',
+  weakened: 'success',
+  new_signal: 'critical',
+  resolved_or_improved: 'success',
+  stable: 'neutral',
+}
+
+// Action-oriented counterpart to Results.jsx's "Progress Since Last Time"
+// card: instead of just naming the status, tells the user what to DO with
+// it in the context of their action plan — the whole point of putting
+// this on ProtocolPage rather than duplicating the Results.jsx version.
+function ProgressActionSection({ progress, copy }) {
+  if (!progress?.available) return null
+  const changes = Array.isArray(progress.changes) ? progress.changes : []
+  if (!changes.length) return null
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <RefreshCw className="h-5 w-5 text-teal-600" />
+        <h2 className="text-lg font-extrabold text-slate-950">{copy.progressTitle}</h2>
+      </div>
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.progressIntro}</p>
+      <div className="space-y-3">
+        {changes.slice(0, 8).map((change, index) => (
+          <div key={change.pattern_id || index} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <strong className="text-slate-950">{change.pattern_name || change.pattern_id}</strong>
+              <CoachBadge tone={PROGRESS_STATUS_TONE[change.status] || 'neutral'}>
+                {change.status?.replaceAll('_', ' ')}
+              </CoachBadge>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{copy.progressAction[change.status] || ''}</p>
+          </div>
+        ))}
+      </div>
+    </CoachCard>
+  )
+}
+
+export function ActionCard({ item, copy, isUk, reportVersionId, completed, saving, error, onComplete }) {
+  const title = protocolTitle(item)
+  const body = protocolBody(item)
+  const timing = protocolTiming(item, isUk)
+  const category = protocolCategory(item, isUk)
+  const effort = effortLabel(item)
+  const outcome = outcomeLabel(item)
+  const evidence = displayEvidence(evidenceLabel(item), isUk)
+  const safety = safetyLabel(item)
+  const basedOn = basedOnList(item).map((value) => displayBiomarker(value, isUk))
+  const domains = healthDomainList(item).map((domain) => localizeDomainLabel(domain, isUk))
+  const safetyNotes = safetyNotesList(item)
+  const retestMarkers = retestMarkersList(item)
+  const expectedTimeline = item?.expected_timeline || item?.timeline || item?.expected_timeframe || null
+  const provenance = actionSourceLabel(item?.source, isUk)
+  const canComplete = Boolean(item?.action_id && reportVersionId)
+  return (
+    <CoachCard className="protocol-action-card p-4" interactive>
+      <div className="protocol-action-card__header mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="protocol-action-card__identity min-w-0">
+          <h3 className="protocol-action-card__title text-lg font-extrabold text-slate-950">{title}</h3>
+          {category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{category}</p>}
+          {provenance && <p className="mt-1 text-xs font-medium text-slate-500">{provenance}</p>}
+        </div>
+        <CoachBadge tone={priorityTone(item?.priority)}>{formatPriority(item?.priority, isUk)}</CoachBadge>
+      </div>
+      {body && <p className="text-sm leading-6 text-slate-600">{body}</p>}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {timing && <CoachBadge tone="primary">{timing}</CoachBadge>}
+        {effort && <CoachBadge tone="neutral">{copy.effort}: {effort}</CoachBadge>}
+        {evidence && <CoachBadge tone="neutral">{copy.evidence}: {evidence}</CoachBadge>}
+      </div>
+      {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
+      {/* !! is required here, not just truthiness: when every one of these is
+          empty (all 3 lengths are 0, expectedTimeline is null), the bare `||`
+          chain evaluates to the number 0 (JS `||`'s last-falsy-operand
+          behavior), and `0 && <details>` renders the literal text "0" in
+          React instead of nothing — this was the "00" showing under every
+          protocol card in production (this guard + the safety one below,
+          both hitting the same bug, back to back with no separator). */}
+      {!!(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
+        <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-800">{copy.technicalDetails}</summary>
+          <div className="mt-3 grid gap-2">
+            {!!basedOn.length && <p><span className="font-semibold text-slate-800">{copy.basedOn}:</span> {basedOn.join(', ')}</p>}
+            {!!domains.length && <p><span className="font-semibold text-slate-800">{copy.healthDomains}:</span> {domains.join(', ')}</p>}
+            {expectedTimeline && <p><span className="font-semibold text-slate-800">{copy.expectedTimeline}:</span> {expectedTimeline}</p>}
+            {!!retestMarkers.length && <p><span className="font-semibold text-slate-800">{copy.retestMarkers}:</span> {retestMarkers.map((value) => displayBiomarker(value, isUk)).join(', ')}</p>}
+          </div>
+        </details>
+      )}
+      {!!(safety || safetyNotes.length) && (
+        <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+          <span className="font-semibold">{copy.safetyNotes}: </span>
+          {[safety, ...safetyNotes].filter(Boolean).join(' ')}
+        </div>
+      )}
+      {canComplete && (
+        <>
+          <button
+            type="button"
+            className="mt-4 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={saving || completed}
+            onClick={() => onComplete(item)}
+          >
+            {completed ? copy.completed : saving ? copy.completing : copy.markComplete}
+          </button>
+          {error && <p role="alert" className="mt-2 break-words text-sm leading-5 text-rose-700">{error}</p>}
+        </>
+      )}
+    </CoachCard>
+  )
+}
+
+async function exportProtocolPdf({ protocolRows, retestPlan, doctorDiscussion, uploadId, copy, isUk }) {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+  const margin = 44
+  const width = doc.internal.pageSize.getWidth() - margin * 2
+  let y = 48
+  const safeUpload = String(uploadId || 'protocol').replace(/[^a-zA-Z0-9_-]/g, '')
+
+  const addTitle = (text, size = 18) => {
+    if (y > 720) { doc.addPage(); y = 48 }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(size)
+    doc.setTextColor(15, 23, 42)
+    doc.text(text, margin, y)
+    y += size + 12
+  }
+  const addText = (text, size = 10) => {
+    if (!text) return
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor(71, 85, 105)
+    const lines = doc.splitTextToSize(String(text), width)
+    lines.forEach((line) => {
+      if (y > 760) { doc.addPage(); y = 48 }
+      doc.text(line, margin, y)
+      y += size + 5
+    })
+    y += 4
+  }
+
+  addTitle(copy.pdfTitle, 20)
+  addText(`${copy.pdfUpload}: ${uploadId}`)
+  addText(`${copy.pdfGenerated}: ${new Date().toLocaleString()}`)
+  addTitle(copy.pdfSummary, 14)
+  addText(copy.pdfSummaryBody(protocolRows.length))
+  addTitle(copy.pdfActions, 14)
+  protocolRows.forEach((item, index) => {
+    addText(`${index + 1}. ${protocolTitle(item)}${item?.priority ? ` [${formatPriority(item.priority, isUk)}]` : ''}`, 11)
+    addText(protocolBody(item), 9)
+    const meta = [protocolTiming(item, isUk), protocolCategory(item, isUk), evidenceLabel(item)].filter(Boolean).join(' · ')
+    addText(meta, 9)
+  })
+  addTitle(copy.pdfDiscussion, 14)
+  ;(doctorDiscussion || []).slice(0, 8).forEach((item) => addText(`• ${item}`))
+  addTitle(copy.pdfRetest, 14)
+  ;(retestPlan || []).slice(0, 8).forEach((item) => addText(`• ${item.marker || copy.marker}: ${item.timing || item.reason || ''}`))
+  addTitle(copy.pdfDisclaimer, 14)
+  addText(copy.disclaimer)
+  doc.save(`vitaloop-protocol-${safeUpload}-${new Date().toISOString().slice(0, 10)}.pdf`)
+}
+
+export default function ProtocolPage() {
+  const { uploadId } = useParams()
+  const navigate = useNavigate()
+  const { hasAccess: canExport } = useFeature('advanced_protocol')
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? PROTOCOL_COPY.uk : PROTOCOL_COPY.en
+  const [biomarkers, setBiomarkers] = useState([])
+  const [protocol, setProtocol] = useState([])
+  const [doctorDiscussion, setDoctorDiscussion] = useState([])
+  const [retestPlan, setRetestPlan] = useState([])
+  const [retestObligations, setRetestObligations] = useState([])
+  const [retestResultDates, setRetestResultDates] = useState({})
+  const [interventionsAvailable, setInterventionsAvailable] = useState(true)
+  const [safetyAlerts, setSafetyAlerts] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
+  const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
+  const [progressIntelligence, setProgressIntelligence] = useState(null)
+  const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
+  const [reportVersionId, setReportVersionId] = useState(null)
+  const [completedActionIds, setCompletedActionIds] = useState(() => new Set())
+  const [savingActionId, setSavingActionId] = useState(null)
+  const [completionErrors, setCompletionErrors] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      setLoading(true)
+      setError('')
+      try {
+        const data = await loadProtocolData(uploadId)
+        if (!active) return
+        setBiomarkers(data.biomarkers)
+        setProtocol(data.protocol)
+        setDoctorDiscussion(data.doctorDiscussion)
+        setRetestPlan(data.retestPlan)
+        setRetestObligations(data.retestObligations)
+        setRetestResultDates(data.retestResultDates)
+        setInterventionsAvailable(data.interventionsAvailable)
+        setSafetyAlerts(data.safetyAlerts)
+        setShoppingLinks(data.shoppingLinks)
+        setClinicalReasoningTraces(data.clinicalReasoningTraces)
+        setProgressIntelligence(data.progressIntelligence)
+        setDoctorEscalationPrecision(data.doctorEscalationPrecision)
+        setReportVersionId(data.reportVersionId)
+        setCompletedActionIds(data.completedActionIds)
+        gaProtocolView(uploadId)
+      } catch (err) {
+        if (!active) return
+        const status = err?.response?.status
+        if (status === 404) setError(copy.notFound)
+        else if (status === 402) setError(copy.premium)
+        else setError(copy.genericError)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
+    return () => { active = false }
+  }, [uploadId, copy.genericError, copy.notFound, copy.premium])
+
+  const sortedProtocol = useMemo(() => sortProtocolByPriority(protocol), [protocol])
+  const grouped = useMemo(() => groupProtocol(sortedProtocol), [sortedProtocol])
+  const sections = [
+    { key: 'today', title: copy.sections.today[0], body: copy.sections.today[1], rows: grouped.today },
+    { key: 'week', title: copy.sections.week[0], body: copy.sections.week[1], rows: grouped.week },
+    { key: 'month', title: copy.sections.month[0], body: copy.sections.month[1], rows: grouped.month },
+    { key: 'longTerm', title: copy.sections.longTerm[0], body: copy.sections.longTerm[1], rows: grouped.longTerm },
+  ].filter((section) => section.rows.length > 0)
+  const persistedRetestPlan = interventionsAvailable ? retestObligations : []
+  const visibleRetestPlan = selectProtocolRetestPlan({
+    interventionsAvailable,
+    persistedRetestPlan,
+    reportRetestPlan: retestPlan,
+  })
+  const decisionRetest = decisionRetestSummary(visibleRetestPlan, copy.retestFallback)
+  const nextProtocolAction = sortedProtocol[0]?.title || sortedProtocol[0]?.label || copy.continueTracking
+
+  async function handleComplete(item) {
+    if (!reportVersionId || !item?.action_id || savingActionId || completedActionIds.has(item.action_id)) return
+    setCompletionErrors((current) => {
+      if (!current[item.action_id]) return current
+      const next = { ...current }
+      delete next[item.action_id]
+      return next
+    })
+    setSavingActionId(item.action_id)
+    try {
+      await completeProtocolAction(buildProtocolActionCompletionPayload(item, reportVersionId))
+      setCompletedActionIds((current) => new Set(current).add(item.action_id))
+      setCompletionErrors((current) => {
+        if (!current[item.action_id]) return current
+        const next = { ...current }
+        delete next[item.action_id]
+        return next
+      })
+    } catch {
+      setCompletionErrors((current) => ({
+        ...current,
+        [item.action_id]: copy.completionFailed,
+      }))
+    } finally {
+      setSavingActionId(null)
+    }
+  }
+
+  async function handleExportPdf() {
+    if (!canExport || exporting || sortedProtocol.length === 0) return
+    try {
+      setExporting(true)
+      await exportProtocolPdf({ protocolRows: sortedProtocol, retestPlan: visibleRetestPlan, doctorDiscussion, uploadId, copy, isUk })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  if (loading) return <div className="coach-shell"><CoachSkeleton rows={4} /></div>
+
+  if (error) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState
+          icon={ShieldAlert}
+          title={copy.errorTitle}
+          body={error}
+          actionLabel={copy.backResults}
+          onAction={() => navigate(`/results/${uploadId}`)}
+        />
+      </div>
+    )
+  }
+
+  if (sortedProtocol.length === 0) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState
+          icon={FileText}
+          title={copy.noProtocol}
+          body={copy.noProtocolBody}
+          actionLabel={copy.openResult}
+          onAction={() => navigate(`/results/${uploadId}`)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="coach-shell coach-grid">
+      <section className="coach-hero">
+        <div className="protocol-hero relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="coach-eyebrow">{copy.summaryEyebrow}</p>
+            <h1 className="coach-title-xl">{copy.summaryTitle}</h1>
+            <p className="coach-body mt-4 max-w-2xl">
+              {copy.summaryBody}
+            </p>
+            <DecisionHeader
+              title={copy.decision.title}
+              summary={copy.summaryTitle}
+              why={copy.summaryBody}
+              nextAction={nextProtocolAction}
+              retest={decisionRetest}
+              labels={copy.decision}
+            />
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <CoachButton variant="secondary" icon={ArrowLeft} onClick={() => navigate(`/results/${uploadId}`)}>{copy.backResults}</CoachButton>
+              <CoachButton icon={Download} disabled={!canExport || exporting} onClick={handleExportPdf}>{exporting ? copy.exporting : copy.exportPdf}</CoachButton>
+            </div>
+          </div>
+          <CoachCard className="p-5" tone="soft">
+            <p className="coach-eyebrow">{copy.planContext}</p>
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.actions}</span><strong>{sortedProtocol.length}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.biomarkers}</span><strong>{biomarkers.length}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.retestItems}</span><strong>{visibleRetestPlan.length}</strong></div>
+            </div>
+          </CoachCard>
+        </div>
+      </section>
+
+      {!!safetyAlerts.length && (
+        <CoachCard tone="attention" className="p-5">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-1 h-5 w-5 text-amber-600" />
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyWarning}</h2>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-amber-900">
+                {safetyAlerts.slice(0, 4).map((alert, index) => <li key={index}>{alert.message || alert.body || String(alert)}</li>)}
+              </ul>
+            </div>
+          </div>
+        </CoachCard>
+      )}
+
+      {sections.map((section) => (
+        <CoachCard key={section.key} className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{section.title}</p>
+            <h2 className="coach-title-lg">{section.body}</h2>
+          </div>
+          <div className="protocol-action-grid grid gap-4 md:grid-cols-2">
+            {section.rows.map((item, index) => (
+              <ActionCard
+                key={`${protocolTitle(item)}-${index}`}
+                item={item}
+                copy={copy}
+                isUk={isUk}
+                reportVersionId={reportVersionId}
+                completed={completedActionIds.has(item.action_id)}
+                saving={savingActionId === item.action_id}
+                error={completionErrors[item.action_id]}
+                onComplete={handleComplete}
+              />
+            ))}
+          </div>
+        </CoachCard>
+      ))}
+
+      {!!shoppingLinks.length && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{copy.shoppingEyebrow}</p>
+            <h2 className="coach-title-lg">{copy.shoppingTitle}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {copy.shoppingBody}
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {shoppingLinks.slice(0, 6).map((item, index) => (
+              <div key={`${item.search_query || item.label}-${index}`} className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
+                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{protocolCategory(item, isUk)}</p>}
+                  </div>
+                  {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority, isUk)}</CoachBadge>}
+                </div>
+                {item.reason && <p className="mt-3 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 sm:w-auto"
+                  >
+                    {copy.findIherb}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </CoachCard>
+      )}
+
+      <div className={hasDoctorEscalationContent(doctorEscalationPrecision) ? '' : 'coach-grid coach-grid--2'}>
+        <CoachCard className="p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg font-extrabold text-slate-950">{copy.retestPlan}</h2>
+          </div>
+          {!!visibleRetestPlan.length && <p className="mb-3 text-sm leading-6 text-slate-500">{copy.retestPlanIntro}</p>}
+          {visibleRetestPlan.length ? (
+            <div className="space-y-3">
+              {persistedRetestPlan.length
+                ? persistedRetestPlan.slice(0, 6).map((item) => (
+                    <RetestObligationCard
+                      key={item.id || item.marker}
+                      item={item}
+                      resultDate={retestResultDates[item.fulfilled_by_upload_id]}
+                      copy={copy}
+                      isUk={isUk}
+                    />
+                  ))
+                : retestPlan.slice(0, 6).map((item, index) => (
+                    <div key={index} className="rounded-2xl bg-slate-50 p-3">
+                      <p className="font-bold text-slate-950">{displayBiomarker(item.marker, isUk) || copy.marker}</p>
+                      <p className="mt-1 text-sm text-slate-600">{item.timing || item.reason || copy.discussTiming}</p>
+                    </div>
+                  ))}
+            </div>
+          ) : <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>}
+          {!!visibleRetestPlan.length && (
+            <button
+              type="button"
+              onClick={() => navigate('/upload')}
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+            >
+              {copy.uploadWhenRepeated}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </CoachCard>
+
+        {/* P31b: the legacy "Safety discussion" bullet list duplicated
+            DoctorEscalationCard below with older, less calibrated copy
+            (see P31a audit). Kept only as a fallback for a report that
+            has no doctor/urgent doctor_escalation_precision content --
+            once that structured card has something to show, this one
+            steps aside rather than showing doctor-discussion content
+            twice. */}
+        {!hasDoctorEscalationContent(doctorEscalationPrecision) && (
+          <CoachCard className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-teal-600" />
+              <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyDiscussion}</h2>
+            </div>
+            {doctorDiscussion.length ? (
+              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+                {doctorDiscussion.slice(0, 6).map((item, index) => <li key={index} className="rounded-2xl bg-slate-50 p-3">{item}</li>)}
+              </ul>
+            ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
+          </CoachCard>
+        )}
+      </div>
+
+      <DoctorEscalationCard doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
+
+      <ProgressActionSection progress={progressIntelligence} copy={copy} />
+
+      {/* P31b: raw per-pattern reasoning traces are debug-level pattern-
+          engine output (see P31a audit) -- kept available, collapsed
+          behind a disclosure by default rather than shown open. */}
+      {!!clinicalReasoningTraces.length && (
+        <details className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+          <summary className="flex cursor-pointer items-center gap-2 text-lg font-extrabold text-slate-950">
+            <GitBranch className="h-5 w-5 text-teal-600" />
+            {copy.reasoningTitle}
+          </summary>
+          <p className="mb-4 mt-3 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+          <div className="space-y-3">
+            {clinicalReasoningTraces.slice(0, 6).map((trace, index) => (
+              <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} isUk={isUk} />
+            ))}
+          </div>
+        </details>
+      )}
+
+      <InsightCard
+        icon={Sparkles}
+        title={copy.evidenceTitle}
+        body={copy.evidenceBody}
+      />
+
+      {/* P31b: Protocol previously ended with no closing next-step CTA
+          (see P31a audit) -- a modest link back to Results/check-ins,
+          reusing existing navigation, not a new marketing block. */}
+      <div className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+        <p className="text-sm leading-6 text-slate-600">{copy.closingBody}</p>
+        <div className="flex shrink-0 gap-3">
+          <CoachButton variant="secondary" icon={ArrowLeft} onClick={() => navigate(`/results/${uploadId}`)}>{copy.backResults}</CoachButton>
+          <CoachButton icon={ArrowRight} onClick={() => navigate('/check-ins')}>{copy.continueTracking}</CoachButton>
+        </div>
+      </div>
+
+      {!canExport && (
+        <p className="mt-4 text-center text-sm text-slate-500">
+          {copy.premiumTeaser}{' '}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'protocol_follow_through' } }))}
+            className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+          >
+            {copy.premiumTeaserCta}
+          </button>
+        </p>
+      )}
+
+    </div>
+  )
+}

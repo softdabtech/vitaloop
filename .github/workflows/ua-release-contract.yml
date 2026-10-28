@@ -1,0 +1,25 @@
+name: UA release contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/deploy-ua-frontend-dist.sh'
+      - 'scripts/bootstrap-ua-atomic-releases.sh'
+      - 'scripts/test-ua-release-workflow.sh'
+      - 'ops/nginx/ua.vitaloop.today.conf'
+      - '.github/workflows/ua-release-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/deploy-ua-frontend-dist.sh'
+      - 'scripts/bootstrap-ua-atomic-releases.sh'
+      - 'scripts/test-ua-release-workflow.sh'
+      - 'ops/nginx/ua.vitaloop.today.conf'
+      - '.github/workflows/ua-release-contract.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/test-ua-release-workflow.sh

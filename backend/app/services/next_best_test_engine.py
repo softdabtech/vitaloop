@@ -1,0 +1,159 @@
+"""Next-best-test engine.
+
+2026-09-12 clinical analyzer audit, "not implemented yet" item #3: a
+next-best-test engine driven by uncertainty, missing paired markers,
+unit-blocked markers, and pattern gaps did not exist at all.
+
+This is deliberately pure composition, same posture as
+clinical_priority_planner.py: evidence_gaps.py already identifies exactly
+these three uncertainty sources (missing domain-expected markers,
+no-active-rule markers, unit-blocked markers) per gap, and each interpreted
+pattern already carries its own retest_plan. Recommending "which test to add
+or repeat next" from data the pipeline already has beats inventing a new,
+separate uncertainty model that could silently disagree with evidence_gaps
+or the pattern engine about what's actually missing.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+from app.services.action_identity import assign_action_ids
+from app.services.lab_normalization.biomarker_mapping import to_known_canonical_name
+
+
+NEXT_BEST_TEST_ENGINE_VERSION = "next_best_test_engine_v1"
+
+_REASON_LABELS = {
+    "domain_expected_marker": "Would clarify a health domain currently only partially covered.",
+    "no_active_rule_for_marker": "Measured but not yet interpreted — no active rule evaluates it.",
+    "unit_not_reconcilable": "Reported unit could not be matched to what interpretation requires; a repeat with a standard unit would resolve this.",
+}
+
+
+def _priority_rank(priority: Any) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get(str(priority or "medium").strip().lower(), 1)
+
+
+def _dedup_key(marker: str) -> str:
+    """Normalize a marker label for dedup comparison only (not for display).
+
+    2026-09-16 QA follow-up: some patterns' retest_plan entries carry a single
+    comma-joined string (e.g. "TSH, free T4, free T3") while evidence_gaps
+    carries individual snake_case ids (e.g. "free_t4"). Comparing raw
+    lowercased strings let both survive into recommended_tests side by side
+    ("free_t4" and "tsh, free t4, free t3"), which the Results page then
+    rendered as a near-duplicate, inconsistently-cased list. Collapsing
+    underscores/spaces before comparing catches the id-vs-label duplicates;
+    splitting on commas (done by the caller) catches the joined-string case.
+    """
+    return marker.replace("_", " ").strip().lower()
+
+
+def build_next_best_tests(
+    *,
+    evidence_gaps: Dict[str, Any] | None = None,
+    patterns: List[Dict[str, Any]] | None = None,
+    limit: int = 10,
+) -> Dict[str, Any]:
+    candidates: List[Dict[str, Any]] = []
+    seen_markers: set[str] = set()
+
+    for gap in (evidence_gaps or {}).get("gaps") or []:
+        if not isinstance(gap, dict):
+            continue
+        marker = str(gap.get("missing_marker") or "").strip().lower()
+        key = _dedup_key(marker)
+        if not marker or key in seen_markers:
+            continue
+        seen_markers.add(key)
+        reason_key = str(gap.get("reason") or "")
+        candidates.append(
+            {
+                "marker": marker,
+                "domain": gap.get("domain"),
+                "priority": gap.get("priority") or "medium",
+                "reason": _REASON_LABELS.get(reason_key) or gap.get("suggested_next_step") or reason_key,
+                "source": "evidence_gaps",
+            }
+        )
+
+    for pattern in patterns or []:
+        if not isinstance(pattern, dict):
+            continue
+        for retest in pattern.get("retest_plan") or []:
+            if not isinstance(retest, dict):
+                continue
+            raw_marker = str(retest.get("marker") or "").strip()
+            # A retest_plan marker can be a single comma-joined string (e.g.
+            # "TSH, free T4, free T3") rather than one marker per entry —
+            # split it so each marker gets its own dedup check and doesn't
+            # survive as one lumped, inconsistently-formatted item.
+            for part in raw_marker.split(","):
+                marker = part.strip().lower()
+                key = _dedup_key(marker)
+                if not marker or key in seen_markers:
+                    continue
+                seen_markers.add(key)
+                candidates.append(
+                    {
+                        "marker": marker,
+                        "domain": pattern.get("domain"),
+                        "priority": retest.get("priority") or pattern.get("priority") or "medium",
+                        "reason": retest.get("reason") or f"Follow-up for the {pattern.get('title') or pattern.get('key')} pattern.",
+                        "source": "pattern_retest_plan",
+                    }
+                )
+
+    candidates.sort(key=lambda item: _priority_rank(item.get("priority")))
+    ranked = candidates[:limit]
+    ranked_with_ids = []
+    for item in assign_action_ids(
+        [
+            {
+                **candidate,
+                "key": f"{candidate.get('source')}:{_dedup_key(str(candidate.get('marker') or ''))}",
+            }
+            for candidate in ranked
+        ],
+        "next-test",
+    ):
+        recommendation = dict(item)
+        recommendation["recommendation_id"] = recommendation.pop("action_id")
+        recommendation.pop("key", None)
+        canonical_marker = to_known_canonical_name(recommendation.get("marker") or "")
+        if canonical_marker:
+            recommendation["canonical_marker"] = canonical_marker
+        ranked_with_ids.append(recommendation)
+
+    return {
+        "version": NEXT_BEST_TEST_ENGINE_VERSION,
+        "recommended_tests": ranked_with_ids,
+        "summary": {
+            "count": len(ranked_with_ids),
+            "high_priority_count": len([item for item in ranked_with_ids if item.get("priority") == "high"]),
+        },
+    }
+
+
+def attach_report_provenance(
+    next_best_tests: Dict[str, Any],
+    report_version_id: str,
+) -> Dict[str, Any]:
+    """Attach immutable ownership to recommendations in a persisted snapshot."""
+    return {
+        **next_best_tests,
+        "recommended_tests": [
+            {
+                **item,
+                "source_report_version_id": report_version_id,
+                **(
+                    {"canonical_marker": to_known_canonical_name(item.get("marker") or "")}
+                    if to_known_canonical_name(item.get("marker") or "")
+                    else {}
+                ),
+            }
+            for item in next_best_tests.get("recommended_tests") or []
+            if isinstance(item, dict)
+        ],
+    }

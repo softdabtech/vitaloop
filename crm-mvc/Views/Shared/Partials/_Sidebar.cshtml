@@ -1,0 +1,127 @@
+@using System.Linq
+@using Vitaloop.Crm.Web.Services.Navigation
+@model UserContext?
+@{
+  // 2026-09-13 CRM information-architecture audit, item #4: this partial
+  // used to hardcode the full nav item list AND re-implement the
+  // role-visibility rule inline in Razor (see CrmNavItem.cs's docstring for
+  // why that was a real problem, not just style). It is now a thin renderer
+  // over CrmNavigationCatalog — adding a page still means adding one line,
+  // but now in one reviewable C# file with a unit test, not silently inside
+  // a view.
+  var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? string.Empty;
+  var visibleGroups = CrmNavigationCatalog.GetVisibleGroups(Model).ToList();
+  var allVisibleItems = visibleGroups.SelectMany(g => g).ToList();
+  var activeItemHref = CrmNavigationCatalog.ResolveActiveHref(allVisibleItems, currentPath) ?? string.Empty;
+  var isSuperAdmin = string.Equals(Model?.GlobalRole, "super_admin", StringComparison.OrdinalIgnoreCase);
+  var activeMembership = Model?.ActiveOrganizationId.HasValue == true
+    ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
+    : null;
+}
+
+<aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
+  <div class="vo-brand">
+    <a href="/org" class="vo-brand-link" aria-label="VITALOOP CRM home">
+      <span class="vo-brand-mark">VL</span>
+      <span class="vo-brand-text">Vitaloop</span>
+    </a>
+    <button class="vo-sidebar-toggle" type="button" aria-label="Toggle sidebar">&#10005;</button>
+  </div>
+
+  <div class="vo-identity-block">
+    @if (Model is null)
+    {
+      <p class="vo-identity-line">Guest session</p>
+      <p class="vo-identity-sub">Not authenticated</p>
+    }
+    else
+    {
+      <p class="vo-identity-line">@Model.Email</p>
+      <p class="vo-identity-sub">
+        @(isSuperAdmin ? "🔑 Super Admin" : activeMembership?.Role ?? "Member")
+      </p>
+      
+      @if (Model.Memberships.Count > 0)
+      {
+        <div class="vo-org-selector">
+          <select class="vo-org-select" onchange="location.href = this.value">
+            @if (!Model.ActiveOrganizationId.HasValue)
+            {
+              <option value="" selected>Select Organization...</option>
+            }
+            @foreach (var membership in Model.Memberships)
+            {
+              var selected = membership.OrganizationId == Model.ActiveOrganizationId;
+              if (selected)
+              {
+                <option value="/org/orgs/@membership.OrganizationId/switch" selected>
+                  @membership.OrganizationName
+                </option>
+              }
+              else
+              {
+                <option value="/org/orgs/@membership.OrganizationId/switch">
+                  @membership.OrganizationName
+                </option>
+              }
+            }
+          </select>
+        </div>
+      }
+    }
+  </div>
+
+  @foreach (var group in visibleGroups)
+  {
+    <div class="vo-nav-group">
+      <p class="vo-nav-group-title">@group.Key</p>
+      <ul class="vo-nav-list">
+        @foreach (var item in group)
+        {
+          var active = string.Equals(activeItemHref, item.Href, StringComparison.OrdinalIgnoreCase);
+          <li>
+            <a class="vo-nav-link @(active ? "is-active" : string.Empty)"
+               href="@item.Href"
+               aria-current="@(active ? "page" : null)">
+              <span class="vo-nav-icon" aria-hidden="true">@Html.Raw(item.IconHtmlEntity)</span>
+              @item.Label
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="vo-sidebar-footer">
+    <a class="vo-nav-link" href="/auth/logout">
+      <span class="vo-nav-icon" aria-hidden="true">&#128275;</span>
+      Log out
+    </a>
+  </div>
+</aside>
+
+<style>
+  .vo-org-selector {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .vo-org-select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .vo-org-select:hover,
+  .vo-org-select:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+</style>
+

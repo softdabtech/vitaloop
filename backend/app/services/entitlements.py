@@ -1,0 +1,130 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+from app.services import supabase_service as svc
+from app.utils.roles import normalize_global_role, as_bool
+
+
+def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[str, Any]) -> tuple[bool, str, str, str, bool]:
+    # Deprecated compatibility source; prefer canonical subscriptions rows.
+    explicit_subscription_status = str(account.get('subscription_status') or '').strip().lower()
+    legacy_sub_status = str(account.get('sub_status') or '').strip().lower()
+    subscription_status = explicit_subscription_status or legacy_sub_status
+    account_plan = str(account.get('plan_tier') or '').strip().lower()
+
+    sub_table_status = str((active_sub or {}).get('status') or 'free').lower()
+    sub_table_plan = str((active_sub or {}).get('plan_name') or '').strip().lower()
+    cancel_at_period_end = bool((active_sub or {}).get('cancel_at_period_end', False))
+
+    period_end = (active_sub or {}).get('current_period_end')
+    try:
+        paid_through_current_period = not period_end or datetime.fromisoformat(str(period_end).replace('Z', '+00:00')) > datetime.now(timezone.utc)
+    except ValueError:
+        # Do not revoke a subscription solely because a legacy timestamp is
+        # malformed; provider webhooks will reconcile it on the next event.
+        paid_through_current_period = True
+
+    paid_from_sub_table = bool(
+        active_sub
+        and sub_table_status == 'active'
+        and sub_table_plan
+        and sub_table_plan != 'free'
+        and paid_through_current_period
+    )
+    paid_from_account = bool(
+        subscription_status == 'active'
+        and account_plan != 'free'
+        and (
+            bool(account_plan)
+            or not explicit_subscription_status
+            or explicit_subscription_status == 'active'
+        )
+    )
+    is_paid = paid_from_sub_table or paid_from_account
+
+    if paid_from_sub_table:
+        billing_status = 'active'
+        plan_key = sub_table_plan or account_plan or 'personal'
+        source = 'subscriptions'
+    elif paid_from_account:
+        billing_status = 'active'
+        plan_key = account_plan or 'personal'
+        source = 'users'
+    elif active_sub:
+        if sub_table_plan == 'free' and sub_table_status == 'active':
+            billing_status = 'free'
+        else:
+            billing_status = sub_table_status if sub_table_status in {'active', 'past_due', 'paused', 'cancelled', 'free'} else 'free'
+        plan_key = sub_table_plan or account_plan or 'free'
+        source = 'subscriptions'
+    else:
+        billing_status = 'free' if subscription_status == 'active' and (not account_plan or account_plan == 'free') else (subscription_status or 'free')
+        plan_key = account_plan or 'free'
+        source = 'users'
+
+    return is_paid, billing_status, plan_key, source, cancel_at_period_end
+
+
+def resolve_entitlements_from_data(
+    *,
+    user_id: str,
+    account: Dict[str, Any],
+    active_sub: Optional[Dict[str, Any]],
+    jwt_role: str = "",
+) -> Dict[str, Any]:
+    """Pure, batch-compatible core of resolve_user_entitlements() — takes
+    already-fetched `account` (a users row) and `active_sub` (a subscriptions
+    row) instead of fetching them itself. This is the SAME rule
+    resolve_user_entitlements() uses, extracted so a caller that needs
+    entitlements for MANY users at once (e.g. CRM member/client lists) can
+    batch-fetch users + subscriptions once and call this per row with zero
+    additional DB round-trips — not a second entitlement resolver, just this
+    one made reusable without the N+1 per-user fetch pattern.
+    """
+    global_role = normalize_global_role(account.get('global_role'), jwt_role)
+
+    is_paid, billing_status, plan_key, source, cancel_at_period_end = _is_paid_subscription(active_sub, account)
+    is_premium = bool(global_role != 'end_user' or is_paid)
+    is_trial = billing_status == 'trialing'
+    is_past_due = billing_status == 'past_due'
+
+    features = {
+        'upload_limit': None if is_premium else 1,
+        'lab_history': True,
+        'trend_analysis': bool(is_premium),
+        'advanced_protocol': bool(is_premium),
+        'symptom_lab_plan': True,
+        'checkins': True,
+    }
+
+    return {
+        'user_id': user_id,
+        'role': global_role,
+        'plan_key': plan_key,
+        'billing_status': billing_status,
+        'is_premium': is_premium,
+        'is_trial': is_trial,
+        'is_past_due': is_past_due,
+        'cancel_at_period_end': cancel_at_period_end,
+        'has_active_subscription': is_paid,
+        'source': source,
+        'needs_sync': bool(source == 'users' and active_sub),
+        'features': features,
+    }
+
+
+async def resolve_user_entitlements(user_id: str, current_user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    current_user = current_user or {}
+
+    account = await svc.get_user_account(user_id)
+    profile = await svc.get_user_profile(user_id)
+    active_sub = await svc.get_user_active_subscription(user_id)
+
+    jwt_role = str(current_user.get('global_role') or current_user.get('role') or '').lower()
+    result = resolve_entitlements_from_data(user_id=user_id, account=account, active_sub=active_sub, jwt_role=jwt_role)
+    result['profile'] = {
+        'onboarding_complete': as_bool(profile.get('onboarding_complete')),
+    }
+    return result

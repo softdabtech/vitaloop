@@ -1,0 +1,32 @@
+@model PractitionerClientsPageViewModel
+@{
+  ViewData["Title"] = "My Clients";
+  Layout = "_CrmLayout";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel {
+  Title = "My Clients",
+  Subtitle = "Only clients assigned to you",
+  Eyebrow = "Practitioner"
+})
+
+<div id="practitioner-clients-wrap">
+@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
+  Title = "Assigned Clients",
+  Columns = new[] { "Client", "Status", "Last Updated", "Profile" },
+  EmptyMessage = "No clients assigned yet.",
+  Rows = Model.Clients
+    .Select(c => (IReadOnlyList<string>)new[] {
+      c.ClientName,
+      string.IsNullOrWhiteSpace(c.Status) ? "active" : c.Status,
+      c.UpdatedAt == default ? "-" : c.UpdatedAt.ToString("yyyy-MM-dd HH:mm"),
+      $"/practitioner/clients/{c.Id}",
+    })
+    .ToList()
+})
+</div>
+
+<script>
+  voInitTable({ wrapId: 'practitioner-clients-wrap', pageSize: 20, searchPlaceholder: 'Search clients…' });
+</script>

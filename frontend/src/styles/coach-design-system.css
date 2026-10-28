@@ -1,0 +1,767 @@
+:root {
+  --coach-primary: var(--vtl-color-brand-600);
+  --coach-primary-dark: var(--vtl-color-brand-800);
+  --coach-primary-soft: var(--vtl-color-brand-100);
+  --coach-success: var(--vtl-status-stable);
+  --coach-warning: var(--vtl-status-monitor);
+  --coach-critical: var(--vtl-status-review);
+  --coach-text: var(--vtl-color-ink);
+  --coach-muted: var(--vtl-color-ink-secondary);
+  --coach-bg: var(--vtl-color-canvas);
+  --coach-surface: var(--vtl-color-surface);
+  --coach-border: var(--vtl-color-border);
+  --coach-shadow: var(--vtl-shadow-raised);
+  --coach-radius: var(--vtl-radius-panel);
+}
+
+.coach-shell {
+  color: var(--vtl-color-ink);
+  font-family: var(--vtl-font-sans);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.coach-grid {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.coach-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.coach-grid--2 {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.coach-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.coach-card {
+  border: 1px solid var(--vtl-color-border);
+  border-radius: var(--vtl-radius-card);
+  background: var(--vtl-color-surface);
+  box-shadow: var(--vtl-shadow-card);
+  overflow-wrap: anywhere;
+}
+
+.coach-card--soft {
+  background: var(--vtl-color-brand-50);
+  border-color: var(--vtl-color-border-strong);
+}
+
+.coach-card--attention {
+  background: var(--vtl-status-monitor-bg);
+  border-color: var(--vtl-color-border-strong);
+}
+
+.coach-card--interactive {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.coach-card--interactive:hover {
+  border-color: var(--vtl-color-brand-500);
+  box-shadow: var(--vtl-shadow-raised);
+  transform: translateY(-2px);
+}
+
+.coach-hero {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--vtl-space-8);
+  border-radius: var(--vtl-radius-panel);
+  background: linear-gradient(135deg, var(--vtl-color-surface) 0%, var(--vtl-color-brand-50) 100%);
+  border: 1px solid var(--vtl-color-border-strong);
+  box-shadow: var(--coach-shadow);
+}
+
+.coach-hero > * {
+  /* The decorative circle is a pseudo-element of this hero. Keep every
+     real child above it, otherwise the circle can cover the step label or
+     progress control at wide desktop breakpoints. */
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.coach-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -120px -180px auto;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: var(--vtl-color-brand-100);
+  pointer-events: none;
+}
+
+.coach-eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--coach-primary-dark);
+}
+
+.coach-title-xl {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 32px);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--coach-text);
+}
+
+/* P40 -- unified with .cabinet-title-lg (dashboard2026.css) so every
+   in-page section heading is the same size across the whole cabinet. */
+.coach-title-lg {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--coach-text);
+}
+
+.coach-body {
+  color: var(--coach-muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.coach-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vtl-space-2);
+  border-radius: var(--vtl-radius-pill);
+  border: 1px solid transparent;
+  font-family: var(--vtl-font-sans);
+  font-weight: var(--vtl-font-weight-bold);
+  line-height: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.coach-button:focus-visible,
+.coach-chip:focus-visible,
+.coach-segmented-control__option:focus-visible,
+.coach-link-button:focus-visible {
+  outline: 3px solid var(--vtl-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.coach-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.coach-button--md {
+  padding: 0 var(--vtl-space-6);
+  font-size: var(--vtl-font-size-body);
+}
+
+.coach-button--sm {
+  min-height: 40px;
+  padding: 0 var(--vtl-space-4);
+  font-size: 13px;
+}
+
+.coach-button--primary {
+  color: var(--vtl-action-primary-fg);
+  background: var(--vtl-action-primary-bg);
+  box-shadow: var(--vtl-shadow-primary);
+}
+
+.coach-button--primary:hover {
+  transform: translateY(-1px);
+  background: var(--vtl-action-primary-bg-hover);
+  box-shadow: var(--vtl-shadow-primary);
+}
+
+.coach-button--secondary {
+  color: var(--vtl-action-secondary-fg);
+  background: var(--vtl-action-secondary-bg);
+  border-color: var(--vtl-action-secondary-border);
+}
+
+.coach-button--ghost {
+  color: var(--coach-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.coach-button__icon,
+.coach-chip__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.coach-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.coach-badge--primary { color: var(--vtl-color-brand-800); background: var(--vtl-color-brand-100); border-color: var(--vtl-color-border-strong); }
+.coach-badge--success { color: var(--vtl-status-stable); background: var(--vtl-status-stable-bg); border-color: var(--vtl-color-border-strong); }
+.coach-badge--warning { color: var(--vtl-status-monitor); background: var(--vtl-status-monitor-bg); border-color: var(--vtl-color-border-strong); }
+.coach-badge--critical { color: var(--vtl-status-review); background: var(--vtl-status-review-bg); border-color: var(--vtl-color-border-strong); }
+.coach-badge--neutral { color: var(--vtl-status-unavailable); background: var(--vtl-status-unavailable-bg); border-color: var(--vtl-color-border); }
+
+.coach-chip {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--coach-border);
+  background: var(--vtl-color-surface);
+  padding: 0 16px;
+  color: var(--coach-muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coach-chip--active {
+  color: var(--vtl-color-brand-800);
+  border-color: var(--vtl-color-border-strong);
+  background: var(--coach-primary-soft);
+}
+
+.coach-segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--vtl-space-1);
+  padding: var(--vtl-space-1);
+  border: 1px solid var(--vtl-color-border);
+  border-radius: var(--vtl-radius-pill);
+  background: var(--vtl-color-canvas);
+}
+
+.coach-segmented-control__option {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vtl-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--vtl-radius-pill);
+  background: transparent;
+  color: var(--vtl-color-ink-secondary);
+  padding: 0 var(--vtl-space-4);
+  font: inherit;
+  font-size: var(--vtl-font-size-body);
+  font-weight: var(--vtl-font-weight-bold);
+  cursor: pointer;
+}
+
+.coach-segmented-control__option--active {
+  border-color: var(--vtl-color-border-strong);
+  background: var(--vtl-color-surface);
+  color: var(--vtl-color-brand-800);
+  box-shadow: var(--vtl-shadow-card);
+}
+
+.coach-segmented-control__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.coach-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--vtl-space-3);
+  border: 1px solid var(--vtl-color-border-strong);
+  border-radius: var(--vtl-radius-card);
+  padding: var(--vtl-space-4);
+  color: var(--vtl-color-ink);
+  background: var(--vtl-color-surface);
+}
+
+.coach-alert--info { background: var(--vtl-color-brand-50); }
+.coach-alert--warning { background: var(--vtl-status-monitor-bg); }
+.coach-alert--critical { background: var(--vtl-status-review-bg); }
+.coach-alert--success { background: var(--vtl-status-stable-bg); }
+
+.coach-alert__icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--vtl-color-brand-800);
+}
+
+.coach-alert--warning .coach-alert__icon { color: var(--vtl-status-monitor); }
+.coach-alert--critical .coach-alert__icon { color: var(--vtl-status-review); }
+.coach-alert--success .coach-alert__icon { color: var(--vtl-status-stable); }
+.coach-alert__content { min-width: 0; flex: 1; }
+.coach-alert__action { flex: 0 0 auto; }
+
+.coach-field {
+  display: grid;
+  gap: var(--vtl-space-2);
+  color: var(--vtl-color-ink);
+}
+
+.coach-field__label {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coach-field input,
+.coach-field textarea,
+.coach-field select,
+.coach-input {
+  min-height: 48px;
+  width: 100%;
+  border-radius: var(--vtl-radius-field);
+  border: 1px solid var(--vtl-color-border-strong);
+  background: var(--vtl-color-surface);
+  padding: var(--vtl-space-3) 14px;
+  color: var(--vtl-color-ink);
+  font-size: var(--vtl-font-size-body-lg);
+}
+
+.coach-field textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.coach-field input:focus,
+.coach-field textarea:focus,
+.coach-field select:focus,
+.coach-input:focus {
+  outline: 3px solid var(--vtl-color-focus-ring);
+  border-color: var(--vtl-color-brand-700);
+}
+
+.coach-field__helper {
+  color: var(--coach-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.coach-field__error {
+  color: var(--vtl-status-review);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coach-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.coach-progress__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--coach-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.coach-progress__track {
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--vtl-color-border);
+}
+
+.coach-progress__bar {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 500ms ease;
+}
+
+/* dataviz skill: sequential = one hue, light->dark -- was teal->blue, a
+ * two-hue gradient on a single completeness value (a classic "rainbow"
+ * anti-pattern that implies a second dimension where there is only one). */
+.coach-progress__bar--primary { background: linear-gradient(90deg, var(--coach-primary-dark), var(--coach-primary)); }
+.coach-progress__bar--warning { background: var(--coach-warning); }
+.coach-progress__bar--success { background: var(--coach-success); }
+.coach-progress__bar--critical { background: var(--coach-critical); }
+
+.coach-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.coach-tooltip__bubble {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 10px);
+  right: 0;
+  width: min(240px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  transform: translateY(4px);
+  border-radius: 14px;
+  background: var(--vtl-color-ink);
+  color: var(--vtl-action-primary-fg);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.coach-tooltip:hover .coach-tooltip__bubble,
+.coach-tooltip:focus-within .coach-tooltip__bubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.coach-skeleton {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.coach-skeleton__line {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--vtl-color-border) 0%, var(--vtl-color-canvas) 50%, var(--vtl-color-border) 100%);
+  background-size: 220% 100%;
+  animation: coach-shimmer 1.25s linear infinite;
+}
+
+.coach-skeleton__line:nth-child(1) { width: 52%; height: 18px; }
+.coach-skeleton__line:nth-child(2) { width: 86%; }
+.coach-skeleton__line:nth-child(3) { width: 70%; }
+
+@keyframes coach-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+.coach-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.coach-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  color: var(--vtl-color-brand-800);
+  background: var(--coach-primary-soft);
+}
+
+.coach-empty h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.coach-empty p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--coach-muted);
+  line-height: 1.65;
+}
+
+.coach-kpi {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+}
+
+.coach-kpi__icon,
+.coach-insight__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: var(--coach-primary-soft);
+  color: var(--vtl-color-brand-800);
+}
+
+.coach-kpi__icon--warning,
+.coach-insight__icon--warning { background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); }
+.coach-kpi__icon--success,
+.coach-insight__icon--success { background: var(--vtl-status-stable-bg); color: var(--vtl-status-stable); }
+.coach-kpi__icon--critical,
+.coach-insight__icon--critical { background: var(--vtl-status-review-bg); color: var(--vtl-status-review); }
+
+.coach-kpi__label {
+  margin: 0;
+  color: var(--coach-muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coach-kpi__value {
+  margin: 4px 0 0;
+  color: var(--coach-text);
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.coach-kpi__helper {
+  margin: 8px 0 0;
+  color: var(--coach-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.coach-insight {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+}
+
+.coach-insight h3 {
+  margin: 0;
+  color: var(--coach-text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.coach-insight p {
+  margin: 6px 0 0;
+  color: var(--coach-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.coach-link-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--vtl-color-brand-800);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.coach-journey {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.coach-journey__step {
+  min-height: 132px;
+  border-radius: 20px;
+  border: 1px solid var(--coach-border);
+  background: var(--vtl-color-surface);
+  padding: 16px;
+}
+
+.coach-journey__step--active {
+  border-color: var(--vtl-color-border-strong);
+  background: linear-gradient(180deg, var(--vtl-color-surface) 0%, var(--vtl-color-brand-50) 100%);
+  box-shadow: var(--vtl-shadow-raised);
+}
+
+.coach-journey__number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--vtl-color-canvas);
+  color: var(--coach-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.coach-journey__step--active .coach-journey__number {
+  color: var(--vtl-action-primary-fg);
+  background: var(--coach-primary);
+}
+
+.coach-journey__step h3 {
+  margin: 14px 0 0;
+  color: var(--coach-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.coach-journey__step p {
+  margin: 6px 0 0;
+  color: var(--coach-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Journey stepper — a fixed-width node+connector track, independent of step
+   count (unlike the old .coach-journey card grid, which was hardcoded to 5
+   columns and orphaned any 6th+ step onto its own row). */
+.coach-stepper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.coach-stepper__item {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 84px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.coach-stepper__track {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  /* Fixed to the largest possible node (.coach-stepper__node--active is
+     38px) so the line centers on the same axis for every step regardless
+     of that step's own node size — without this, the active step's taller
+     node grows its track's auto height, which re-centers just that one
+     segment lower than its neighbors and makes the connector look like it
+     dips down at the active step. */
+  height: 40px;
+}
+
+.coach-stepper__line {
+  flex: 1 1 auto;
+  height: 3px;
+  background: var(--coach-border);
+  border-radius: 999px;
+}
+
+.coach-stepper__line--filled {
+  background: var(--coach-primary);
+}
+
+.coach-stepper__item:first-child .coach-stepper__track .coach-stepper__line:first-child {
+  visibility: hidden;
+}
+
+.coach-stepper__item:last-child .coach-stepper__track .coach-stepper__line:last-child {
+  visibility: hidden;
+}
+
+.coach-stepper__node {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 2px solid var(--coach-border);
+  background: var(--vtl-color-surface);
+  color: var(--coach-muted);
+  font-size: 12px;
+  font-weight: 900;
+  transition: transform 0.15s ease;
+}
+
+.coach-stepper__node--done {
+  border-color: var(--coach-primary);
+  background: var(--coach-primary);
+  color: var(--vtl-action-primary-fg);
+}
+
+.coach-stepper__node--active {
+  width: 38px;
+  height: 38px;
+  border-color: var(--coach-primary);
+  background: var(--vtl-color-surface);
+  color: var(--coach-primary-dark);
+  box-shadow: 0 0 0 5px var(--vtl-color-focus-ring);
+}
+
+.coach-stepper__label {
+  max-width: 96px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--coach-muted);
+  line-height: 1.3;
+}
+
+.coach-stepper__item--active .coach-stepper__label {
+  color: var(--coach-text);
+}
+
+.coach-mobile-stack {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .coach-grid--2,
+  .coach-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .coach-journey {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .coach-hero {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .coach-title-xl {
+    font-size: 28px;
+  }
+
+  .coach-journey {
+    grid-template-columns: 1fr;
+  }
+
+  .coach-button {
+    width: 100%;
+  }
+
+  .coach-insight {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach-card,
+  .coach-button,
+  .coach-progress__bar,
+  .coach-skeleton__line {
+    animation: none !important;
+    transition: none !important;
+  }
+}

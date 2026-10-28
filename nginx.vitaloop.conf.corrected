@@ -1,0 +1,110 @@
+# nginx config for vitaloop.today (frontend SPA)
+# Production paths:
+#   /etc/nginx/sites-available/vitaloop.today
+#   /etc/nginx/sites-enabled/vitaloop.today  (standalone file — NOT a symlink)
+# Deployed by: scripts/deploy-prod.sh when this file appears in git diff
+# NOTE: SSL directives are managed by Certbot — do not remove.
+
+server {
+    server_name vitaloop.today www.vitaloop.today;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+    root /var/www/VITALOOP/frontend/dist;
+    index index.html;
+
+    # Keep the user cabinet on the frontend SPA. Historically this pointed to
+    # CRM post-login, which broke direct /dashboard entry.
+    location = /dashboard {
+        return 301 /dashboard/;
+    }
+
+    # Redirect legacy CRM entry paths to CRM app
+    location = /admin {
+        return 302 https://crm.vitaloop.today/admin;
+    }
+
+    location = /ops {
+        return 302 https://crm.vitaloop.today/ops;
+    }
+
+    # No-cache: HTML shell (must revalidate so service worker updates propagate)
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
+    # No-cache: Web App Manifest
+    location = /manifest.json {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
+    # No-cache: Service Worker (browser must always re-fetch to detect updates)
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
+    # No-cache: Service Worker registration shim
+    location = /registerSW.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
+    # No-cache: Build metadata — used by deploy validation and diagnostics
+    location = /build-info.json {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        try_files $uri =404;
+    }
+
+    # Proxy API requests to analysis service
+    location /api/v1/ {
+        proxy_pass http://127.0.0.1:8006;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 15s;
+        proxy_send_timeout 180s;
+        proxy_read_timeout 180s;
+    }
+
+    # SPA fallback — all other paths serve index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Long cache: hashed assets (immutable filenames from Vite build)
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # SSL — managed by Certbot, do not edit manually
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/vitaloop.today/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vitaloop.today/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    if ($host = www.vitaloop.today) {
+        return 301 https://$host$request_uri;
+    }
+    listen 80;
+    server_name vitaloop.today www.vitaloop.today;
+    return 404; # managed by Certbot
+}

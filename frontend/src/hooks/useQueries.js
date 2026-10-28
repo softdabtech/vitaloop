@@ -1,0 +1,222 @@
+import { useQuery } from '@tanstack/react-query'
+import api from '../lib/api.js'
+import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
+
+// Entitlements control access to subscription management. Keep this request
+// bounded so a delayed backend response cannot leave that route loading
+// indefinitely. Individual consumers already render their own retry/error UI.
+export const ENTITLEMENTS_REQUEST_TIMEOUT_MS = 6000
+
+function readAccessTokenFromSupabaseStorage() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const key = Object.keys(window.localStorage).find((item) => item.startsWith('sb-') && item.endsWith('-auth-token'))
+    if (!key) return null
+
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw)
+    return parsed?.access_token || parsed?.currentSession?.access_token || null
+  } catch {
+    return null
+  }
+}
+
+async function hasActiveAccessToken() {
+  // Read the persisted session first. This keeps entitlement loading
+  // independent of a parallel Supabase hydration call in another component.
+  if (readAccessTokenFromSupabaseStorage()) return true
+
+  if (hasSupabaseConfig) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) return true
+  }
+
+  return Boolean(readAccessTokenFromSupabaseStorage())
+}
+
+// Dashboard summary (stats, assignments)
+export const useDashboardSummary = () =>
+  useQuery({
+    queryKey: ['dashboard-summary'],
+    queryFn: async () => {
+      const { data } = await api.get('/dashboard/summary')
+      return data
+    },
+    staleTime: 5 * 60 * 1000, // 5 min
+    gcTime: 10 * 60 * 1000,   // 10 min cache
+  })
+
+// Progress tracking (biomarkers across uploads)
+export const useProgress = () =>
+  useQuery({
+    queryKey: ['progress'],
+    queryFn: async () => {
+      const { data } = await api.get('/progress')
+      return Array.isArray(data) ? data : []
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+// Insights timeline + list
+export const useInsights = () =>
+  useQuery({
+    queryKey: ['insights'],
+    queryFn: async () => {
+      const { data } = await api.get('/insights')
+      return data || []
+    },
+    staleTime: 10 * 60 * 1000, // 10 min
+    gcTime: 20 * 60 * 1000,
+  })
+
+export const useInsightState = () =>
+  useQuery({
+    queryKey: ['insight-state'],
+    queryFn: async () => {
+      const { data } = await api.get('/insights/state')
+      return data || { active: [], dismissed: [] }
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  })
+
+// Timeline events
+export const useTimeline = () =>
+  useQuery({
+    queryKey: ['timeline'],
+    queryFn: async () => {
+      const { data } = await api.get('/timeline')
+      return data || []
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+// Health score
+export const useHealthScore = () =>
+  useQuery({
+    queryKey: ['health-score'],
+    queryFn: async () => {
+      const { data } = await api.get('/insights/health-score')
+      return data || null
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  })
+
+// Lab results by upload ID
+export const useLabResults = (uploadId) =>
+  useQuery({
+    queryKey: ['lab-results', uploadId],
+    queryFn: async () => {
+      const { data } = await api.get(`/results/${uploadId}`)
+      return data || []
+    },
+    enabled: !!uploadId,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  })
+
+// User entitlements (subscriptions, features)
+export const useUserEntitlements = () =>
+  useQuery({
+    queryKey: ['user-entitlements'],
+    queryFn: async () => {
+      const freeEntitlements = {
+        is_premium: false,
+        billing_status: 'free',
+        plan_key: 'free',
+        has_active_subscription: false,
+        features: { upload_limit: 1, lab_history: true, trend_analysis: false, advanced_protocol: false, symptom_lab_plan: true, checkins: false },
+      }
+
+      const hasToken = await hasActiveAccessToken()
+      if (!hasToken) {
+        return freeEntitlements
+      }
+
+      try {
+        const { data } = await api.get('/auth/entitlements', { timeout: ENTITLEMENTS_REQUEST_TIMEOUT_MS })
+        return data || freeEntitlements
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          return freeEntitlements
+        }
+        throw error
+      }
+    },
+    // Post-release entitlement consistency fix: a 30-minute staleTime meant
+    // a Premium grant made out-of-band (CRM) could stay invisible to an
+    // already-open client for up to 30 minutes — the global QueryClient
+    // already has refetchOnWindowFocus/refetchOnReconnect enabled
+    // (main.jsx), but React Query only actually refetches on focus/reconnect
+    // when the data IS stale, so a long staleTime silently defeated both.
+    // A short staleTime lets those existing triggers work as intended,
+    // without adding any new polling.
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    // This is a user-facing status check, not a background refresh. Surface a
+    // bounded failure to the subscription page instead of silently retrying
+    // for the global QueryClient retry window.
+    retry: false,
+  })
+
+// P37e: report details for the Today dashboard's returning-user sections
+// (comparison, evidence gaps, retest timing, report-scoped safety).
+// GET /results/{uploadId} is side-effect-free once the id is known (frozen-
+// report reproducibility, see backend/app/services/report_history.py) --
+// but `enabled` keeps it from ever firing speculatively. Callers must only
+// pass an uploadId sourced from today_contract.latest_ready_report.upload_id
+// (P37c), never from stats.total_uploads/active_program/latest_upload/
+// latest_lab_result -- see output/p37a-.../p37c-...-2026-09-20.md.
+export const useReportDetails = (uploadId) =>
+  useQuery({
+    queryKey: ['report-details', uploadId],
+    queryFn: async () => {
+      const { data } = await api.get(`/results/${uploadId}`)
+      return data || {}
+    },
+    enabled: Boolean(uploadId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+// Symptom check session/context
+export const useQuestionnaireSession = () =>
+  useQuery({
+    queryKey: ['questionnaire-session'],
+    queryFn: async () => {
+      const { data } = await api.get('/questionnaire/session')
+      return data || {}
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+// Lab results list (all uploads)
+export const useLabResultsList = () =>
+  useQuery({
+    queryKey: ['lab-results-list'],
+    queryFn: async () => {
+      const { data } = await api.get('/lab-results')
+      return Array.isArray(data) ? data : []
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+// Assignments (from practitioners)
+export const useAssignments = () =>
+  useQuery({
+    queryKey: ['assignments'],
+    queryFn: async () => {
+      const { data } = await api.get('/assignments')
+      return Array.isArray(data) ? data : []
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })

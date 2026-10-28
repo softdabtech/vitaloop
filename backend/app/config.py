@@ -1,0 +1,187 @@
+from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict
+from pydantic import Field
+from typing import List
+
+
+class Settings(BaseSettings):
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_service_key: str = ""
+    supabase_jwt_secret: str = ""  # Legacy HS256 (leave empty if using ES256)
+    supabase_jwt_public_key_jwk: str = ""  # ES256 EC public key as JWK JSON string
+    # anthropic_api_key/anthropic_model removed 2026-09-03: dead fields, never
+    # read anywhere outside this class. active_llm_api_key/base_url/model
+    # (below) resolve to OpenAI unconditionally — there is no provider switch.
+    # The LLM layer's file/function names (claude_service.py,
+    # claude_pdf_analyzer.py, the claude_* settings right below) are legacy
+    # naming from before the provider was OpenAI; renaming them is a separate,
+    # larger change, not done here.
+    claude_analysis_timeout: int = 120
+    claude_max_tokens: int = 8192
+    claude_pdf_max_size_mb: int = 10
+    claude_analysis_retry_count: int = 2
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-4o-mini"
+    openai_vision_model: str = "gpt-4o-mini"  # Cheapest Vision API model for images
+    enable_vision_api: bool = True  # Feature flag for Vision API
+    # P0 cost-aware architecture (post Sept 2026 OpenAI cost-leak incident,
+    # see qa_2026-09-11_fixes memory / openai-cost-audit-20260913.md): a
+    # simple, always-on daily-spend guard surfaced in the Ops cost
+    # dashboard rather than only discovered after the fact via a manual
+    # llm_usage_events query.
+    openai_daily_spend_alert_threshold_usd: float = 5.0
+    image_max_size_mb: int = 20  # Vision API supports up to 20MB
+    tiff_max_pages: int = 10  # Max pages in multi-page TIFF
+    table_analysis_max_rows: int = 1000  # Max rows when parsing tables
+    table_analysis_max_columns: int = 50  # Max columns when parsing tables
+    app_env: str = "development"
+    allowed_origins: str = "http://localhost:5173"
+    security_enable_headers: bool = True
+    rate_limit_backend: str = "inmemory"  # inmemory | redis
+    rate_limit_trust_forwarded_for: bool = False
+    rate_limit_forwarded_for_header: str = "x-forwarded-for"
+    rate_limit_redis_url: str = ""
+    rate_limit_redis_prefix: str = "rl"
+    auth_rate_limit_per_minute: int = 60
+    analyze_rate_limit_per_minute: int = 30
+    protocol_rate_limit_per_minute: int = 30
+    symptom_check_rate_limit_per_minute: int = 60
+    b2b_partner_rate_limit_per_minute: int = 60
+    b2b_api_key_rate_limit_per_minute: int = 30
+    metrics_enabled: bool = True
+    metrics_bearer_token: str = ""
+    lab_upload_raw_retention_days: int = 180
+    lab_upload_retention_batch_size: int = 500
+    retention_alert_email: str = ""
+    iherb_rcode: str = "VIT123"
+    iherb_base_url: str = "https://www.iherb.com/search"
+    freemium_upload_limit: int = 1  # free-tier lab uploads allowed before paywall
+    resend_api_key: str = ""
+    resend_from_email: str = "onboarding@resend.dev"
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = "VITALOOP <info@softdab.tech>"
+    registration_alert_email: str = "info@softdab.tech"
+    ops_alert_email: str = "info@softdab.tech"
+    ops_alerts_enabled: bool = True
+    ops_alerts_max_emails_per_day: int = 2
+    ops_alert_state_file: str = "/tmp/vitaloop_ops_alerts.json"
+    # Autonomous processing of the durable, frozen post-finalization ledger.
+    # This process is started only by the production Compose service; keeping
+    # the switch off by default prevents accidental background work in web and
+    # test processes.
+    recovery_worker_enabled: bool = False
+    recovery_worker_interval_seconds: int = Field(default=60, ge=10, le=3600)
+    recovery_worker_batch_size: int = Field(default=8, ge=1, le=32)
+    recovery_worker_concurrency: int = Field(default=2, ge=1, le=4)
+    frontend_base_url: str = "https://vitaloop.today"
+    # English end-user cabinet. Keep `frontend_base_url` as the public-site
+    # origin so UA and public links are not silently moved with this setting.
+    end_user_app_base_url: str = "https://app.vitaloop.today"
+    crm_base_url: str = "https://crm.vitaloop.today"
+    webpush_vapid_public_key: str = ""
+    webpush_vapid_private_key: str = ""
+    webpush_vapid_subject: str = "mailto:info@softdab.tech"
+    webpush_dispatch_secret: str = ""
+    emergency_fixes_enabled: bool = False
+    knowledge_context_enabled: bool = True
+    knowledge_evaluation_after_analyze_enabled: bool = True
+    # Structured symptom engine. Server-only credentials; rollout remains off
+    # until local integration, clinical review, and explicit deployment approval.
+    infermedica_enabled: bool = False
+    infermedica_app_id: str = ""
+    infermedica_app_key: str = ""
+    infermedica_base_url: str = "https://api.infermedica.com/v3"
+    infermedica_model_en: str = "infermedica-en"
+    infermedica_model_uk: str = "infermedica-uk"
+    infermedica_timeout_seconds: float = 15.0
+    infermedica_dev_mode: bool = True
+    infermedica_max_questions: int = 30
+    infermedica_store_condition_candidates: bool = False
+    symptom_engine_allowlist_user_ids: str = ""
+    symptom_engine_rollout_percent: int = Field(default=0, ge=0, le=100)
+    symptom_engine_clinical_approval_recorded: bool = False
+    symptom_engine_privacy_approval_recorded: bool = False
+    symptom_engine_commercial_approval_recorded: bool = False
+    symptom_engine_security_approval_recorded: bool = False
+    symptom_engine_alerting_ready: bool = False
+    # International billing (`vitaloop.today`) — server-only secrets.
+    creem_api_key: str = ""
+    creem_webhook_secret: str = ""
+    creem_api_base_url: str = "https://api.creem.io"
+    creem_monthly_product_id: str = "prod_4MhqWhNnN5LWUl6WzdqWEY"
+    creem_annual_product_id: str = "prod_1HOZGfWiIm6sVv0DgU1COl"
+    # Ukrainian billing (`ua.vitaloop.today`) remains isolated on WayForPay.
+    wayforpay_merchant_login: str = ""
+    wayforpay_secret_key: str = ""
+    wayforpay_merchant_password: str = ""
+    wayforpay_merchant_domain: str = "ua.vitaloop.today"
+    wayforpay_api_base_url: str = "https://api.vitaloop.today"
+    wayforpay_return_url: str = "https://ua.vitaloop.today/subscription?sub=success"
+
+    @property
+    def origins_list(self) -> List[str]:
+        parsed = [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+        # Keep critical frontend origins available even if env config is missing
+        # or partially overwritten on a server. Only include localhost in development.
+        fallback_origins = [
+            "https://vitaloop.today",
+            "https://www.vitaloop.today",
+            "https://app.vitaloop.today",
+            "https://ua.vitaloop.today",
+            "https://www.ua.vitaloop.today",
+            "https://crm.vitaloop.today",
+        ]
+
+        # Keep common local frontend ports available for browser QA against
+        # deployed API. This is origin-scoped and still requires a valid token.
+        if self.app_env in ("development", "staging"):
+            fallback_origins.extend([
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ])
+        fallback_origins.extend([
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "http://localhost:4174",
+            "http://127.0.0.1:4174",
+        ])
+
+        seen = set()
+        merged: List[str] = []
+        for origin in [*parsed, *fallback_origins]:
+            if origin and origin not in seen:
+                seen.add(origin)
+                merged.append(origin)
+        return merged
+
+    @property
+    def active_llm_api_key(self) -> str:
+        """Direct OpenAI API key."""
+        return self.openai_api_key
+
+    @property
+    def active_llm_base_url(self) -> str:
+        """Direct OpenAI API base URL."""
+        return self.openai_base_url or "https://api.openai.com/v1"
+
+    @property
+    def active_llm_model(self) -> str:
+        """Direct OpenAI model."""
+        return self.openai_model or "gpt-4o-mini"
+
+    @property
+    def active_supabase_service_key(self) -> str:
+        """Prefer service role key; keep legacy key as fallback during migration."""
+        return self.supabase_service_role_key or self.supabase_service_key
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+settings = Settings()

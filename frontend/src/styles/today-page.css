@@ -1,0 +1,1069 @@
+/* P37h — Today dashboard visual/product alignment fix.
+ *
+ * Page-scoped styles ONLY for UserDashboard.jsx. Deliberately NOT added to
+ * coach-design-system.css: .coach-hero/.coach-card are shared by
+ * LabPlan.jsx, Questionnaire.jsx, and ProtocolPage.jsx, and the design
+ * spec's own instruction is "do not rewrite shared Coach components if the
+ * change is only needed by one page" (§14). This file exists so Today can
+ * move to a calmer, compact layout without touching any other page's look.
+ */
+
+/* P37h.1/P37h.2 — mobile overlay & safety-stack polish. See git history for
+ * the full before/after measurements; kept below, mostly superseded in
+ * presentation (not behavior) by the P37i tile system further down. */
+
+.today-header {
+  margin-bottom: 4px;
+}
+
+.today-header .today-header__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-header .today-header__source {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+/* Both safety banners (report-scoped + questionnaire) share one wrapper so
+ * they read as one compact "safety stack" -- sources stay fully separate
+ * (each keeps its own text/tone/source label), only the visual weight is
+ * reduced. Compact padding/type-scale applies whenever more than one banner
+ * is present; a single banner keeps the roomier sizing. */
+.today-safety-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-safety {
+  border-radius: 14px;
+  border: 1px solid;
+  padding: 12px 14px;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety {
+  padding: 10px 12px;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety__source {
+  margin-top: 4px !important;
+}
+
+/* P37k.2/P37k.2.1 -- questionnaire safety banner in the cockpit is a real
+ * <button> (navigates to /questionnaire) rather than plain text, so it gets
+ * native keyboard activation and focus for free. `.today-safety` already
+ * supplies border/padding/border-radius via inline style + this stylesheet;
+ * this block only resets the default <button> UA styling (background/font/
+ * text-align/width/appearance) that would otherwise fight those rules, and
+ * adds the hover/focus ring. */
+.today-safety--actionable {
+  display: block;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.today-safety--actionable:hover,
+.today-safety--actionable:focus-visible {
+  box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.28);
+  outline: none;
+}
+
+/* P37k.2.1 -- dedicated classes replacing the previous Tailwind-utility-
+ * class selector (.flex.items-start.gap-2\.5.justify-between), which broke
+ * silently if those utility classes were ever reordered/renamed on the JSX
+ * side. These are the only place this layout is defined now. */
+.today-safety__action-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.today-safety__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.today-safety__action {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  align-self: center;
+}
+
+@media (max-width: 480px) {
+  .today-safety__action-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .today-safety-stack:has(> :nth-child(2)) {
+    gap: 6px;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety {
+    padding: 8px 10px;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety p {
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety__source {
+    margin-top: 3px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Reserves space so the site-wide fixed-bottom cookie banner (see
+ * CookieConsent.jsx: position:fixed, bottom:0) never sits on top of the
+ * last content section before it is dismissed -- same established pattern
+ * already used at the bottom of Results.jsx/ProtocolPage.jsx/
+ * ManualBiomarkerEntry.jsx for the floating chat widget. Height verified via
+ * getBoundingClientRect() at 375px width (see output/p37h1-overlap-check.mjs
+ * and output/p37h2-overlap-check.mjs) -- 232px real banner height, 17rem
+ * gives a real margin above that, not just enough to exactly clear it. */
+.today-bottom-spacer {
+  height: 17rem;
+}
+
+@media (min-width: 641px) {
+  .today-bottom-spacer {
+    /* P38b -- bumped from 6rem: removing .today-canvas's outer padding
+       shortened the page enough that 6rem no longer cleared the corner
+       chat bubble at true scroll-rest (confirmed via getBoundingClientRect()
+       -- output/p37k.2.1-overlap-check.mjs -- documentsFooter's bottom
+       edge landed ~8px inside the chat bubble's top edge). 9rem restores a
+       real margin above it, not just enough to exactly clear it, matching
+       this file's own established convention (see the 17rem mobile value's
+       comment above). Desktop has no bottom nav, so only the chat bubble
+       and cookie banner need clearance here. */
+    height: 9rem;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P38b — Today moves onto the shared CabinetPageFrame (see
+ * components/dashboard/CabinetPageFrame.jsx and the P38a audit,
+ * output/p38a-cabinet-visual-information-audit-2026-09-22.md §3/§6.8).
+ *
+ * P37i's `.today-canvas` (a bordered/shadowed 1040px white panel the whole
+ * page sat inside) is removed: Today's sections now render directly on the
+ * shared cabinet page background, exactly like every other cabinet route --
+ * no second, page-level "card inside a card" wrapper. `.today-focus` is
+ * simplified to a normal tinted section (no more negative-margin trick,
+ * which only existed to bleed edge-to-edge inside the removed canvas's
+ * padding) -- it still marks "current focus" with a distinct tint, it just
+ * no longer needs to fight an outer panel that no longer exists.
+ *
+ * None of this changes what data is fetched or how state is chosen --
+ * UserDashboard.jsx's viewModel branches are unchanged; only how each
+ * already-present piece of it is composed on screen.
+ */
+
+/* P38b.1 -- flat mint fill, no gradient: reuses the existing
+ * --coach-primary-soft token (#DDF8F2, already used elsewhere for mint
+ * surfaces, e.g. the pre-P38b Documents pill background) instead of the
+ * two near-identical mint stops (#F3FBF9/#F6FCFB) this replaced. Radius
+ * capped at 16px at every width, matching the P38b.1 radius rule. */
+/* P39 -- same gradient hero treatment as .cockpit-hero above, so the
+ * first_run/labs_intent entry states read as the same visual family as the
+ * ready-report cockpit and the rest of the cabinet (Lab Plan/Questionnaire/
+ * Protocol), instead of a flatter, plainer surface. */
+.today-focus {
+  position: relative;
+  overflow: hidden;
+  padding: 32px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
+  border: 1px solid rgba(42, 191, 170, 0.2);
+  box-shadow: var(--coach-shadow, 0 20px 50px rgba(15, 23, 42, 0.08));
+}
+
+@media (max-width: 640px) {
+  .today-focus {
+    padding: 20px;
+    border-radius: 24px;
+  }
+}
+
+.today-hero {
+  padding: 20px 0 0;
+  background: transparent;
+  border: none;
+}
+
+.today-hero h1 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 32px);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--coach-text);
+}
+
+.today-hero p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #475569;
+  max-width: 60ch;
+}
+
+/* Seam between the focus band and the structured lower grid -- a plain
+ * divider, not another shadowed card edge, so the page reads as one
+ * continuous surface split into two zones, not two stacked panels. */
+.today-divider {
+  height: 1px;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.07);
+}
+
+.today-grid-lower {
+  padding: 24px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .today-grid-lower {
+    padding: 18px 0 4px;
+    gap: 16px;
+  }
+}
+
+/* Changes + Return checkpoint pair: side by side when both exist. When only
+ * one exists, it spans the full row instead of leaving an empty half beside
+ * it -- the ":only-child" rule is what makes "sections gracefully rebalance"
+ * an actual CSS guarantee instead of a manual per-state layout choice. */
+.today-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.today-pair > :only-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+  .today-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Base tile surface shared by Changes / Return / Clarity / Latest report,
+ * plus the loading/limitation message when returning-user data is still
+ * settling. Compact but no longer bare: a real bordered surface with a
+ * subtle background tint and its own section label, so each piece of
+ * information reads as an intentional card, not a paragraph floating in
+ * whitespace. */
+.today-tile {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.today-tile--wide {
+  grid-column: 1 / -1;
+}
+
+/* Latest report/plan keeps a slightly stronger surface than the other
+ * tiles (spec's own "stable navigational anchor" framing) -- white instead
+ * of tinted, with a touch more elevation, so it still reads as the anchor
+ * even though it's now inside the same grid rhythm as the other tiles. */
+.today-documents {
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.today-documents .today-documents__report-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--coach-text);
+}
+
+.today-documents .today-documents__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.today-documents .today-documents__link {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  background: var(--coach-primary-soft, #DDF8F2);
+  color: var(--coach-primary-dark, #109581);
+  transition: background 0.15s ease;
+}
+
+.today-documents .today-documents__link:hover {
+  background: #C7F1E7;
+}
+
+.today-documents .today-documents__link--locked {
+  background: rgba(15, 23, 42, 0.05);
+  color: #94A3B8;
+}
+
+.today-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748B;
+}
+
+/* Clarity: a denser, intentional two-column item grid on wider screens,
+ * nested inside its own wide tile -- collapses to a single column on
+ * mobile, same as every other responsive grid on this page. */
+.today-clarity-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px 16px;
+}
+
+@media (min-width: 640px) {
+  .today-clarity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.today-clarity-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P37k — Today cockpit.
+ *
+ * Replaces the hero-first composition (P37h/P37i) with a denser,
+ * information-forward layout once a ready report's details have resolved:
+ * header -> status strip -> safety (if any) -> this week -> lab snapshot ->
+ * follow-up -> missing context -> report links. No giant headline, no
+ * decorative surface -- every block is a flat, tightly-padded card at the
+ * same visual weight, mobile-first, never nested card-in-card.
+ *
+ * Sizing per spec: 16-20px card padding, 12px section labels (reuses the
+ * existing .today-section-label), 16-18px block titles, 14px body text.
+ */
+
+.cockpit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* P39 -- Today's cockpit gets the same calm gradient "hero" treatment as
+ * Lab Plan/Questionnaire/Protocol (.coach-hero in coach-design-system.css),
+ * instead of a plain flat block -- this is the visual-parity fix requested
+ * after the September 2026 full-cabinet-unification review. Purely a
+ * decorative wrapper around the existing header/safety/status-strip
+ * markup -- no change to what renders inside it or in what order. */
+.cockpit-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 28px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
+  border: 1px solid rgba(42, 191, 170, 0.2);
+  box-shadow: var(--coach-shadow, 0 20px 50px rgba(15, 23, 42, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cockpit-hero > .today-safety-stack {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .cockpit-hero {
+    padding: 18px 18px 16px;
+    border-radius: 24px;
+  }
+}
+
+.cockpit-header {
+  padding-bottom: 2px;
+}
+
+.cockpit-header .coach-eyebrow {
+  margin: 0 0 10px;
+}
+
+.cockpit-header__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 12px;
+}
+
+/* P38b -- Today's real page-level <h1>. Previously the cockpit header used
+ * only `.coach-eyebrow` (a small uppercase label, not a heading element) --
+ * for a ready report (the vast majority of real usage, since P37k.3 the
+ * cockpit renders for every ready state) that left the page with NO <h1> at
+ * all. Sized close to the removed hero's h1 so the page doesn't lose visual
+ * weight at its top, just gains a real heading. */
+.cockpit-title {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  color: var(--coach-text);
+}
+
+.cockpit-header__intro {
+  max-width: 720px;
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.cockpit-header__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.cockpit-source-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cockpit-freshness-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(42, 191, 170, 0.12);
+  color: var(--coach-primary-dark, #109581);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* P37k.2 -- very_old gets a calmer, non-alarmist amber (not red) so the
+ * header itself makes clear this isn't current data without reading as a
+ * warning/error state. */
+.cockpit-freshness-chip--very-old {
+  background: rgba(217, 119, 6, 0.13);
+  color: #92400e;
+}
+
+.cockpit-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--coach-primary-dark, #109581);
+  white-space: nowrap;
+}
+
+.cockpit-link:hover {
+  color: #0b6b5b;
+}
+
+.cockpit-link:focus-visible,
+.cockpit-header__upload-btn:focus-visible,
+.cockpit-primary-action:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.3);
+  outline-offset: 3px;
+}
+
+.cockpit-primary-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 18px;
+  background: #0d9488;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.cockpit-primary-action:hover {
+  background: #0f766e;
+}
+
+.cockpit-primary-action--compact {
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+/* P39 -- the header's Upload action gets real button weight (pill, border,
+ * background) instead of reading as a stray text link floating in the top
+ * corner of the hero -- matches the secondary-button language used
+ * elsewhere (Lab Plan's "Upload existing results"). */
+.cockpit-header__upload-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  color: var(--coach-text, #0f172a);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cockpit-header__upload-btn:hover {
+  background: var(--coach-primary-soft, #DDF8F2);
+  border-color: rgba(42, 191, 170, 0.5);
+}
+
+@media (max-width: 480px) {
+  .cockpit-header__upload-btn {
+    font-size: 12.5px;
+    padding: 0 12px;
+  }
+}
+
+/* Status strip: 3 flat cells in one row on desktop, stacked on mobile --
+ * tight padding, no card-on-card (each cell is a plain bordered block
+ * directly inside the strip, not a card nested inside another card). */
+/* P39 -- the retest cell (marker name + timing window) is reliably the
+ * longest of the three, so it gets a slightly wider track instead of an
+ * even 1fr/1fr/1fr split -- that even split was what pushed it to wrap onto
+ * a second line while the other two stayed single-line, making the row look
+ * misaligned (uneven card heights, dangling empty space under the shorter
+ * two). */
+.cockpit-status-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
+  gap: 7px;
+}
+
+.cockpit-report-overview .cockpit-status-strip {
+  margin-top: 14px;
+}
+
+.cockpit-section-intro {
+  color: #64748b !important;
+}
+
+@media (max-width: 640px) {
+  .cockpit-page {
+    gap: 12px;
+  }
+
+  .cockpit-hero {
+    order: 0;
+    padding: 14px 14px 12px;
+    border-radius: 18px;
+  }
+
+  .cockpit-header .coach-eyebrow {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .cockpit-title {
+    font-size: clamp(25px, 8vw, 30px);
+  }
+
+  .cockpit-header__intro,
+  .cockpit-report-overview .cockpit-section-intro {
+    display: none;
+  }
+
+  .cockpit-header__dates {
+    align-items: flex-start;
+    gap: 4px 8px;
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  .cockpit-source-name {
+    flex-basis: 100%;
+  }
+
+  .cockpit-report-overview {
+    order: 1;
+  }
+
+  .cockpit-safety-note {
+    order: 2;
+  }
+
+  .cockpit-symptom-context {
+    order: 3;
+  }
+
+  .cockpit-this-week {
+    order: 4;
+  }
+
+  .cockpit-clinical-summary {
+    order: 5;
+  }
+
+  .cockpit-lab-snapshot {
+    order: 6;
+  }
+
+  .cockpit-section--detail {
+    order: 7;
+  }
+
+  .cockpit-documents {
+    order: 8;
+  }
+
+  .cockpit-status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px !important;
+  }
+
+  .cockpit-status-cell:first-child {
+    display: none;
+  }
+
+  .cockpit-status-cell {
+    min-width: 0;
+    padding: 8px 9px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .cockpit-status-cell span {
+    overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+
+  .cockpit-status-cell small {
+    font-size: 9px;
+  }
+
+  .cockpit-this-week .cockpit-primary-action--compact {
+    width: 100%;
+  }
+}
+
+/* P38b -- "current status" (item 2 in the required visual order) is the
+ * page's own current-state summary, so it gets a stronger surface (white,
+ * not the same flat gray as every other section) plus a per-cell semantic
+ * icon color instead of uniform emerald -- see the tone modifiers below.
+ * Still flat/bordered, still no gradient -- "stronger" means more contrast
+ * against the page background and its neighbors, not decorative. */
+.cockpit-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--coach-text);
+}
+
+.cockpit-status-cell span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cockpit-status-cell small {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+/* Tone modifiers -- applied per cell based on the already-computed value
+ * that cell displays (priority count / basis freshness), never a new
+ * classification. See UserDashboard.jsx's statusToneClass() helper. */
+.cockpit-status-cell--attention svg { color: #D97706; }
+.cockpit-status-cell--good svg { color: #059669; }
+.cockpit-status-cell--info svg { color: #0284C7; }
+
+/* P37k.3 -- loading/error placeholder cells. Same size/padding as a real
+ * status cell so nothing shifts layout when real content arrives. */
+.cockpit-status-cell--placeholder {
+  align-items: center;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P37k.3 -- cockpit loading skeleton. Fixes the two-screen flicker where
+ * the legacy hero+lower-grid layout rendered first and was fully replaced
+ * by the cockpit once GET /results/{uploadId} resolved. The cockpit shell
+ * now mounts immediately for any ready report; these are the placeholders
+ * shown inside its own sections (status strip / this week / lab snapshot)
+ * while that fetch is still in flight, never a whole different layout.
+ */
+@keyframes cockpit-skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.cockpit-skeleton-line {
+  display: block;
+  width: 70%;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.09);
+  animation: cockpit-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.cockpit-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cockpit-skeleton-rows .cockpit-skeleton-line {
+  height: 14px;
+}
+
+.cockpit-skeleton-rows .cockpit-skeleton-line:nth-child(2) {
+  width: 55%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cockpit-skeleton-line {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+.cockpit-section {
+  padding: 20px;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+}
+
+.cockpit-page > .cockpit-section,
+.cockpit-page > .cockpit-hero {
+  width: 100%;
+}
+
+.cockpit-section .today-section-label {
+  margin-bottom: 8px;
+}
+
+.cockpit-section > p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+  margin: 0;
+}
+
+.cockpit-safety-note {
+  border-left: 4px solid #dc2626;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-safety-note__reason {
+  margin-top: 6px !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+}
+
+/* P38b -- "comparisons/follow-up/missing context" (item 5) and Documents
+ * (item 6) are archive/detail tier, one step quieter than the current-state
+ * tier above (status strip / This week / Lab snapshot) -- a lighter fill
+ * and no bold section-label color shift, so scanning the page top-to-
+ * bottom reads as a real priority order, not seven identical gray boxes. */
+.cockpit-section--detail {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+}
+
+.cockpit-section--detail .today-section-label svg {
+  color: #64748B;
+}
+
+/* P37k.1 — quiet report archive/footer. Deliberately NOT .today-documents
+ * (that pill-button treatment made the footer read as a second CTA
+ * cluster, duplicating whatever This week's actual primary action was).
+ * This is plain text on a faint surface -- present, findable, but visibly
+ * secondary to the page's one primary CTA. */
+.cockpit-documents {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+}
+
+.cockpit-documents__report-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.cockpit-documents__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+}
+
+.cockpit-documents__links > * + * {
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid #cbd5e1;
+}
+
+.cockpit-documents__locked {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* Sparse ready-report state: one honest primary action instead of two
+ * empty-placeholder sections (This week / Latest lab snapshot). */
+.cockpit-section--sparse {
+  text-align: left;
+}
+
+/* P41: Main clinical signal + Medical attention level + Basis merged into
+ * one card (confirmed non-redundant fields, see the P40 session's overlap
+ * check -- this is presentation compaction only). Every sub-block shares
+ * one skeleton (micro-label -> bold title + badge -> description) so the
+ * three read as one consistent, tabular clinical entry instead of three
+ * differently-shaped widgets stacked together. */
+.cockpit-clinical-summary__label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.cockpit-clinical-summary__block + .cockpit-clinical-summary__block--divided,
+.cockpit-clinical-summary__block--divided {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+/* P41: dot meter for degree/ordinal values (confidence, evidence basis) --
+ * sequential single-hue fill, never a multi-hue categorical badge, per the
+ * dataviz skill's "sequential = one hue, light-to-dark" rule. Fill state
+ * (not hue) carries the value so it reads under any color vision. */
+.cockpit-meter-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cockpit-meter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.cockpit-meter-dot--filled {
+  background: #0D9488;
+}
+
+.cockpit-clinical-summary__footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cockpit-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.cockpit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-left: 3px solid transparent;
+}
+
+/* P38b -- color used only where the row already carries real semantic
+ * meaning (row.kind, already computed in todayViewModel.js -- no new
+ * classification added here): a clinician-review/safety row gets the same
+ * amber "watch attention" accent as the freshness chip and status-strip
+ * cells; the forced very_old Upload row gets the same amber treatment,
+ * matching its chip. Plan/retest/gap rows carry no inherent status of
+ * their own and stay neutral (no color decoration), per the rule against
+ * decorating sections with no semantic status. */
+.cockpit-row--attention {
+  border-left-color: #D97706;
+}
+
+@media (max-width: 480px) {
+  .cockpit-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.cockpit-row__text {
+  min-width: 0;
+}
+
+.cockpit-row__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--coach-text);
+}
+
+.cockpit-row__why {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #64748B;
+}
+
+.cockpit-link--row {
+  white-space: nowrap;
+}
+
+/* Lab snapshot: compact rows, not a table and not individually-shadowed
+ * cards -- a worse-status row gets a left accent bar via border-left,
+ * status is never color-only (the status word itself is always printed
+ * inside .cockpit-lab-row__range's sibling text via the row's own name/
+ * value, so screen readers and colorblind users get the same information
+ * as the color accent). */
+.cockpit-lab-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* P37k.2: added an explicit status-text column (name / value / status /
+ * range) so status is never color-only -- see .cockpit-lab-row__status. */
+.cockpit-lab-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr) minmax(0, 0.8fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-left: 3px solid transparent;
+  font-size: 13.5px;
+}
+
+@media (max-width: 480px) {
+  .cockpit-lab-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+.cockpit-lab-row--deficient { border-left-color: #0284C7; }
+.cockpit-lab-row--elevated { border-left-color: #E11D48; }
+.cockpit-lab-row--borderline { border-left-color: #D97706; }
+.cockpit-lab-row--optimal { border-left-color: #059669; }
+
+.cockpit-lab-row__name {
+  font-weight: 700;
+  color: var(--coach-text);
+}
+
+.cockpit-lab-row__value {
+  color: #334155;
+}
+
+.cockpit-lab-row__status {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.cockpit-lab-row--deficient .cockpit-lab-row__status { color: #0284C7; }
+.cockpit-lab-row--elevated .cockpit-lab-row__status { color: #E11D48; }
+.cockpit-lab-row--borderline .cockpit-lab-row__status { color: #D97706; }
+.cockpit-lab-row--optimal .cockpit-lab-row__status { color: #059669; }
+
+.cockpit-lab-row__range {
+  color: #94A3B8;
+  font-size: 12.5px;
+}

@@ -1,0 +1,612 @@
+-- ============================================================
+-- VITALOOP — Supabase SQL Migrations
+-- Execute in Supabase SQL Editor in this exact order
+-- ============================================================
+
+-- 1. USERS (extends auth.users)
+CREATE TABLE public.users (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  age SMALLINT CHECK (age > 0 AND age < 130),
+  sex TEXT CHECK (sex IN ('male', 'female', 'other')),
+  timezone TEXT DEFAULT 'America/New_York',
+  sub_status TEXT DEFAULT 'free'
+    CHECK (sub_status IN ('free', 'active', 'cancelled')),
+  sub_id TEXT,
+  global_role TEXT DEFAULT 'user',
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  subscription_status TEXT,
+  current_period_end TIMESTAMPTZ,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Auto-create profile on registration
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email)
+  VALUES (NEW.id, NEW.email);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 2. LAB UPLOADS (stores OCR text, never PDFs)
+CREATE TABLE public.lab_uploads (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  extracted_text TEXT NOT NULL,
+  lab_name TEXT,
+  test_date DATE,
+  ocr_confidence NUMERIC(5,2),
+  analyze_prompt_version TEXT NOT NULL DEFAULT 'extract_v1',
+  status TEXT DEFAULT 'pending'
+    CHECK (status IN ('pending','processing','done','failed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_lab_uploads_user_id ON public.lab_uploads(user_id);
+CREATE INDEX idx_lab_uploads_created_at ON public.lab_uploads(created_at DESC);
+
+-- 3. BIOMARKERS
+CREATE TABLE public.biomarkers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  value NUMERIC(10,3) NOT NULL,
+  unit TEXT NOT NULL,
+  ref_low NUMERIC(10,3),
+  ref_high NUMERIC(10,3),
+  status TEXT NOT NULL
+    CHECK (status IN ('OPTIMAL','BORDERLINE','DEFICIENT','ELEVATED')),
+  category TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_biomarkers_upload_id ON public.biomarkers(upload_id);
+CREATE INDEX idx_biomarkers_user_name ON public.biomarkers(user_id, name);
+CREATE UNIQUE INDEX uq_biomarkers_upload_name ON public.biomarkers(upload_id, lower(name));
+
+-- 4. SYMPTOMS
+CREATE TABLE public.symptoms (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE,
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  severity SMALLINT DEFAULT 5 CHECK (severity BETWEEN 1 AND 10),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_symptoms_user_id ON public.symptoms(user_id);
+CREATE INDEX idx_symptoms_created_at ON public.symptoms(created_at DESC);
+CREATE INDEX idx_symptoms_tags_gin ON public.symptoms USING GIN(tags);
+
+-- Optional helper for dashboard aggregation by symptom tags in a time window
+CREATE OR REPLACE FUNCTION public.get_symptom_tag_summary(p_user_id UUID, p_days INT DEFAULT 30)
+RETURNS TABLE(tag TEXT, count BIGINT, avg_severity NUMERIC)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    unnest(tags) AS tag,
+    COUNT(*)::BIGINT AS count,
+    ROUND(AVG(severity)::NUMERIC, 2) AS avg_severity
+  FROM public.symptoms
+  WHERE user_id = p_user_id
+    AND created_at >= (NOW() - make_interval(days => GREATEST(1, LEAST(p_days, 365))))
+  GROUP BY tag
+  ORDER BY count DESC, avg_severity DESC;
+$$;
+
+-- 5. PROTOCOLS
+CREATE TABLE public.protocols (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  recommendations JSONB NOT NULL DEFAULT '[]',
+  prompt_version TEXT NOT NULL DEFAULT 'protocol_v1',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_protocols_user_id ON public.protocols(user_id);
+CREATE INDEX idx_protocols_upload_id ON public.protocols(upload_id);
+CREATE UNIQUE INDEX uq_protocols_user_upload ON public.protocols(user_id, upload_id);
+
+-- ============================================================
+-- ROW LEVEL SECURITY
+-- ============================================================
+
+ALTER TABLE public.users         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lab_uploads   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.biomarkers    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.symptoms      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.protocols     ENABLE ROW LEVEL SECURITY;
+
+-- users
+CREATE POLICY "Users: select own"
+  ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users: insert own"
+  ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users: update own"
+  ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- lab_uploads
+CREATE POLICY "Lab uploads: select own"
+  ON public.lab_uploads FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Lab uploads: insert own"
+  ON public.lab_uploads FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Lab uploads: update own"
+  ON public.lab_uploads FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- biomarkers
+CREATE POLICY "Biomarkers: select own"
+  ON public.biomarkers FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Biomarkers: insert own"
+  ON public.biomarkers FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Biomarkers: update own"
+  ON public.biomarkers FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- symptoms
+CREATE POLICY "Symptoms: select own"
+  ON public.symptoms FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Symptoms: insert own"
+  ON public.symptoms FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Symptoms: update own"
+  ON public.symptoms FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- protocols
+CREATE POLICY "Protocols: select own"
+  ON public.protocols FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Protocols: insert own"
+  ON public.protocols FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Protocols: update own"
+  ON public.protocols FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- ============================================================
+-- PHASE 2 — P0 TABLES FOR LONGITUDINAL HEALTH MANAGEMENT
+-- ============================================================
+
+-- 6. USER PROFILE (extended baseline)
+CREATE TABLE public.user_profile (
+  id UUID REFERENCES public.users(id) ON DELETE CASCADE PRIMARY KEY,
+  age SMALLINT CHECK (age > 0 AND age < 130),
+  sex TEXT CHECK (sex IN ('male', 'female', 'other')),
+  height_cm NUMERIC(5,1),
+  weight_kg NUMERIC(5,1),
+  timezone TEXT DEFAULT 'America/New_York',
+  medications TEXT,
+  allergies TEXT,
+  pregnancy_status TEXT,
+  goals TEXT[] DEFAULT '{}',
+  current_supplements TEXT[] DEFAULT '{}',
+  current_medications TEXT[] DEFAULT '{}',
+  prior_diagnoses TEXT,
+  onboarding_complete BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "UserProfile: select own" ON public.user_profile FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "UserProfile: insert own" ON public.user_profile FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "UserProfile: update own" ON public.user_profile FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- Auto-create user_profile on registration
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profile (id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_user_created_profile
+  AFTER INSERT ON public.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_profile();
+
+-- 7. USER LOCATIONS
+CREATE TABLE public.user_locations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  district TEXT,
+  city TEXT,
+  state TEXT,
+  country TEXT,
+  is_primary BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_locations_user_id ON public.user_locations(user_id);
+ALTER TABLE public.user_locations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "UserLocations: select own" ON public.user_locations FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "UserLocations: insert own" ON public.user_locations FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "UserLocations: update own" ON public.user_locations FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 8. RECURRING COMPLAINTS
+CREATE TABLE public.recurring_complaints (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  complaint TEXT NOT NULL,
+  duration_description TEXT,
+  tried_interventions TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_recurring_complaints_user_id ON public.recurring_complaints(user_id);
+ALTER TABLE public.recurring_complaints ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Complaints: select own" ON public.recurring_complaints FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Complaints: insert own" ON public.recurring_complaints FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Complaints: delete own" ON public.recurring_complaints FOR DELETE USING (auth.uid() = user_id);
+
+-- 9. WEEKLY CHECK-INS
+CREATE TABLE public.checkins_weekly (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  week_start DATE NOT NULL,
+  energy_score SMALLINT CHECK (energy_score BETWEEN 1 AND 10),
+  sleep_quality SMALLINT CHECK (sleep_quality BETWEEN 1 AND 10),
+  mood_score SMALLINT CHECK (mood_score BETWEEN 1 AND 10),
+  symptom_changes TEXT,
+  protocol_adherence SMALLINT CHECK (protocol_adherence BETWEEN 1 AND 10),
+  new_complaints TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_checkins_weekly_user_id ON public.checkins_weekly(user_id);
+CREATE UNIQUE INDEX uq_checkins_weekly_user_week ON public.checkins_weekly(user_id, week_start);
+ALTER TABLE public.checkins_weekly ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Checkins: select own" ON public.checkins_weekly FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Checkins: insert own" ON public.checkins_weekly FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Checkins: update own" ON public.checkins_weekly FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 10. RED FLAG EVENTS
+CREATE TABLE public.red_flag_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  trigger_type TEXT NOT NULL
+    CHECK (trigger_type IN ('biomarker', 'symptom_severity', 'checkin_response', 'complaint_escalation', 'manual')),
+  severity TEXT DEFAULT 'high' CHECK (severity IN ('medium', 'high', 'critical')),
+  summary TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  acknowledged BOOLEAN DEFAULT FALSE,
+  acknowledged_at TIMESTAMPTZ,
+  acknowledged_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_red_flag_events_user_id ON public.red_flag_events(user_id);
+CREATE INDEX idx_red_flag_events_acknowledged ON public.red_flag_events(acknowledged);
+ALTER TABLE public.red_flag_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "RedFlags: select own" ON public.red_flag_events FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "RedFlags: update own" ON public.red_flag_events FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- Admin bypass via service role (backend uses service key)
+
+-- 11. INSIGHTS
+CREATE TABLE public.insights (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  insight_type TEXT NOT NULL
+    CHECK (insight_type IN ('symptom_trend', 'biomarker_trend', 'adherence', 'retest_suggestion', 'general')),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  priority SMALLINT DEFAULT 2 CHECK (priority BETWEEN 1 AND 5),
+  dismissed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_insights_user_id ON public.insights(user_id);
+ALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Insights: select own" ON public.insights FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Insights: update own" ON public.insights FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 12. NOTIFICATIONS
+CREATE TABLE public.notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  trigger_type TEXT NOT NULL
+    CHECK (trigger_type IN ('weekly_checkin', 'retest_reminder', 'red_flag', 'insight', 'general')),
+  channel TEXT DEFAULT 'email' CHECK (channel IN ('email', 'in_app')),
+  subject TEXT,
+  body TEXT,
+  delivery_status TEXT DEFAULT 'pending'
+    CHECK (delivery_status IN ('pending', 'sent', 'failed', 'opened', 'clicked')),
+  delivered_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ,
+  followup_required BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_notifications_delivery_status ON public.notifications(delivery_status);
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Notifications: select own" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Notifications: update own" ON public.notifications FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- 13. TIMELINE EVENTS
+CREATE TABLE public.timeline_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  event_type TEXT NOT NULL
+    CHECK (event_type IN (
+      'onboarding_completed','profile_updated','symptoms_logged','complaint_added',
+      'lab_uploaded','biomarkers_extracted','protocol_generated','weekly_checkin_submitted',
+      'adherence_updated','insight_created','red_flag_triggered',
+      'notification_sent','integration_synced'
+    )),
+  summary TEXT NOT NULL,
+  source TEXT,
+  metadata JSONB DEFAULT '{}',
+  occurred_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_timeline_user_id ON public.timeline_events(user_id);
+CREATE INDEX idx_timeline_occurred_at ON public.timeline_events(occurred_at DESC);
+ALTER TABLE public.timeline_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Timeline: select own" ON public.timeline_events FOR SELECT USING (auth.uid() = user_id);
+
+-- 14. HEALTH SCORES
+CREATE TABLE public.health_scores (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  score NUMERIC(5,2) NOT NULL CHECK (score >= 0 AND score <= 100),
+  symptom_component NUMERIC(5,2),
+  biomarker_component NUMERIC(5,2),
+  adherence_component NUMERIC(5,2),
+  calculated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_health_scores_user_id ON public.health_scores(user_id);
+ALTER TABLE public.health_scores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "HealthScores: select own" ON public.health_scores FOR SELECT USING (auth.uid() = user_id);
+
+-- ============================================================
+-- STAGE 4 — CRM CORE: ORGANIZATIONS & MULTI-TENANCY
+-- ============================================================
+
+-- 15. ORGANIZATIONS
+CREATE TABLE public.organizations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  owner_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  owner_name TEXT,
+  logo_url TEXT,
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_organizations_owner_id ON public.organizations(owner_id);
+CREATE INDEX idx_organizations_slug ON public.organizations(slug);
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+-- RLS: Users can see organizations they belong to, admins see more
+CREATE POLICY "Organizations: owners see all" ON public.organizations 
+  FOR SELECT USING (auth.uid() = owner_id);
+CREATE POLICY "Organizations: members see their org" ON public.organizations 
+  FOR SELECT USING (
+    id IN (SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid())
+  );
+
+-- 16. ORGANIZATION MEMBERS (Join table with roles)
+CREATE TABLE public.organization_members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' 
+    CHECK (role IN ('org_owner', 'client_admin', 'manager', 'practitioner', 'support', 'member')),
+  status TEXT DEFAULT 'active'
+    CHECK (status IN ('active', 'inactive', 'pending', 'removed')),
+  invited_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  invited_at TIMESTAMPTZ,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, user_id)
+);
+
+CREATE INDEX idx_org_members_organization_id ON public.organization_members(organization_id);
+CREATE INDEX idx_org_members_user_id ON public.organization_members(user_id);
+CREATE INDEX idx_org_members_role ON public.organization_members(role);
+ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "OrgMembers: see own membership" ON public.organization_members 
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "OrgMembers: admins see org members" ON public.organization_members 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin')
+    )
+  );
+
+-- 17. PRACTITIONER ASSIGNMENTS (Practitioner → Client relationship)
+CREATE TABLE public.practitioner_assignments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  practitioner_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  client_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'active'
+    CHECK (status IN ('active', 'inactive', 'paused', 'archived')),
+  notes TEXT,
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, practitioner_id, client_id)
+);
+
+CREATE INDEX idx_practitioner_assignments_org_id ON public.practitioner_assignments(organization_id);
+CREATE INDEX idx_practitioner_assignments_practitioner_id ON public.practitioner_assignments(practitioner_id);
+CREATE INDEX idx_practitioner_assignments_client_id ON public.practitioner_assignments(client_id);
+ALTER TABLE public.practitioner_assignments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "PractitionerAssignments: users see assignments involving them" ON public.practitioner_assignments 
+  FOR SELECT USING (auth.uid() = practitioner_id OR auth.uid() = client_id);
+CREATE POLICY "PractitionerAssignments: admins see org assignments" ON public.practitioner_assignments 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin', 'manager')
+    )
+  );
+
+-- 18. INVITATIONS (Pending user invites to organizations)
+CREATE TABLE public.invitations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member'
+    CHECK (role IN ('org_owner', 'client_admin', 'manager', 'practitioner', 'support', 'member')),
+  status TEXT DEFAULT 'sent'
+    CHECK (status IN ('sent', 'accepted', 'expired', 'revoked')),
+  invited_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  accepted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
+  token TEXT UNIQUE,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_invitations_organization_id ON public.invitations(organization_id);
+CREATE INDEX idx_invitations_email ON public.invitations(email);
+CREATE INDEX idx_invitations_status ON public.invitations(status);
+CREATE INDEX idx_invitations_token ON public.invitations(token);
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Invitations: admins see org invitations" ON public.invitations 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin')
+    )
+  );
+
+-- 19. AUDIT LOGS (Platform activity stream)
+CREATE TABLE public.audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL,
+  old_value JSONB DEFAULT '{}',
+  new_value JSONB DEFAULT '{}',
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_logs_timestamp ON public.audit_logs(timestamp DESC);
+CREATE INDEX idx_audit_logs_user_id ON public.audit_logs(user_id);
+CREATE INDEX idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_organization_id ON public.audit_logs(organization_id);
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "AuditLogs: users can see own actions" ON public.audit_logs
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- 20. PHASE 1 HEALTH INTELLIGENCE TABLES
+CREATE TABLE IF NOT EXISTS public.biomarker_extraction_candidates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  source TEXT NOT NULL DEFAULT 'ai'
+    CHECK (source IN ('regex', 'table', 'ai', 'manual')),
+  raw_name TEXT,
+  raw_value TEXT,
+  raw_unit TEXT,
+  raw_reference_range TEXT,
+  parsed_value DOUBLE PRECISION,
+  confidence_score DOUBLE PRECISION DEFAULT 0
+    CHECK (confidence_score >= 0 AND confidence_score <= 1),
+  confidence_reasons JSONB DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'confirmed', 'rejected', 'corrected')),
+  source_page INTEGER,
+  source_row TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_biomarker_extraction_candidates_upload_user
+  ON public.biomarker_extraction_candidates(upload_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_biomarker_extraction_candidates_status
+  ON public.biomarker_extraction_candidates(user_id, status, created_at DESC);
+
+ALTER TABLE public.biomarker_extraction_candidates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "BiomarkerCandidates: users see own candidates" ON public.biomarker_extraction_candidates
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "BiomarkerCandidates: users update own candidates" ON public.biomarker_extraction_candidates
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.report_versions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  version TEXT NOT NULL,
+  locale TEXT NOT NULL DEFAULT 'en',
+  input_snapshot JSONB DEFAULT '{}',
+  knowledge_report JSONB DEFAULT '{}',
+  protocol JSONB DEFAULT '{}',
+  safety_result JSONB DEFAULT '{}',
+  explainability JSONB DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'completed'
+    CHECK (status IN ('processing', 'completed', 'approved', 'approved_with_warnings', 'blocked', 'failed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_versions_upload_user_locale
+  ON public.report_versions(upload_id, user_id, locale, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_report_versions_user_created
+  ON public.report_versions(user_id, created_at DESC);
+
+ALTER TABLE public.report_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ReportVersions: users see own report versions" ON public.report_versions
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.safety_rules (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  key TEXT UNIQUE NOT NULL,
+  type TEXT NOT NULL,
+  conditions JSONB DEFAULT '{}',
+  action TEXT NOT NULL DEFAULT 'warn'
+    CHECK (action IN ('allow', 'warn', 'doctor_first', 'block', 'human_review')),
+  severity TEXT NOT NULL DEFAULT 'medium'
+    CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+  message_en TEXT,
+  message_uk TEXT,
+  evidence_source_id UUID,
+  active BOOLEAN DEFAULT TRUE,
+  version TEXT DEFAULT 'safety_v1',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_safety_rules_active_type ON public.safety_rules(active, type);
+ALTER TABLE public.safety_rules ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.safety_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE SET NULL,
+  report_version_id UUID REFERENCES public.report_versions(id) ON DELETE SET NULL,
+  rule_key TEXT,
+  severity TEXT NOT NULL DEFAULT 'medium',
+  action TEXT NOT NULL DEFAULT 'warn',
+  input_snapshot JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_safety_events_user_created ON public.safety_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_safety_events_upload ON public.safety_events(upload_id);
+
+ALTER TABLE public.safety_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "SafetyEvents: users see own safety events" ON public.safety_events
+  FOR SELECT USING (auth.uid() = user_id);

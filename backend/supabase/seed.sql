@@ -1,0 +1,2 @@
+-- Intentionally empty.
+-- Stable catalog seed data will be added only after clinical concept IDs are approved.

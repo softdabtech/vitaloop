@@ -1,0 +1,1 @@
+# OCR dependencies retired after migration to direct Claude PDF analysis.

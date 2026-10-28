@@ -1,0 +1,4923 @@
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import logging
+import re
+import ssl
+from collections import Counter
+from datetime import date, datetime, timedelta, timezone
+from uuid import uuid4, UUID
+from fastapi import HTTPException
+import httpx
+from supabase import create_client, Client
+from app.config import settings
+from app.services.lab_date_extraction import choose_measurement_date, choose_report_measurement_date
+from app.services.analysis_input_digest import (
+    PROJECTION_FIELDS,
+    build_persisted_projection,
+    canonical_input_digest,
+    DigestInputError,
+)
+from app.services.lab_normalization.biomarker_mapping import (
+    is_metadata_field,
+    to_known_canonical_name,
+)
+from app.services.safety.symptom_report_contract import normalize_report_level
+from app.utils.retry import (
+    with_retry,
+    SUPABASE_RETRY_CONFIG,
+    supabase_circuit_breaker,
+)
+from typing import Iterable, List, Dict, Any, Optional
+
+_supabase: Optional[Client] = None
+_use_rest_auth_context = False
+_logger = logging.getLogger(__name__)
+
+_RETEST_WEEKS_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s+weeks?\s*$", re.IGNORECASE)
+_RELIABLE_RETEST_DATE_SOURCES = frozenset({
+    "extracted_test_date",
+    "extracted_collected_at",
+    "extracted_done_date",
+    "user_provided",
+})
+
+# These names are inserted by finalize_lab_analysis in the same transaction as
+# report_versions. They are a durable recovery contract, not permission for a
+# caller to invent a follow-up effect.
+FOLLOWUP_EFFECT_TYPES = (
+    "retest_obligations",
+    "retest_fulfillment",
+    "lab_plan_fulfillment",
+    "safety_events",
+    "intelligence_artifacts",
+    "protocol",
+    "timeline",
+    "audit",
+)
+_FOLLOWUP_STATUSES = frozenset({"pending", "processing", "completed", "failed", "retryable"})
+
+
+def analysis_effect_key(report_version_id: str | None, effect_type: str, sub_key: str = "") -> str | None:
+    """Return a non-identifying stable key for one persisted downstream effect."""
+    if not report_version_id:
+        return None
+    report_id = _require_uuid(report_version_id, field="report_version_id")
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    material = f"vitaloop-downstream-effect-v1:{report_id}:{effect_type}:{sub_key}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+TRUSTED_DATA_ORIGINS = frozenset({
+    "clinical",
+    "synthetic",
+    "qa",
+    "smoke",
+    "validation",
+    "legacy_unclassified",
+})
+
+SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
+    "brain": ["brain_fog", "poor_concentration", "mood_swings", "depression", "anxiety"],
+    "thyroid": ["cold_intolerance", "weight_gain", "hair_loss", "fatigue"],
+    "heart": ["poor_immunity", "fatigue", "anxiety"],
+    "liver": ["skin_problems", "mood_swings", "digestive_issues"],
+    "gut": ["digestive_issues", "poor_immunity", "weight_gain", "weight_loss"],
+    "muscles": ["muscle_weakness", "fatigue", "low_libido"],
+    "joints": ["joint_pain", "muscle_weakness"],
+    "nervous": ["insomnia", "anxiety", "brain_fog", "poor_concentration"],
+}
+
+SYMPTOM_LABELS: Dict[str, str] = {
+    "fatigue": "Fatigue",
+    "insomnia": "Insomnia",
+    "brain_fog": "Brain Fog",
+    "anxiety": "Anxiety",
+    "depression": "Depression",
+    "hair_loss": "Hair Loss",
+    "weight_gain": "Weight Gain",
+    "weight_loss": "Weight Loss",
+    "low_libido": "Low Libido",
+    "muscle_weakness": "Muscle Weakness",
+    "joint_pain": "Joint Pain",
+    "poor_immunity": "Poor Immunity",
+    "digestive_issues": "Digestive Issues",
+    "skin_problems": "Skin Problems",
+    "mood_swings": "Mood Swings",
+    "poor_concentration": "Poor Concentration",
+    "cold_intolerance": "Cold Intolerance",
+}
+
+
+def _run(fn):
+    """Run a synchronous Supabase call in a thread pool to avoid blocking the event loop."""
+    return asyncio.to_thread(fn)
+
+
+async def _run_supabase_read(fn, *, attempts: int = 3, label: str = "supabase_read"):
+    """Run a Supabase read with retry for transient errors including SSL/protocol issues.
+
+    Retries on:
+    - RemoteProtocolError: HTTP/2 protocol resets, EOF violations
+    - TimeoutException: Connection timeouts
+    - ConnectError: Connection refused/reset
+    - SSLError: SSL certificate/protocol issues
+    """
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return await _run(fn)
+        except (httpx.RemoteProtocolError, httpx.TimeoutException, httpx.ConnectError) as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            _logger.warning("%s_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+            await asyncio.sleep(min(0.25 * attempt, 1.0))
+        except ssl.SSLError as exc:
+            # SSL errors (certificate, protocol version, etc.)
+            last_error = exc
+            if attempt >= attempts:
+                break
+            _logger.warning("%s_ssl_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+            await asyncio.sleep(min(0.5 * attempt, 2.0))  # Longer backoff for SSL issues
+        except OSError as exc:
+            # Catch broader OS errors (includes SSL errors on some platforms)
+            if "SSL" in str(exc) or "certificate" in str(exc).lower():
+                last_error = exc
+                if attempt >= attempts:
+                    break
+                _logger.warning("%s_os_error_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+                await asyncio.sleep(min(0.5 * attempt, 2.0))
+            else:
+                raise
+    if last_error:
+        raise last_error
+
+
+def _clean(value: str) -> str:
+    return (value or "").strip()
+
+
+def _rest_headers() -> Dict[str, str]:
+    key = _clean(settings.active_supabase_service_key)
+    return {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+    }
+
+
+def _is_valid_uuid(value: str) -> bool:
+    """Validate if string is valid UUID format"""
+    try:
+        UUID(value)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
+@with_retry(SUPABASE_RETRY_CONFIG)
+def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str, Any]:
+    """Query Supabase REST API with retry logic and robust error handling."""
+    base_url = _clean(settings.supabase_url).rstrip("/")
+    if not base_url:
+        _logger.error("Supabase URL not configured")
+        return {}
+
+    # Validate UUID format before making request
+    if not _is_valid_uuid(user_id):
+        _logger.error(f"Invalid UUID format for {table}: {user_id}")
+        return {}
+
+    url = f"{base_url}/rest/v1/{table}"
+    params = {
+        "select": columns,
+        "id": f"eq.{user_id}",
+        "limit": "1",
+    }
+
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get(url, headers=_rest_headers(), params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        if isinstance(data, list) and data:
+            return data[0]
+        return {}
+    except httpx.HTTPStatusError as e:
+        # Log detailed error info for debugging
+        _logger.error(
+            f"Supabase REST API error for {table}",
+            extra={
+                "status": e.response.status_code,
+                "url": str(e.request.url),
+                "user_id": user_id,
+                "response_body": e.response.text[:500] if e.response.text else None,
+            }
+        )
+        return {}
+    except httpx.TimeoutException as e:
+        _logger.error(f"Supabase REST API timeout for {table}: {str(e)}")
+        return {}
+    except Exception as e:
+        _logger.error(
+            f"Unexpected error in _rest_select_first_by_id for {table}",
+            exc_info=True,
+            extra={"user_id": user_id}
+        )
+        return {}
+
+
+async def _select_first_by_id_with_fallback(table: str, columns: str, user_id: str) -> Dict[str, Any]:
+    global _use_rest_auth_context
+
+    # Validate UUID format upfront
+    if not _is_valid_uuid(user_id):
+        _logger.error(f"Invalid UUID format for {table}: {user_id}")
+        return {}
+
+    if _use_rest_auth_context:
+        return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+
+    try:
+        supabase = _get_supabase()
+        response = await _run(
+            lambda: supabase.table(table)
+            .select(columns)
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        # Reset circuit-breaker on success so SDK is preferred again.
+        _use_rest_auth_context = False
+        return response.data[0] if response.data else {}
+    except Exception as ex:
+        # Keep REST fallback for auth context lookup resilience.
+        _use_rest_auth_context = True
+        _logger.warning(
+            "Supabase SDK query failed for %s; switching auth context lookup to REST fallback: %s",
+            table,
+            ex,
+        )
+        return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+
+
+def _missing_key_error_message() -> str:
+    return "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+
+
+def _is_invalid_api_key_error(ex: Exception) -> bool:
+    return "Invalid API key" in str(ex)
+
+
+def _build_supabase_client(supabase_url: str, supabase_key: str) -> Client:
+    return create_client(supabase_url, supabase_key)
+
+
+def _init_supabase_client() -> Client:
+    supabase_url = _clean(settings.supabase_url)
+    supabase_key = _clean(settings.active_supabase_service_key)
+    if not supabase_url or not supabase_key:
+        raise RuntimeError(_missing_key_error_message())
+
+    try:
+        return _build_supabase_client(supabase_url, supabase_key)
+    except Exception as ex:
+        _logger.error("Failed to initialize Supabase client: %s", ex)
+        if _is_invalid_api_key_error(ex):
+            raise RuntimeError("SUPABASE_SDK_INVALID_API_KEY") from ex
+        raise
+
+
+def _get_supabase() -> Client:
+    global _supabase
+    if _supabase is None:
+        _supabase = _init_supabase_client()
+    return _supabase
+
+
+async def _audit_medical_read(
+    *,
+    user_id: Optional[str],
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    await write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        new_value={"scope": "medical", **(details or {})},
+    )
+
+
+async def _audit_medical_write(
+    *,
+    user_id: Optional[str],
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    safe_action = action if action in {"create", "update", "delete"} else "update"
+    await write_audit_log(
+        user_id=user_id,
+        action=safe_action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        new_value={"scope": "medical", **(details or {})},
+    )
+
+
+async def save_lab_upload(
+    user_id: str,
+    extracted_text: str,
+    lab_name: Optional[str] = None,
+    test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: Optional[str] = None,
+    date_confidence: Optional[str] = None,
+    date_raw_text: Optional[str] = None,
+    ocr_confidence: Optional[float] = None,
+    analyze_prompt_version: Optional[str] = None,
+    data_origin: str = "clinical",
+) -> Dict:
+    if data_origin not in TRUSTED_DATA_ORIGINS - {"legacy_unclassified"}:
+        raise ValueError("Unsupported trusted upload data origin")
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "extracted_text": extracted_text,
+        "status": "processing",
+        "data_origin": data_origin,
+    }
+    if lab_name:
+        payload["lab_name"] = lab_name
+    if test_date:
+        payload["test_date"] = test_date
+    if collected_at:
+        payload["collected_at"] = collected_at
+    if reported_at:
+        payload["reported_at"] = reported_at
+    if date_source:
+        payload["date_source"] = date_source
+    if date_confidence:
+        payload["date_confidence"] = date_confidence
+    if date_raw_text:
+        payload["date_raw_text"] = date_raw_text[:500]
+    if ocr_confidence is not None:
+        payload["ocr_confidence"] = ocr_confidence
+    if analyze_prompt_version:
+        payload["analyze_prompt_version"] = analyze_prompt_version
+
+    resp = await _run(lambda: supabase.table("lab_uploads").insert(payload).execute())
+    return resp.data[0]
+
+
+async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) -> List[Dict]:
+    supabase = _get_supabase()
+    rows = [
+        {
+            "upload_id": upload_id,
+            "user_id": user_id,
+            "name": b["name"],
+            "value": b["value"],
+            "unit": b["unit"],
+            "ref_low": b.get("ref_low"),
+            "ref_high": b.get("ref_high"),
+            "status": b["status"],
+            "category": b.get("category"),
+            "canonical_name": b.get("canonical_name"),
+            "reference_source": b.get("reference_source"),
+            "unevaluated_reason": b.get("unevaluated_reason"),
+        }
+        for b in biomarkers
+        # Stage 2A (F04): document metadata (dates, IDs, contact/admin fields) must
+        # not become a persisted biomarker row. Reuses the same classifier already
+        # applied in normalize_biomarkers() — this is the shared write chokepoint
+        # for every caller of save_biomarkers(), so filtering here closes the gap
+        # for the canonical `biomarkers` table (and everything that reads it —
+        # dashboard, progress, insights) rather than only the in-memory pipeline
+        # report. See docs/audit/VITALOOP_STAGE2_IMPLEMENTATION_PLAN.md, Stage 2A.
+        if not is_metadata_field(
+            b.get("name"),
+            value=b.get("value"),
+            ref_low=b.get("ref_low"),
+            ref_high=b.get("ref_high"),
+        )
+    ]
+    # Idempotent retry: when the stored rows already equal the new rows, keep
+    # them untouched instead of deleting and reinserting (an ambiguous retry must
+    # never destroy data). Only genuinely different content is replaced.
+    existing = await _run(
+        lambda: supabase.table("biomarkers").select("*").eq("upload_id", upload_id).eq("user_id", user_id).execute()
+    )
+    existing_rows = list(getattr(existing, "data", None) or [])
+    if existing_rows and _biomarker_rows_equal(existing_rows, rows):
+        return existing_rows
+    # Replace on re-analysis (unique constraint on upload_id+lower(name) would fail otherwise).
+    # Not atomic: delete and insert are separate calls; true atomicity needs a DB RPC.
+    await _run(lambda: supabase.table("biomarkers").delete().eq("upload_id", upload_id).execute())
+    resp = await _run(lambda: supabase.table("biomarkers").insert(rows).execute())
+    return resp.data
+
+
+class AtomicFinalizationError(RuntimeError):
+    """A fail-closed error returned by the atomic report-finalization boundary."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def _replay_projection_matches_snapshot(report_version: Dict[str, Any], projection: List[Dict[str, Any]]) -> bool:
+    """Require the stored projection and immutable input snapshot to agree.
+
+    The report is the authority on a replay; current pipeline data is deliberately
+    not consulted. Comparison is field-exact after applying the shared persisted
+    projection boundary to both sources.
+    """
+    snapshot = report_version.get("input_snapshot")
+    rows = snapshot.get("biomarkers") if isinstance(snapshot, dict) else None
+    try:
+        snapshot_projection = build_persisted_projection(rows)
+    except (DigestInputError, TypeError, ValueError):
+        return False
+    if len(snapshot_projection) != len(projection):
+        return False
+    fields = tuple(PROJECTION_FIELDS)
+    canonical = lambda values: sorted(
+        tuple(repr(row.get(field)) for field in fields) for row in values
+    )
+    return canonical(snapshot_projection) == canonical(projection)
+
+
+def _followup_summary(rows: List[Dict[str, Any]]) -> str:
+    statuses = {str(row.get("status") or "") for row in rows}
+    if statuses == {"completed"}:
+        return "completed"
+    if "processing" in statuses:
+        return "processing"
+    if statuses & {"failed", "retryable"}:
+        return "retryable"
+    return "pending"
+
+
+async def load_authoritative_finalization_replay(
+    *, user_id: str, upload_id: str, report_version_id: str
+) -> Dict[str, Any]:
+    """Load and validate the immutable report returned by an RPC replay.
+
+    This function is intentionally owner-scoped and never takes report data from
+    a request or from the newly run pipeline. Missing work rows are a hard error:
+    a replay must not claim a completed finalization without recoverable work.
+    """
+    report_id = _require_uuid(report_version_id, field="report_version_id")
+    expected_upload_id = _require_uuid(upload_id, field="upload_id")
+    report = await get_report_version_for_user(user_id, report_id)
+    if not isinstance(report, dict):
+        raise AtomicFinalizationError("replay_report_unavailable")
+    if (
+        str(report.get("id") or "") != report_id
+        or str(report.get("user_id") or "") != str(user_id)
+        or str(report.get("upload_id") or "") != expected_upload_id
+        or report.get("status") not in {"completed", "blocked"}
+        or not isinstance(report.get("version"), str)
+        or not isinstance(report.get("knowledge_report"), dict)
+        or not isinstance(report.get("safety_result"), dict)
+        or not isinstance(report.get("explainability"), dict)
+        or not isinstance(report.get("protocol"), (dict, list))
+    ):
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    biomarkers = await get_biomarkers_by_upload(expected_upload_id, user_id)
+    try:
+        projection = build_persisted_projection(biomarkers)
+    except (DigestInputError, TypeError, ValueError) as exc:
+        raise AtomicFinalizationError("replay_report_inconsistent") from exc
+    if not projection or not _replay_projection_matches_snapshot(report, projection):
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    # Frozen evidence must remain structurally valid. The explicit non-authorizing
+    # state is safe for a persisted report but never authorizes an action.
+    from app.services.protocol_pipeline_evidence import (
+        NON_AUTHORIZING_READ_REASON,
+        verify_persisted_frozen_evidence,
+    )
+
+    evidence = verify_persisted_frozen_evidence(report, report_version_id=report_id)
+    if isinstance(evidence, str) and evidence != NON_AUTHORIZING_READ_REASON:
+        raise AtomicFinalizationError("replay_report_inconsistent")
+
+    supabase = _get_supabase()
+    try:
+        response = await _run(
+            lambda: supabase.table("analysis_followup_work")
+            .select("effect_type,status,attempt_count")
+            .eq("user_id", user_id)
+            .eq("upload_id", expected_upload_id)
+            .eq("report_version_id", report_id)
+            .execute()
+        )
+        work = list(getattr(response, "data", None) or [])
+    except Exception as exc:
+        raise AtomicFinalizationError("followup_work_unavailable") from exc
+    effects = [str(row.get("effect_type") or "") for row in work if isinstance(row, dict)]
+    statuses = [str(row.get("status") or "") for row in work if isinstance(row, dict)]
+    if (
+        len(work) != len(FOLLOWUP_EFFECT_TYPES)
+        or set(effects) != set(FOLLOWUP_EFFECT_TYPES)
+        or len(set(effects)) != len(effects)
+        or any(status not in _FOLLOWUP_STATUSES for status in statuses)
+    ):
+        raise AtomicFinalizationError("followup_work_inconsistent")
+
+    return {
+        "report_version": report,
+        "biomarkers": projection,
+        "followup_work": work,
+        "downstream_status": _followup_summary(work),
+    }
+
+
+def _require_uuid(value: str, *, field: str) -> str:
+    try:
+        return str(UUID(str(value)))
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise AtomicFinalizationError(f"invalid_{field}") from exc
+
+
+def _atomic_error_code(exc: Exception) -> str:
+    """Map the RPC's public error classes without logging report/patient payloads."""
+    message = str(exc).lower()
+    if "stale_operation" in message:
+        return "stale_operation"
+    if "idempotency_conflict" in message:
+        return "idempotency_conflict"
+    return "finalization_storage_error"
+
+
+async def finalize_lab_analysis(
+    *,
+    user_id: str,
+    upload_id: str,
+    operation_key: str,
+    report_version_id: str,
+    locale: str,
+    pipeline_version: str,
+    biomarkers: List[Dict[str, Any]],
+    report: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Commit canonical biomarkers, frozen report, and upload completion in one RPC.
+
+    This is deliberately the only clinical persistence path for a pipeline run that
+    replaces biomarkers.  An RPC failure is surfaced to the caller; it never falls
+    back to separate REST writes.
+    """
+    user_id = _require_uuid(user_id, field="user_id")
+    upload_id = _require_uuid(upload_id, field="upload_id")
+    operation_key = _require_uuid(operation_key, field="operation_key")
+    report_version_id = _require_uuid(report_version_id, field="report_version_id")
+    if not isinstance(report, dict):
+        raise AtomicFinalizationError("invalid_report_payload")
+
+    try:
+        projection = build_persisted_projection(biomarkers)
+        input_hash = canonical_input_digest(
+            upload_id=upload_id,
+            locale=locale,
+            pipeline_version=pipeline_version,
+            projection=projection,
+        )
+    except DigestInputError as exc:
+        raise AtomicFinalizationError(f"invalid_biomarker_projection:{exc}") from exc
+
+    supabase = _get_supabase()
+    try:
+        upload_response = await _run(
+            lambda: supabase.table("lab_uploads")
+            .select("id,user_id,analysis_generation")
+            .eq("id", upload_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        upload_rows = list(getattr(upload_response, "data", None) or [])
+        upload = upload_rows[0] if len(upload_rows) == 1 else None
+        generation = upload.get("analysis_generation") if isinstance(upload, dict) else None
+        if not isinstance(generation, int) or isinstance(generation, bool) or generation < 0:
+            raise AtomicFinalizationError("upload_not_finalizable")
+
+        response = await _run(
+            lambda: supabase.rpc(
+                "finalize_lab_analysis",
+                {
+                    "p_user_id": user_id,
+                    "p_upload_id": upload_id,
+                    "p_operation_key": operation_key,
+                    "p_input_hash": input_hash,
+                    "p_base_generation": generation,
+                    "p_report_version_id": report_version_id,
+                    "p_locale": locale,
+                    "p_pipeline_version": pipeline_version,
+                    "p_biomarkers": projection,
+                    "p_report": report,
+                },
+            ).execute()
+        )
+    except AtomicFinalizationError:
+        raise
+    except Exception as exc:
+        raise AtomicFinalizationError(_atomic_error_code(exc)) from exc
+
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    generation = payload.get("generation") if isinstance(payload, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("status") != "committed"
+        or not isinstance(payload.get("replay"), bool)
+        or not isinstance(generation, int)
+        or isinstance(generation, bool)
+        or generation < 0
+    ):
+        raise AtomicFinalizationError("invalid_finalization_response")
+    persisted_id = payload.get("report_version_id")
+    try:
+        persisted_id = str(UUID(str(persisted_id)))
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise AtomicFinalizationError("invalid_finalization_response") from exc
+    return {
+        "report_version_id": persisted_id,
+        "replay": payload["replay"],
+        "generation": generation,
+        "biomarkers": projection,
+        "input_hash": input_hash,
+    }
+
+
+_BIOMARKER_COMPARE_FIELDS = (
+    "name", "value", "unit", "ref_low", "ref_high", "status", "category",
+    "canonical_name", "reference_source", "unevaluated_reason",
+)
+
+
+def _biomarker_rows_equal(existing: List[Dict], rows: List[Dict]) -> bool:
+    def key(row: Dict) -> tuple:
+        return tuple(repr(row.get(f)) for f in _BIOMARKER_COMPARE_FIELDS)
+
+    return sorted(map(key, existing)) == sorted(map(key, rows))
+
+
+async def mark_lab_upload_done(upload_id: str, user_id: str) -> None:
+    """Marks the upload done. Called only after the authoritative report version
+    is confirmed persisted (or when no report persistence was requested)."""
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads").update({"status": "done"}).eq("id", upload_id).eq("user_id", user_id).execute()
+    )
+
+
+async def save_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    candidates: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not candidates:
+        return []
+
+    supabase = _get_supabase()
+    rows = [
+        {
+            "upload_id": upload_id,
+            "user_id": user_id,
+            "source": item.get("source") or "ai",
+            "raw_name": item.get("raw_name"),
+            "raw_value": None if item.get("raw_value") is None else str(item.get("raw_value")),
+            "raw_unit": item.get("raw_unit"),
+            "raw_reference_range": item.get("raw_reference_range"),
+            "parsed_value": item.get("parsed_value"),
+            "confidence_score": item.get("confidence_score"),
+            "confidence_reasons": item.get("confidence_reasons") or [],
+            "status": item.get("status") or "pending",
+            "source_page": item.get("source_page"),
+            "source_row": None if item.get("source_row") is None else str(item.get("source_row")),
+        }
+        for item in candidates
+    ]
+    resp = await _run(lambda: supabase.table("biomarker_extraction_candidates").insert(rows).execute())
+    return resp.data or []
+
+
+async def get_biomarker_extraction_candidates(upload_id: str, user_id: str) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarker_extraction_candidates")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
+    )
+    return resp.data or []
+
+
+async def update_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    decisions: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not decisions:
+        return []
+
+    supabase = _get_supabase()
+    updated_rows: List[Dict[str, Any]] = []
+    for decision in decisions:
+        candidate_id = decision.get("id")
+        if not candidate_id:
+            continue
+
+        patch: Dict[str, Any] = {
+            "status": decision.get("status") or "confirmed",
+        }
+        corrections = decision.get("corrections")
+        if isinstance(corrections, dict):
+            field_map = {
+                "raw_name": "raw_name",
+                "name": "raw_name",
+                "raw_value": "raw_value",
+                "value": "raw_value",
+                "raw_unit": "raw_unit",
+                "unit": "raw_unit",
+                "raw_reference_range": "raw_reference_range",
+                "reference_range": "raw_reference_range",
+                "parsed_value": "parsed_value",
+            }
+            for source_key, target_key in field_map.items():
+                if source_key in corrections:
+                    patch[target_key] = corrections[source_key]
+
+        resp = await _run(
+            lambda candidate_id=candidate_id, patch=patch: supabase.table("biomarker_extraction_candidates")
+            .update(patch)
+            .eq("id", candidate_id)
+            .eq("upload_id", upload_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        updated_rows.extend(resp.data or [])
+    return updated_rows
+
+
+async def save_report_version(
+    *,
+    user_id: str,
+    upload_id: str,
+    report_version_id: Optional[str] = None,
+    version: str,
+    locale: str,
+    input_snapshot: Dict[str, Any],
+    knowledge_report: Dict[str, Any],
+    protocol: Any,
+    safety_result: Dict[str, Any],
+    explainability: Dict[str, Any],
+    interpreted_report: Dict[str, Any] | None = None,
+    status: str = "completed",
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    knowledge_payload = knowledge_report or {}
+    if interpreted_report:
+        knowledge_payload = {
+            **knowledge_payload,
+            "interpreted_report": interpreted_report,
+        }
+    payload = {
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "version": version,
+        "locale": locale,
+        "input_snapshot": input_snapshot or {},
+        "knowledge_report": knowledge_payload,
+        "protocol": protocol or {},
+        "safety_result": safety_result or {},
+        "explainability": explainability or {},
+        "status": status,
+    }
+    if report_version_id:
+        payload["id"] = report_version_id
+    resp = await _run(lambda: supabase.table("report_versions").insert(payload).execute())
+    return (resp.data or [{}])[0]
+
+
+async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -> Optional[Dict[str, Any]]:
+    """Stage: locale P0 fix (cabinet reconciliation).
+
+    NEVER return a frozen report_versions row whose locale differs from the
+    requested locale. There used to be a second, locale-unfiltered fallback
+    query here that returned the globally-latest row of ANY language when no
+    row matched the requested locale — that is exactly the cross-locale leak
+    (a Ukrainian frozen report rendering under English UI chrome) confirmed
+    live on upload 8a818a14-6dae-4740-a76e-52a2b590c6d5. Removed, no
+    replacement fallback query. Returning None here is intentional and safe:
+    both callers (analyze.py::get_results, compatibility.py::get_results_by_upload)
+    already treat a None report_version as "no frozen version for this locale
+    yet" and fall through to their existing transient (non-persisting)
+    live-render branch — verified by reading both callers and
+    run_lab_analysis_pipeline's persist_report_version/persist_biomarkers
+    defaults (both False unless a caller explicitly opts in, which these two
+    GET callers do not) before this change was made.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .eq("locale", locale)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return (resp.data or [None])[0]
+
+
+async def get_organization_rule_pack_settings(org_id: str) -> list[dict]:
+    """P11 follow-up (stage-29 migration): the org's saved enable/disable
+    overrides for expert rule packs. Absence of a row for a pack means
+    "enabled" (opt-out, not opt-in) — callers must apply that default
+    themselves; this returns only the rows that exist (explicit
+    overrides), never a synthesized "enabled" row for every known pack.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("organization_rule_packs")
+        .select("*")
+        .eq("organization_id", str(org_id))
+        .execute()
+    )
+    return resp.data or []
+
+
+async def set_organization_rule_pack_enabled(
+    org_id: str, pack_id: str, enabled: bool, *, actor_user_id: str
+) -> dict:
+    """Upsert (org_id, pack_id) -> enabled — one row per pack per org, per
+    stage-29's UNIQUE(organization_id, pack_id) constraint. Toggling again
+    updates the existing row rather than accumulating history rows.
+    """
+    supabase = _get_supabase()
+    payload = {
+        "organization_id": str(org_id),
+        "pack_id": pack_id,
+        "enabled": enabled,
+        "enabled_by": str(actor_user_id),
+        "enabled_at": datetime.now(timezone.utc).isoformat(),
+    }
+    resp = await _run(
+        lambda: supabase.table("organization_rule_packs")
+        .upsert(payload, on_conflict="organization_id,pack_id")
+        .execute()
+    )
+    return (resp.data or [{}])[0]
+
+
+async def get_previous_report_version_for_user(
+    user_id: str, *, exclude_upload_id: str | None = None
+) -> Optional[Dict[str, Any]]:
+    """The user's most recent report_versions row from a DIFFERENT upload
+    than the one currently being processed — the input P5 Progress
+    Intelligence (progress_intelligence.py) needs to diff "this report" vs
+    "the last one".
+
+    Deliberately locale-unfiltered (unlike get_latest_report_version): a
+    trajectory comparison reads pattern_id/confidence/severity out of
+    input_snapshot's clinical_reasoning_traces, which are locale-independent
+    structured data, not the localized prose get_latest_report_version's
+    locale filter exists to protect (see that function's own docstring for
+    the cross-locale prose leak it fixes). Restricting to one locale here
+    would just make progress intelligence silently unavailable for a user
+    who switched locale between uploads, for no correctness benefit.
+    """
+    supabase = _get_supabase()
+    query = (
+        supabase.table("report_versions")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(5)
+    )
+    resp = await _run(lambda: query.execute())
+    rows = resp.data or []
+    if exclude_upload_id:
+        rows = [row for row in rows if str(row.get("upload_id") or "") != str(exclude_upload_id)]
+    return rows[0] if rows else None
+
+
+async def has_any_report_version(upload_id: str, user_id: str) -> bool:
+    """Existence check only, deliberately locale-unfiltered and deliberately
+    NOT used to serve report content (that would reintroduce the exact
+    cross-locale leak get_latest_report_version was just fixed to remove).
+
+    Lets a caller distinguish two different "no frozen version for this
+    locale" situations without guessing:
+      - a genuinely legacy upload that predates report_versions entirely
+        (this returns False), vs.
+      - an upload that HAS a frozen version, just in a different locale
+        (this returns True) — the case where a caller must not silently
+        trust an existing upload-scoped `protocols` row either, since that
+        row has no locale column of its own and may hold the other
+        locale's prose (see the protocol-locale fix in analyze.py::get_results
+        / compatibility.py::get_results_by_upload).
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("id")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return bool(resp.data)
+
+
+async def get_report_version(report_version_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("id", report_version_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return (resp.data or [None])[0]
+
+
+async def save_safety_events(
+    *,
+    user_id: str,
+    upload_id: str | None,
+    report_version_id: str | None,
+    safety_events: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not safety_events:
+        return []
+
+    supabase = _get_supabase()
+    rows = []
+    occurrences: Dict[str, int] = {}
+    for event in safety_events:
+        canonical_event = json.dumps(event if isinstance(event, dict) else {}, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        occurrence = occurrences.get(canonical_event, 0)
+        occurrences[canonical_event] = occurrence + 1
+        row = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "report_version_id": report_version_id,
+            "rule_key": event.get("key") if isinstance(event, dict) else None,
+            "severity": (event.get("severity") or "medium") if isinstance(event, dict) else "medium",
+            "action": (event.get("action") or "warn") if isinstance(event, dict) else "warn",
+            "input_snapshot": event if isinstance(event, dict) else {},
+        }
+        if report_version_id:
+            row["analysis_effect_key"] = analysis_effect_key(
+                report_version_id, "safety_events", f"{canonical_event}:{occurrence}"
+            )
+        rows.append(row)
+    write = supabase.table("safety_events")
+    resp = await _run(
+        lambda: write.upsert(rows, on_conflict="analysis_effect_key").execute()
+        if report_version_id else write.insert(rows).execute()
+    )
+    return resp.data or []
+
+
+async def save_analysis_intelligence_artifacts(
+    *,
+    user_id: str,
+    upload_id: str,
+    report_version_id: str | None = None,
+    analysis_input_quality_gate: Dict[str, Any] | None = None,
+    clinical_data_integrity: Dict[str, Any] | None = None,
+    evidence_gaps: Dict[str, Any] | None = None,
+    health_states: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Persist internal intelligence artifacts for observability and audit.
+
+    These rows are intentionally separate from the user-visible report version.
+    Callers should treat this as best-effort persistence and alert on failures
+    without blocking the analysis result.
+    """
+
+    supabase = _get_supabase()
+    persisted: Dict[str, Any] = {}
+
+    if analysis_input_quality_gate:
+        gate = analysis_input_quality_gate or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "decision": gate.get("decision") or "unknown",
+            "label": gate.get("label"),
+            "score": gate.get("score"),
+            "requires_confirmation": bool(gate.get("requires_confirmation")),
+            "components": gate.get("components") or {},
+            "candidate_summary": gate.get("candidate_summary") or {},
+            "warnings": gate.get("warnings") or [],
+            "blockers": gate.get("blockers") or [],
+            "reasons": gate.get("reasons") or [],
+            "source": gate.get("source") or {},
+            "gate_version": gate.get("version"),
+            "status": "recorded",
+        }
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "analysis_quality_gate")
+        table = supabase.table("analysis_quality_gates")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
+        persisted["analysis_quality_gate"] = (resp.data or [{}])[0]
+
+    if clinical_data_integrity:
+        integrity = clinical_data_integrity or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "status": integrity.get("status") or "unknown",
+            "integrity_version": integrity.get("version"),
+            "summary": integrity.get("summary") or {},
+            "issues": integrity.get("issues") or [],
+            "profile": integrity.get("profile") or {},
+            "markers": integrity.get("markers") or [],
+        }
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "clinical_data_integrity")
+        table = supabase.table("clinical_data_integrity_events")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
+        persisted["clinical_data_integrity"] = (resp.data or [{}])[0]
+
+    if evidence_gaps:
+        gaps = evidence_gaps or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "evidence_gaps_version": gaps.get("version"),
+            "gaps": gaps.get("gaps") or [],
+            "summary": gaps.get("summary") or {},
+            "status": "recorded",
+        }
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "evidence_gaps")
+        table = supabase.table("evidence_gaps")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
+        persisted["evidence_gaps"] = (resp.data or [{}])[0]
+
+    if health_states:
+        states = health_states or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "health_state_version": states.get("version"),
+            "domain_registry_version": states.get("domain_registry_version"),
+            "states": states.get("states") or [],
+            "top_priorities": states.get("top_priorities") or [],
+            "summary": states.get("summary") or {},
+            "status": "recorded",
+        }
+        if report_version_id:
+            payload["analysis_effect_key"] = analysis_effect_key(report_version_id, "intelligence_artifacts", "health_states")
+        table = supabase.table("health_state_versions")
+        resp = await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                          if report_version_id else table.insert(payload).execute())
+        persisted["health_states"] = (resp.data or [{}])[0]
+
+    return persisted
+
+
+async def update_lab_upload_status(upload_id: str, status: str) -> None:
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update({"status": status})
+        .eq("id", upload_id)
+        .execute()
+    )
+
+
+async def update_lab_upload_analysis_payload(
+    upload_id: str,
+    *,
+    extracted_text: Optional[str] = None,
+    analyze_prompt_version: Optional[str] = None,
+    test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: Optional[str] = None,
+    date_confidence: Optional[str] = None,
+    date_raw_text: Optional[str] = None,
+) -> None:
+    payload: Dict[str, Any] = {}
+    if extracted_text is not None:
+        payload["extracted_text"] = extracted_text
+    if analyze_prompt_version is not None:
+        payload["analyze_prompt_version"] = analyze_prompt_version
+    if test_date is not None:
+        payload["test_date"] = test_date
+    if collected_at is not None:
+        payload["collected_at"] = collected_at
+    if reported_at is not None:
+        payload["reported_at"] = reported_at
+    if date_source is not None:
+        payload["date_source"] = date_source
+    if date_confidence is not None:
+        payload["date_confidence"] = date_confidence
+    if date_raw_text is not None:
+        payload["date_raw_text"] = date_raw_text[:500]
+    if not payload:
+        return
+
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update(payload)
+        .eq("id", upload_id)
+        .execute()
+    )
+
+
+async def update_lab_upload_dates(
+    upload_id: str,
+    user_id: str,
+    *,
+    test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: str = "user_provided",
+    date_confidence: str = "high",
+    date_raw_text: Optional[str] = None,
+    overwrite: bool = False,
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    current_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id,test_date,collected_at,reported_at,date_source,date_confidence")
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    current = (current_resp.data or [None])[0]
+    if not current:
+        raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+
+    existing_source = str(current.get("date_source") or "")
+    existing_confidence = str(current.get("date_confidence") or "")
+    has_high_confidence_date = bool(
+        (current.get("test_date") or current.get("collected_at") or current.get("reported_at"))
+        and existing_source.startswith("extracted_")
+        and existing_confidence == "high"
+    )
+    if has_high_confidence_date and not overwrite:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "detail": "High-confidence extracted lab date already exists",
+                "code": "LAB_DATE_OVERWRITE_REQUIRED",
+            },
+        )
+
+    payload: Dict[str, Any] = {
+        "date_source": date_source,
+        "date_confidence": date_confidence,
+    }
+    if test_date is not None:
+        payload["test_date"] = test_date
+    if collected_at is not None:
+        payload["collected_at"] = collected_at
+    if reported_at is not None:
+        payload["reported_at"] = reported_at
+    if date_raw_text is not None:
+        payload["date_raw_text"] = date_raw_text[:500]
+
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .update(payload)
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    result = (resp.data or [{**current, **payload}])[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="lab_upload",
+        entity_id=upload_id,
+        details={"date_source": date_source, "date_confidence": date_confidence},
+    )
+    return result
+
+
+async def get_lab_uploads_for_date_backfill(user_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    safe_limit = max(1, min(int(limit or 200), 500))
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select(
+            "id,user_id,lab_name,status,created_at,test_date,collected_at,reported_at,"
+            "date_source,date_confidence,date_raw_text,extracted_text"
+        )
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(safe_limit)
+        .execute()
+    )
+    return resp.data or []
+
+
+async def apply_lab_upload_date_backfill(
+    *,
+    user_id: str,
+    decisions: List[Dict[str, Any]],
+    overwrite: bool = False,
+) -> List[Dict[str, Any]]:
+    """Apply date-only backfill decisions.
+
+    This must stay metadata-only: it must not update biomarkers, reports,
+    protocols, safety events, or launch the analysis pipeline.
+    """
+
+    updated: List[Dict[str, Any]] = []
+    for decision in decisions:
+        if decision.get("action") != "update":
+            continue
+        patch = decision.get("patch") or {}
+        row = await update_lab_upload_dates(
+            upload_id=str(decision.get("upload_id")),
+            user_id=user_id,
+            test_date=patch.get("test_date"),
+            collected_at=patch.get("collected_at"),
+            reported_at=patch.get("reported_at"),
+            date_source=patch.get("date_source") or "missing",
+            date_confidence=patch.get("date_confidence") or "low",
+            date_raw_text=patch.get("date_raw_text"),
+            overwrite=overwrite,
+        )
+        updated.append(row)
+    return updated
+
+
+async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
+    _logger.debug("assert_upload_belongs_to_user called")
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id,lab_name,test_date,collected_at,reported_at")
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    _logger.debug("assert_upload_belongs_to_user completed")
+    if not resp.data:
+        _logger.warning("Upload not found for current user")
+        raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+    return resp.data[0]
+
+
+async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
+    _logger.debug("get_biomarkers_by_upload called")
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("biomarkers")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .execute(),
+        label="get_biomarkers_by_upload",
+    )
+    _logger.debug("get_biomarkers_by_upload completed")
+    return resp.data
+
+
+async def get_recent_biomarker_history(user_id: str, *, limit: int = 250) -> List[Dict[str, Any]]:
+    """Return recent biomarker rows for longitudinal trend analysis.
+
+    This is intentionally read-only and fail-open at the caller level; analysis
+    should still complete when historical data is unavailable.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarkers")
+        .select(
+            "id,upload_id,user_id,name,value,unit,status,category,created_at,"
+            "lab_uploads(test_date,collected_at,reported_at,created_at,date_source,date_confidence)"
+        )
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="biomarkers",
+        details={"count": len(rows), "source": "trend_engine"},
+    )
+    return rows
+
+
+async def get_active_symptom_context(user_id: str) -> tuple[List[str], Dict[str, Any]]:
+    """Compatibility helper backed only by the canonical structured snapshot."""
+    try:
+        # Local import avoids a module cycle: symptom_snapshot uses this module's
+        # database helpers, while this legacy API now delegates back to it.
+        from app.services.symptom_snapshot import (
+            load_latest_eligible_symptom_snapshot,
+            public_symptom_snapshot,
+            symptoms_from_snapshot,
+        )
+
+        snapshot = await load_latest_eligible_symptom_snapshot(user_id)
+        if not snapshot:
+            return [], {}
+        return symptoms_from_snapshot(snapshot), {"symptom_snapshot": public_symptom_snapshot(snapshot)}
+    except Exception as exc:
+        _logger.warning("get_active_symptom_context_failed user_id=%s error=%s", user_id, exc)
+        return [], {}
+
+
+async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
+    # QA 2026-09-11: GET /protocol/{id} 500'd with a bare ConnectionTerminated
+    # on a plain _run() call — not reproducible on retry a minute later, so a
+    # transient Supabase HTTP/2 blip, not a logic bug (the cache-hit path
+    # here was already correct). Switched to _run_supabase_read(), same
+    # retry-on-transient-network-error wrapper already used elsewhere in
+    # this file, instead of adding bespoke retry logic just for this call.
+    _logger.debug("get_protocol_by_upload called")
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("protocols")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("upload_id", upload_id)
+        .limit(1)
+        .execute(),
+        label="get_protocol_by_upload",
+    )
+    _logger.debug("get_protocol_by_upload completed")
+    return resp.data[0] if resp.data else None
+
+
+async def get_protocols_by_uploads(user_id: str, upload_ids: List[str]) -> Dict[str, Dict]:
+    """Batch load protocols for multiple uploads. Returns dict mapping upload_id to protocol."""
+    if not upload_ids:
+        return {}
+
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("protocols")
+        .select("*")
+        .eq("user_id", user_id)
+        .in_("upload_id", upload_ids)
+        .execute()
+    )
+
+    # Group by upload_id for easy lookup
+    result = {}
+    for protocol in resp.data or []:
+        result[protocol.get("upload_id")] = protocol
+    return result
+
+
+async def save_protocol(
+    user_id: str,
+    upload_id: str,
+    recommendations: List[Dict],
+    prompt_version: Optional[str] = None,
+    report_version_id: str | None = None,
+) -> Dict:
+    supabase = _get_supabase()
+
+    if report_version_id:
+        # The report version carries the immutable protocol and its frozen flat
+        # projection. Never accept this invocation's freshly generated list as
+        # authority for a recovery-capable write.
+        report_id = _require_uuid(report_version_id, field="report_version_id")
+        response = await _run(
+            lambda: supabase.rpc(
+                "project_report_protocol",
+                {
+                    "p_user_id": _require_uuid(user_id, field="user_id"),
+                    "p_upload_id": _require_uuid(upload_id, field="upload_id"),
+                    "p_report_version_id": report_id,
+                },
+            ).execute()
+        )
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if len(payload) == 1 else None
+        if (
+            not isinstance(payload, dict)
+            or payload.get("status") not in {"applied", "already_projected", "newer_projection"}
+            or not isinstance(payload.get("recommendations"), list)
+        ):
+            raise AtomicFinalizationError("invalid_protocol_projection_response")
+        return payload
+
+    existing_protocol = await get_protocol_by_upload(user_id, upload_id)
+
+    payload: Dict[str, Any] = {"recommendations": recommendations}
+    if prompt_version:
+        payload["prompt_version"] = prompt_version
+    effect_key = analysis_effect_key(report_version_id, "protocol") if report_version_id else None
+    if effect_key:
+        payload["analysis_effect_key"] = effect_key
+        payload["source_report_version_id"] = report_version_id
+
+    if existing_protocol:
+        protocol_id = existing_protocol["id"]
+        updated = await _run(lambda: supabase.table("protocols").update(payload).eq("id", protocol_id).execute())
+        return updated.data[0]
+
+    create_payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "recommendations": recommendations,
+    }
+    if prompt_version:
+        create_payload["prompt_version"] = prompt_version
+    if effect_key:
+        create_payload["analysis_effect_key"] = effect_key
+        create_payload["source_report_version_id"] = report_version_id
+
+    resp = await _run(lambda: supabase.table("protocols").insert(create_payload).execute())
+    await _emit_timeline(
+        user_id,
+        "protocol_generated",
+        "Protocol generated from uploaded lab",
+        metadata={"upload_id": upload_id, "recommendation_count": len(recommendations)},
+        analysis_effect_key=(
+            analysis_effect_key(report_version_id, "timeline", "protocol_generated")
+            if report_version_id else None
+        ),
+    )
+    return resp.data[0]
+
+
+async def load_frozen_followup_payload(
+    *, user_id: str, report_version_id: str, effect_type: str
+) -> Dict[str, Any]:
+    """Load one hash-verified recovery payload through the owner-scoped RPC.
+
+    This is deliberately the only future worker input boundary. It neither
+    accepts a payload from the worker nor re-evaluates report/KB/AI content.
+    """
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "load_analysis_followup_work_payload",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema") != "analysis_recovery_work_payload_v1"
+        or payload.get("effect_type") != effect_type
+        or not isinstance(payload.get("data"), dict)
+    ):
+        raise AtomicFinalizationError("invalid_followup_payload_response")
+    return payload
+
+
+async def list_recoverable_followup_report_ids(*, user_id: str, limit: int = 4) -> List[str]:
+    """Return a bounded owner-scoped set of reports with durable retryable work.
+
+    This is an internal dispatcher trigger, never a public API. It returns only
+    report identities after validating them as UUIDs; the dispatcher still loads
+    the authoritative report and hash-verified payload for every item.
+    """
+    owner = _require_uuid(user_id, field="user_id")
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 16:
+        raise AtomicFinalizationError("invalid_followup_recovery_limit")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("analysis_followup_work")
+        .select("report_version_id,status,created_at")
+        .eq("user_id", owner)
+        .in_("status", ["pending", "retryable"])
+        .order("created_at")
+        .limit(limit * len(FOLLOWUP_EFFECT_TYPES))
+        .execute()
+    )
+    rows = list(getattr(response, "data", None) or [])
+    report_ids: List[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise AtomicFinalizationError("invalid_followup_recovery_row")
+        report_id = _require_uuid(row.get("report_version_id"), field="report_version_id")
+        if report_id not in seen:
+            seen.add(report_id)
+            report_ids.append(report_id)
+        if len(report_ids) >= limit:
+            break
+    return report_ids
+
+
+async def list_global_recoverable_followup_reports(*, limit: int = 8) -> List[Dict[str, str]]:
+    """Return bounded, server-only recovery candidates across ledger owners.
+
+    This function is used solely by the autonomous worker, which is a separate
+    server-owned Compose service using the existing service-role client.  The
+    ledger's service_role RLS policy is deliberately the discovery boundary;
+    regular users have no route or RPC that can invoke this query.  Each result
+    is subsequently re-validated by ``recover_report_followups`` against the
+    immutable report and its owner-scoped frozen work rows before a claim.
+    """
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 32:
+        raise AtomicFinalizationError("invalid_global_followup_recovery_limit")
+
+    # A processing row is recoverable only after its database-authoritative
+    # lease has elapsed.  Never touch an active lease from another worker.
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("analysis_followup_work")
+        .select("user_id,report_version_id,status,lease_expires_at,created_at")
+        .or_(
+            "status.in.(pending,retryable),"
+            f"and(status.eq.processing,lease_expires_at.lte.{now})"
+        )
+        .order("created_at")
+        .limit(limit * len(FOLLOWUP_EFFECT_TYPES))
+        .execute()
+    )
+    rows = list(getattr(response, "data", None) or [])
+    candidates: List[Dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise AtomicFinalizationError("invalid_global_followup_recovery_row")
+        owner = _require_uuid(row.get("user_id"), field="user_id")
+        report_id = _require_uuid(row.get("report_version_id"), field="report_version_id")
+        key = (owner, report_id)
+        if key not in seen:
+            seen.add(key)
+            candidates.append({"user_id": owner, "report_version_id": report_id})
+        if len(candidates) >= limit:
+            break
+    return candidates
+
+
+async def claim_frozen_followup_work(
+    *, user_id: str, report_version_id: str, effect_type: str, lease_token: str
+) -> Dict[str, Any]:
+    """Atomically claim one owner-scoped recovery item; no payload is accepted."""
+    if effect_type not in FOLLOWUP_EFFECT_TYPES:
+        raise AtomicFinalizationError("invalid_followup_effect")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "claim_analysis_followup_work",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+                "p_lease_token": _require_uuid(lease_token, field="lease_token"),
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("claimed"), bool)
+        or payload.get("status") not in _FOLLOWUP_STATUSES
+        or not isinstance(payload.get("attempt_count"), int)
+    ):
+        raise AtomicFinalizationError("invalid_followup_claim_response")
+    return payload
+
+
+async def complete_frozen_followup_work(
+    *, user_id: str, report_version_id: str, effect_type: str, lease_token: str,
+    status: str, error_code: str | None = None,
+) -> Dict[str, Any]:
+    """Complete or release the exact claimed item; stale leases are rejected by SQL."""
+    if effect_type not in FOLLOWUP_EFFECT_TYPES or status not in {"completed", "failed", "retryable"}:
+        raise AtomicFinalizationError("invalid_followup_completion")
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.rpc(
+            "complete_analysis_followup_work",
+            {
+                "p_user_id": _require_uuid(user_id, field="user_id"),
+                "p_report_version_id": _require_uuid(report_version_id, field="report_version_id"),
+                "p_effect_type": effect_type,
+                "p_lease_token": _require_uuid(lease_token, field="lease_token"),
+                "p_status": status,
+                "p_error_code": (error_code or None),
+            },
+        ).execute()
+    )
+    payload = getattr(response, "data", None)
+    if isinstance(payload, list):
+        payload = payload[0] if len(payload) == 1 else None
+    if not isinstance(payload, dict) or payload.get("status") != status:
+        raise AtomicFinalizationError("invalid_followup_completion_response")
+    return payload
+
+
+async def invalidate_user_protocols(user_id: str) -> None:
+    """Remove cached derived plans so the next read uses the current profile."""
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("protocols")
+        .delete()
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+
+async def save_symptoms(user_id: str, upload_id: str, tags: List[str], severity: int = 5) -> Dict:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("symptoms")
+        .insert({"user_id": user_id, "upload_id": upload_id, "tags": tags, "severity": severity})
+        .execute()
+    )
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="symptoms",
+        entity_id=str(result.get("id") or upload_id),
+        details={"tag_count": len(tags)},
+    )
+    return result
+
+
+def _build_symptom_summary(rows: List[Dict[str, Any]], days: int) -> Dict[str, Any]:
+    symptom_counts: Counter = Counter()
+    zone_scores: Dict[str, float] = {zone: 0.0 for zone in SYMPTOM_ZONE_MAP}
+    total_severity = 0
+
+    for row in rows:
+        tags = row.get("tags") or []
+        severity = int(row.get("severity") or 5)
+        total_severity += severity
+
+        for tag in tags:
+            symptom_counts[tag] += 1
+            for zone, zone_tags in SYMPTOM_ZONE_MAP.items():
+                if tag in zone_tags:
+                    zone_scores[zone] += severity
+
+    entries = len(rows)
+    avg_severity = round((total_severity / entries), 2) if entries else 0
+    max_zone_score = max(zone_scores.values()) if zone_scores else 0
+
+    top_symptoms = [
+        {
+            "tag": tag,
+            "label": SYMPTOM_LABELS.get(tag, tag.replace("_", " ").title()),
+            "count": count,
+        }
+        for tag, count in symptom_counts.most_common(5)
+    ]
+
+    top_zones = [
+        {
+            "zone": zone,
+            "score": round(score, 2),
+            "normalized_score": round((score / max_zone_score), 3) if max_zone_score > 0 else 0,
+        }
+        for zone, score in sorted(zone_scores.items(), key=lambda item: item[1], reverse=True)
+        if score > 0
+    ]
+
+    recent_logs = [
+        {
+            "id": row.get("id"),
+            "created_at": row.get("created_at"),
+            "severity": row.get("severity"),
+            "tags": row.get("tags") or [],
+        }
+        for row in rows[:10]
+    ]
+
+    return {
+        "window_days": days,
+        "entries": entries,
+        "average_severity": avg_severity,
+        "top_symptoms": top_symptoms,
+        "top_zones": top_zones,
+        "recent_logs": recent_logs,
+    }
+
+
+async def get_user_symptom_summary(user_id: str, days: int = 30) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("symptoms")
+        .select("id, tags, severity, created_at")
+        .eq("user_id", user_id)
+        .gte("created_at", since)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    rows = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="symptoms",
+        details={"window_days": days, "row_count": len(rows)},
+    )
+    return _build_symptom_summary(rows, days)
+
+
+async def get_platform_symptom_summary(days: int = 30) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("symptoms")
+        .select("id, user_id, tags, severity, created_at")
+        .gte("created_at", since)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    rows = resp.data or []
+    summary = _build_symptom_summary(rows, days)
+    summary["users_reporting"] = len({row.get("user_id") for row in rows if row.get("user_id")})
+    return summary
+
+
+async def update_user_subscription(user_id: str, sub_status: str, sub_id: Optional[str] = None, plan_tier: Optional[str] = None) -> None:
+    # Stage 2H: users.plan_tier was traced and confirmed to NOT exist on the
+    # live schema (phantom legacy architecture — see Stage 2H report). This
+    # function used to attempt writing it, catch the resulting DB error, then
+    # retry without it on every single call — dead-end control flow with an
+    # identical outcome to simply never attempting it. The canonical plan
+    # state this argument represents is written below, unconditionally, into
+    # the real source of truth (the `subscriptions` table) via
+    # upsert_user_subscription_row() — that write is unaffected by this
+    # simplification. Do NOT reintroduce a users.plan_tier column/write here.
+    supabase = _get_supabase()
+    normalized_status = str(sub_status or "").strip().lower()
+    normalized_plan = str(plan_tier or "").strip().lower() or None
+    payload: Dict[str, Any] = {
+        "sub_status": normalized_status,
+        "subscription_status": normalized_status,
+    }
+    if sub_id:
+        payload["sub_id"] = sub_id
+    await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+
+    if normalized_plan:
+        canonical_status = "active" if normalized_status in {"active", "trialing"} else normalized_status
+        await upsert_user_subscription_row(
+            user_id=user_id,
+            plan_name=normalized_plan,
+            status=canonical_status,
+            cancel_at_period_end=normalized_status in {"cancelled", "canceled"},
+        )
+
+
+async def get_user_by_email(email: str) -> Dict[str, Any]:
+    """Return a user account by email for payment-provider webhook reconciliation."""
+    clean_email = (email or "").strip().lower()
+    if not clean_email:
+        return {}
+
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("users")
+        .select("id, email, full_name, sub_status, subscription_status, global_role, created_at")
+        .eq("email", clean_email)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else {}
+
+
+async def upsert_user_subscription_row(
+    user_id: str,
+    *,
+    plan_name: str,
+    status: str,
+    current_period_start: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+    cancel_at_period_end: bool = False,
+    billing_provider: Optional[str] = None,
+    wayforpay_order_reference: Optional[str] = None,
+    wayforpay_rec_token: Optional[str] = None,
+    wayforpay_regular_mode: Optional[str] = None,
+    creem_customer_id: Optional[str] = None,
+    creem_subscription_id: Optional[str] = None,
+    creem_product_id: Optional[str] = None,
+) -> None:
+    """Keep the canonical subscriptions table aligned with external billing state."""
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {
+        "plan_name": plan_name,
+        "status": status,
+        "cancel_at_period_end": cancel_at_period_end,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if current_period_start:
+        payload["current_period_start"] = current_period_start
+    if current_period_end:
+        payload["current_period_end"] = current_period_end
+    if status in {"cancelled", "paused"}:
+        payload["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+    if billing_provider:
+        payload["billing_provider"] = billing_provider
+    if wayforpay_order_reference:
+        payload["wayforpay_order_reference"] = wayforpay_order_reference
+    if wayforpay_rec_token:
+        payload["wayforpay_rec_token"] = wayforpay_rec_token
+    if wayforpay_regular_mode:
+        payload["wayforpay_regular_mode"] = wayforpay_regular_mode
+    if creem_customer_id:
+        payload["creem_customer_id"] = creem_customer_id
+    if creem_subscription_id:
+        payload["creem_subscription_id"] = creem_subscription_id
+    if creem_product_id:
+        payload["creem_product_id"] = creem_product_id
+
+    existing_query = (
+        supabase.table("subscriptions")
+        .select("id")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .limit(1)
+    )
+    if str(plan_name or "").strip().lower() != "free":
+        existing_query = existing_query.neq("plan_name", "free")
+
+    existing = await _run(lambda: existing_query.execute())
+
+    if existing.data:
+        await _run(
+            lambda: supabase.table("subscriptions")
+            .update(payload)
+            .eq("id", existing.data[0]["id"])
+            .execute()
+        )
+        return
+
+    payload.update({"user_id": user_id, "started_at": datetime.now(timezone.utc).isoformat()})
+    await _run(lambda: supabase.table("subscriptions").insert(payload).execute())
+
+
+async def update_admin_user_fields(
+    user_id: str,
+    *,
+    full_name: Optional[str] = None,
+    global_role: Optional[str] = None,
+    sub_status: Optional[str] = None,
+) -> None:
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {}
+
+    if full_name is not None:
+        payload["full_name"] = full_name
+    if global_role is not None:
+        payload["global_role"] = global_role
+    if sub_status is not None:
+        payload["sub_status"] = sub_status
+
+    if not payload:
+        return
+
+    await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+
+
+async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
+    """Return the most recent active subscription row from the subscriptions table."""
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("subscriptions")
+        .select("plan_name, status, current_period_end, cancel_at_period_end, billing_provider, wayforpay_order_reference, creem_customer_id, creem_subscription_id, creem_product_id")
+        .eq("user_id", user_id)
+        .in_("status", ["active", "past_due", "paused"])
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute(),
+        label="get_user_active_subscription",
+    )
+    return resp.data[0] if resp.data else None
+
+
+async def get_subscription_by_creem_subscription_id(creem_subscription_id: str) -> Optional[Dict[str, Any]]:
+    """Look up a VITALOOP subscription using Creem's immutable subscription ID."""
+    if not creem_subscription_id:
+        return None
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("subscriptions")
+        .select("user_id, plan_name, status, current_period_start, current_period_end, cancel_at_period_end, creem_customer_id, creem_subscription_id, creem_product_id")
+        .eq("creem_subscription_id", creem_subscription_id)
+        .limit(1)
+        .execute(),
+        label="get_subscription_by_creem_subscription_id",
+    )
+    return resp.data[0] if resp.data else None
+
+
+async def was_creem_webhook_processed(event_id: str) -> bool:
+    """Return whether a Creem event was fully processed before.
+
+    The event row is written only after the billing state update succeeds, so
+    a transient database failure remains retryable by Creem.
+    """
+    if not event_id:
+        return False
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("creem_webhook_events").select("event_id").eq("event_id", event_id).limit(1).execute(),
+        label="was_creem_webhook_processed",
+    )
+    return bool(resp.data)
+
+
+async def mark_creem_webhook_processed(event_id: str, event_type: str) -> None:
+    """Persist an audit/idempotency marker after a Creem webhook succeeds."""
+    if not event_id:
+        return
+    supabase = _get_supabase()
+    try:
+        await _run(
+            lambda: supabase.table("creem_webhook_events").insert({
+                "event_id": event_id,
+                "event_type": event_type,
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+            }).execute()
+        )
+    except Exception as exc:
+        # A duplicate can race another delivery after both checked above. The
+        # subscription write is idempotent, and the unique event key makes
+        # this safe to acknowledge.
+        if "duplicate" not in str(exc).lower():
+            raise
+
+
+async def get_active_subscriptions_by_user_ids(user_ids: List[str]) -> Dict[str, Dict]:
+    """Batch version of get_user_active_subscription() for a list of user_ids —
+    one query instead of N, same "most recent active/past_due/paused row per
+    user" selection rule. Used by CRM member/client list serialization to
+    resolve entitlements via entitlements.resolve_entitlements_from_data()
+    without an N+1 per-member subscriptions fetch."""
+    ids = [str(uid) for uid in dict.fromkeys(user_ids) if uid]
+    if not ids:
+        return {}
+
+    supabase = _get_supabase()
+    resp = await _run_supabase_read(
+        lambda: supabase.table("subscriptions")
+        .select("user_id, plan_name, status, current_period_end, cancel_at_period_end, updated_at")
+        .in_("user_id", ids)
+        .in_("status", ["active", "past_due", "paused"])
+        .order("updated_at", desc=True)
+        .execute(),
+        label="get_active_subscriptions_by_user_ids",
+    )
+
+    # Rows already arrive most-recent-first (order applies across the whole
+    # result set, not per user) — keep only the first row seen per user_id,
+    # which is therefore that user's most recently updated matching row,
+    # identical to what get_user_active_subscription() returns one at a time.
+    latest_by_user: Dict[str, Dict] = {}
+    for row in resp.data or []:
+        uid = row.get("user_id")
+        if uid and uid not in latest_by_user:
+            latest_by_user[uid] = row
+    return latest_by_user
+
+
+async def record_health_failure(
+    service_name: str,
+    error_type: str,
+    error_message: str,
+) -> None:
+    """Log a service health failure for ops monitoring and alerting."""
+    supabase = _get_supabase()
+    
+    try:
+        await _run(
+            lambda: supabase.table("health_failures")
+            .insert({
+                "service_name": service_name,
+                "error_type": error_type,
+                "error_message": error_message[:500],  # Truncate to prevent abuse
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .execute()
+        )
+    except Exception:
+        # Silent fail; don't let health logging block the app
+        pass
+
+
+async def get_user_account(user_id: str) -> Dict[str, Any]:
+    primary_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
+    fallback_columns = "id, email, full_name, subscription_status, global_role, created_at"
+
+    account = await _select_first_by_id_with_fallback("users", primary_columns, user_id)
+    if not account:
+        account = await _select_first_by_id_with_fallback("users", fallback_columns, user_id)
+
+    # Keep downstream code stable when legacy schemas expose subscription_status
+    # instead of sub_status and/or omit plan_tier.
+    if account and not account.get("sub_status") and account.get("subscription_status"):
+        account["sub_status"] = account.get("subscription_status")
+
+    return account
+
+
+async def get_user_subscription_history(user_id: str) -> List[Dict]:
+    """Return all subscription rows for a user ordered newest-first."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("subscriptions")
+        .select("plan_name, status, started_at, current_period_start, current_period_end, cancel_at_period_end, updated_at")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .execute()
+    )
+    return resp.data or []
+
+
+async def get_user_upload_count(user_id: str) -> int:
+    """Return the visible patient-history upload count for a user."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id, data_origin")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return sum(1 for row in (resp.data or []) if _is_clinical_upload_origin(row.get("data_origin")))
+
+
+async def get_user_progress(user_id: str) -> List[Dict]:
+    """Return this user's uploads with their biomarkers, in CLINICAL chronological
+    order (real lab date, most recent first) — never upload/created_at order.
+
+    Stage 2D-1: date priority is test_date -> collected_at -> reported_at, via
+    the same choose_measurement_date() helper the extraction pipeline already
+    uses (lab_date_extraction.py) — reused here, not reimplemented. Uploads with
+    none of those three dates are explicitly undated: they are placed AFTER
+    every dated upload (never outrank a real clinical date) and are only
+    ordered relative to each other by created_at, which is a display-stability
+    tiebreaker for the "no medical date" bucket, not a clinical date substitute.
+    """
+    supabase = _get_supabase()
+    uploads = await _run_supabase_read(
+        lambda: supabase.table("lab_uploads")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status, data_origin")
+        .eq("user_id", user_id)
+        .execute(),
+        label="get_user_progress_uploads",
+    )
+
+    rows = [
+        row
+        for row in (uploads.data or [])
+        if _is_clinical_upload_origin(row.get("data_origin"))
+    ]
+    if not rows:
+        await _audit_medical_read(
+            user_id=user_id,
+            entity_type="lab_progress",
+            details={"upload_count": 0},
+        )
+        return []
+
+    upload_ids = [row["id"] for row in rows]
+    biomarker_rows_resp = await _run_supabase_read(
+        lambda: supabase.table("biomarkers")
+        .select("upload_id, name, canonical_name, value, unit, status, ref_low, ref_high")
+        .in_("upload_id", upload_ids)
+        .eq("user_id", user_id)
+        .execute(),
+        label="get_user_progress_biomarkers",
+    )
+
+    report_versions_resp = await _run_supabase_read(
+        lambda: supabase.table("report_versions")
+        .select(
+            "upload_id, "
+            "biomarkers:input_snapshot->biomarkers, "
+            "measurement_date:input_snapshot->metadata->>measurement_date, "
+            "created_at"
+        )
+        .eq("user_id", user_id)
+        .in_("upload_id", upload_ids)
+        .order("created_at", desc=True)
+        .execute(),
+        label="get_user_progress_report_snapshots",
+    )
+
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for biomarker in biomarker_rows_resp.data or []:
+        upload_id = biomarker.get("upload_id")
+        if not upload_id:
+            continue
+        grouped.setdefault(upload_id, []).append(
+            {
+                "name": biomarker.get("name"),
+                "canonical_name": biomarker.get("canonical_name"),
+                "value": biomarker.get("value"),
+                "unit": biomarker.get("unit"),
+                "status": biomarker.get("status"),
+                "ref_low": biomarker.get("ref_low"),
+                "ref_high": biomarker.get("ref_high"),
+            }
+        )
+
+    frozen_versions_by_upload: Dict[str, Dict[str, Any]] = {}
+    seen_report_versions = set()
+    for report_version in report_versions_resp.data or []:
+        upload_id = report_version.get("upload_id")
+        upload_key = str(upload_id) if upload_id else None
+        if not upload_key or upload_key in seen_report_versions:
+            continue
+        seen_report_versions.add(upload_key)
+        frozen_biomarkers = report_version.get("biomarkers")
+        frozen_versions_by_upload[upload_key] = {
+            "biomarkers": frozen_biomarkers if isinstance(frozen_biomarkers, list) else None,
+            "measurement_date": report_version.get("measurement_date"),
+        }
+
+    result = [
+        {
+            **{key: value for key, value in upload.items() if key != "data_origin"},
+            # Match the report page's immutable source. Legacy uploads with no
+            # frozen biomarker snapshot continue to use the persisted table.
+            "biomarkers": (
+                frozen_versions_by_upload.get(str(upload["id"]), {}).get("biomarkers")
+                or grouped.get(upload["id"], [])
+            ),
+            "measurement_date": choose_report_measurement_date(
+                upload,
+                frozen_versions_by_upload.get(str(upload["id"]), {}).get("measurement_date"),
+            ),
+        }
+        for upload in rows
+    ]
+    # Clinical chronology: dated results first (most recent real lab date
+    # first), undated results after — never interleaved by upload time, and an
+    # undated result can never outrank a dated one. choose_measurement_date()
+    # returns a plain "YYYY-MM-DD" ISO string (date.isoformat()), which sorts
+    # correctly lexicographically. Sorting descending on
+    # (measurement_date or "", created_at) means: real dates sort first
+    # (largest date string first); rows with no measurement_date all share the
+    # "" key and therefore sort after every dated row, ordered only among
+    # themselves by created_at — a display-stability tiebreaker, never a
+    # clinical date substitute.
+    result.sort(key=lambda row: (row["measurement_date"] or "", str(row.get("created_at") or "")), reverse=True)
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="lab_progress",
+        details={"upload_count": len(result)},
+    )
+    return result
+
+
+# P37c: Dashboard Today read-only exposure. Neither function here recomputes
+# analysis, mutates a frozen report, or generates/persists a protocol — see
+# output/p37a-dashboard-data-state-contract-review-2026-09-20.md and
+# output/p37b-local-visual-prototype-2026-09-20.md for why this is needed:
+# `/dashboard/summary`'s existing latest_upload/latest_lab_result/
+# active_program fields are all proxies over unfiltered lab_uploads rows and
+# do not prove a report was ever actually generated for that upload.
+async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
+    """Identify the user's latest READY report — i.e. the most recent
+    `report_versions` row whose generation event actually completed
+    (status in {"completed","blocked"}, the same terminal-status set
+    report_history.py::is_frozen_report_version() already treats as
+    servable) — never derived from lab_uploads.status, upload count, or
+    any other proxy.
+
+    Ordering: `report_versions.created_at DESC`, `id DESC` as a
+    deterministic tiebreaker for same-timestamp rows (e.g. multiple
+    locale rows written for the same generation event). This is the same
+    "created_at DESC is the only reliable ordering signal" rule
+    report_history.py already documents for `get_latest_report_version()`
+    — reused here, not reinvented, just applied across the whole user
+    instead of one known upload_id.
+
+    Read-only: two plain SELECTs, no writes, no pipeline invocation, no
+    protocol generation. A locale is deliberately NOT filtered on here —
+    unlike get_latest_report_version() (which serves actual report
+    content and must never leak a different locale's content), this
+    function only ever returns upload/date identity metadata, which is
+    locale-independent.
+
+    Returns None if the user has no report_versions row in a ready
+    status at all (covers: no uploads, uploads still processing, uploads
+    that failed before a report_versions row was ever written — see
+    report_history.py's own note that a row is never written for a
+    pending needs_confirmation gate decision).
+    """
+    supabase = _get_supabase()
+    version_resp = await _run_supabase_read(
+        lambda: supabase.table("report_versions")
+        .select("id, upload_id, status, created_at, safety_result, input_snapshot")
+        .eq("user_id", user_id)
+        .in_("status", ["completed", "blocked"])
+        .order("created_at", desc=True)
+        .order("id", desc=True)
+        .limit(100)
+        .execute(),
+        label="get_latest_ready_report_version",
+    )
+    version_rows = version_resp.data or []
+    if not version_rows:
+        return None
+
+    # Ownership re-checked explicitly on the join, exactly like every other
+    # per-upload read in this module (assert_upload_belongs_to_user,
+    # get_biomarkers_by_upload, etc.) — never trust upload_id alone.
+    upload_resp = await _run_supabase_read(
+        lambda: supabase.table("lab_uploads")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence, status, data_origin")
+        .eq("user_id", user_id)
+        .execute(),
+        label="get_latest_ready_report_upload",
+    )
+    upload_rows = {str(row.get("id")): row for row in (upload_resp.data or []) if row.get("id")}
+    selected = select_current_active_report(version_rows, upload_rows.values())
+    if selected is None:
+        return None
+    version_row = selected["report_version"]
+    upload_row = selected["upload"]
+    upload_id = upload_row["id"]
+
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="latest_ready_report",
+        details={"upload_id": upload_id, "report_version_id": version_row.get("id")},
+    )
+
+    return {
+        "upload_id": upload_id,
+        "report_version_id": version_row.get("id"),
+        "report_status": version_row.get("status"),
+        "upload_status": upload_row.get("status"),
+        "report_generated_at": version_row.get("created_at"),
+        "safety_result": version_row.get("safety_result"),
+        "symptom_snapshot": (version_row.get("input_snapshot") or {}).get("symptom_snapshot")
+        if isinstance(version_row.get("input_snapshot"), dict)
+        else None,
+        "upload_created_at": upload_row.get("created_at"),
+        "measurement_date": choose_measurement_date(upload_row) if upload_row else None,
+        "lab_name": upload_row.get("lab_name"),
+        "data_origin": upload_row.get("data_origin"),
+    }
+
+
+def _is_ready_upload_status(status: Any) -> bool:
+    """Return whether an upload lifecycle value can back a current report.
+
+    Older rows predate the lifecycle field and are admitted when the immutable
+    report version is terminal; explicitly non-ready values are never current.
+    """
+    normalized = str(status or "").strip().lower()
+    return not normalized or normalized in {"done", "completed", "ready"}
+
+
+def _is_clinical_upload_origin(origin: Any) -> bool:
+    """Only explicit non-clinical origins are excluded from current context.
+
+    Missing values remain eligible for backward compatibility with legacy
+    records; the migration preserves those rows as ``legacy_unclassified``.
+    """
+    return str(origin or "").strip().lower() not in {
+        "synthetic",
+        "qa",
+        "smoke",
+        "validation",
+    }
+
+
+def select_current_active_report(
+    report_versions: Iterable[Dict[str, Any]],
+    uploads: Iterable[Dict[str, Any]],
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    """Select one deterministic, user-scoped current report/upload pair.
+
+    Reliable clinical sample date is the primary ordering key. When it is
+    absent or tied, report generation time and immutable version id provide a
+    stable completion-order tiebreaker. Upload status is only an exclusion
+    gate here; report_versions remains the source of truth for readiness.
+    """
+    uploads_by_id = {
+        str(upload.get("id")): upload
+        for upload in uploads
+        if upload.get("id")
+    }
+    candidates = []
+    for version in report_versions:
+        upload = uploads_by_id.get(str(version.get("upload_id") or ""))
+        if not upload or str(version.get("status") or "").lower() not in {"completed", "blocked"}:
+            continue
+        if not _is_ready_upload_status(upload.get("status")):
+            continue
+        if not _is_clinical_upload_origin(upload.get("data_origin")):
+            continue
+        clinical_date = choose_measurement_date(upload)
+        candidates.append(
+            (
+                clinical_date or "",
+                str(version.get("created_at") or ""),
+                str(version.get("id") or ""),
+                {"report_version": version, "upload": upload},
+            )
+        )
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[:3])[3]
+
+
+async def plan_exists_for_upload(user_id: str, upload_id: str) -> bool:
+    """Boolean-only, read-only "does a plan already exist for this exact
+    upload" check for Dashboard Today (P37c).
+
+    Deliberately reuses get_protocol_by_upload() — the same plain SELECT
+    the real /protocol/{upload_id} route already calls before deciding
+    whether to generate — rather than the route itself. The route
+    (app/routers/protocol/protocol.py::get_or_create_protocol) generates
+    and persists a new protocol via an LLM call on a cache miss; this
+    function never does, and never will, since it only reads the
+    existence result and never continues into generation.
+    """
+    protocol = await get_protocol_by_upload(user_id, upload_id)
+    return protocol is not None
+
+
+async def get_admin_overview() -> Dict[str, Any]:
+    """Aggregate platform metrics for the /admin/overview endpoint."""
+    supabase = _get_supabase()
+    cutoff_30d = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    cutoff_7d = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+    total_users_resp = await _run(
+        lambda: supabase.table("users").select("id", count="exact").execute()
+    )
+    total_users = total_users_resp.count or len(total_users_resp.data)
+
+    active_users_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .gte("updated_at", cutoff_30d)
+        .execute()
+    )
+    active_users = active_users_resp.count or len(active_users_resp.data)
+
+    premium_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .eq("sub_status", "active")
+        .execute()
+    )
+    premium_subscribers = premium_resp.count or len(premium_resp.data)
+
+    total_uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads").select("id", count="exact").execute()
+    )
+    total_uploads = total_uploads_resp.count or len(total_uploads_resp.data)
+
+    weekly_uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id", count="exact")
+        .gte("created_at", cutoff_7d)
+        .execute()
+    )
+    weekly_uploads = weekly_uploads_resp.count or len(weekly_uploads_resp.data)
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "premium_subscribers": premium_subscribers,
+        "total_uploads": total_uploads,
+        "weekly_uploads": weekly_uploads,
+        "mrr": 0,  # billing provider data not connected
+    }
+
+
+async def get_funnel_overview(
+    days: int = 30,
+    min_dropoff_reached: int = 1,
+    dropoff_sort: str = "count",
+    dropoff_limit: int = 10,
+) -> Dict[str, Any]:
+    """Aggregate B2C funnel metrics for the admin dashboard."""
+    supabase = _get_supabase()
+    safe_days = max(1, min(days, 365))
+    safe_min_dropoff_reached = max(1, min(min_dropoff_reached, 10000))
+    safe_dropoff_sort = str(dropoff_sort or "count").strip().lower()
+    if safe_dropoff_sort not in {"count", "rate", "order"}:
+        safe_dropoff_sort = "count"
+    safe_dropoff_limit = max(1, min(dropoff_limit, 100))
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=safe_days)
+    cutoff = cutoff_dt.isoformat()
+
+    end_users_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id, created_at, sub_status, global_role")
+        .eq("global_role", "end_user")
+        .execute()
+    )
+    end_users = end_users_resp.data or []
+
+    timeline_resp = await _run(
+        lambda: supabase.table("timeline_events")
+        .select("user_id, event_type, occurred_at")
+        .gte("occurred_at", cutoff)
+        .in_("event_type", [
+            "funnel_signup_completed",
+            "funnel_onboarding_completed",
+            "funnel_first_upload_completed",
+            "funnel_paywall_shown",
+        ])
+        .execute()
+    )
+    timeline_rows = timeline_resp.data or []
+
+    def _parse_dt(value: Any) -> Optional[datetime]:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except Exception:
+            return None
+
+    signup_user_ids = {
+        str(row.get("id"))
+        for row in end_users
+        if row.get("id") and (_parse_dt(row.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff_dt
+    }
+
+    onboarding_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_onboarding_completed" and row.get("user_id")
+    }
+    first_upload_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_first_upload_completed" and row.get("user_id")
+    }
+    paywall_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_paywall_shown" and row.get("user_id")
+    }
+
+    paid_user_ids = {
+        str(row.get("id"))
+        for row in end_users
+        if row.get("id") and str(row.get("sub_status") or "").lower() == "active"
+    }
+
+    signup_created_at: Dict[str, datetime] = {}
+    for row in end_users:
+        user_id = str(row.get("id") or "")
+        if not user_id:
+            continue
+        created_dt = _parse_dt(row.get("created_at"))
+        if created_dt and created_dt >= cutoff_dt and user_id in signup_user_ids:
+            signup_created_at[user_id] = created_dt
+
+    first_onboarding_at: Dict[str, datetime] = {}
+    first_upload_at: Dict[str, datetime] = {}
+    first_paywall_at: Dict[str, datetime] = {}
+    for row in timeline_rows:
+        user_id = str(row.get("user_id") or "")
+        event_type = str(row.get("event_type") or "")
+        occurred_dt = _parse_dt(row.get("occurred_at"))
+        if not user_id or not occurred_dt:
+            continue
+        if event_type == "funnel_onboarding_completed":
+            if user_id not in first_onboarding_at or occurred_dt < first_onboarding_at[user_id]:
+                first_onboarding_at[user_id] = occurred_dt
+        elif event_type == "funnel_first_upload_completed":
+            if user_id not in first_upload_at or occurred_dt < first_upload_at[user_id]:
+                first_upload_at[user_id] = occurred_dt
+        elif event_type == "funnel_paywall_shown":
+            if user_id not in first_paywall_at or occurred_dt < first_paywall_at[user_id]:
+                first_paywall_at[user_id] = occurred_dt
+
+    def _avg_lag_days(source: Dict[str, datetime]) -> float:
+        values: List[float] = []
+        for user_id, start_dt in signup_created_at.items():
+            target_dt = source.get(user_id)
+            if not target_dt:
+                continue
+            delta = (target_dt - start_dt).total_seconds() / 86400.0
+            if delta >= 0:
+                values.append(delta)
+        if not values:
+            return 0.0
+        return round(sum(values) / len(values), 2)
+
+    date_counts: Dict[str, int] = {}
+    for user_id in signup_user_ids:
+        dt = signup_created_at.get(user_id)
+        if not dt:
+            continue
+        day = dt.date().isoformat()
+        date_counts[day] = date_counts.get(day, 0) + 1
+    daily_signups = [
+        {"date": day, "count": count}
+        for day, count in sorted(date_counts.items())
+    ]
+
+    def _rate(numerator: int, denominator: int) -> float:
+        if denominator <= 0:
+            return 0.0
+        return round((numerator / denominator) * 100.0, 2)
+
+    def _is_missing_questionnaire_storage_error(ex: Exception) -> bool:
+        msg = str(ex)
+        return "PGRST205" in msg and (
+            "questionnaire_sessions" in msg or "questionnaire_answers" in msg
+        )
+
+    questionnaire_started_sessions = 0
+    questionnaire_completed_sessions = 0
+    questionnaire_median_minutes = 0.0
+    questionnaire_dropoff_by_question: List[Dict[str, Any]] = []
+    questionnaire_no_answer_incomplete = 0
+    questionnaire_daily_cohorts: List[Dict[str, Any]] = []
+    questionnaire_confidence_daily: List[Dict[str, Any]] = []
+
+    try:
+        questionnaire_sessions_resp = await _run(
+            lambda: supabase.table("questionnaire_sessions")
+            .select("id,user_id,status,started_at,completed_at,last_question_order")
+            .gte("started_at", cutoff)
+            .execute()
+        )
+        questionnaire_sessions = questionnaire_sessions_resp.data or []
+        questionnaire_started_sessions = len(questionnaire_sessions)
+
+        daily_started_counts: Dict[str, int] = {}
+        daily_completed_counts: Dict[str, int] = {}
+        for row in questionnaire_sessions:
+            started_dt = _parse_dt(row.get("started_at"))
+            if started_dt:
+                started_day = started_dt.date().isoformat()
+                daily_started_counts[started_day] = daily_started_counts.get(started_day, 0) + 1
+
+            if str(row.get("status") or "").lower() == "completed":
+                completed_dt = _parse_dt(row.get("completed_at"))
+                completed_day = (completed_dt or started_dt)
+                if completed_day:
+                    day = completed_day.date().isoformat()
+                    daily_completed_counts[day] = daily_completed_counts.get(day, 0) + 1
+
+        completed_sessions = [
+            row
+            for row in questionnaire_sessions
+            if str(row.get("status") or "").lower() == "completed"
+        ]
+        questionnaire_completed_sessions = len(completed_sessions)
+
+        completion_minutes: List[float] = []
+        for row in completed_sessions:
+            started_dt = _parse_dt(row.get("started_at"))
+            completed_dt = _parse_dt(row.get("completed_at"))
+            if not started_dt or not completed_dt:
+                continue
+            minutes = (completed_dt - started_dt).total_seconds() / 60.0
+            if minutes >= 0:
+                completion_minutes.append(minutes)
+
+        if completion_minutes:
+            sorted_minutes = sorted(completion_minutes)
+            mid = len(sorted_minutes) // 2
+            if len(sorted_minutes) % 2 == 0:
+                questionnaire_median_minutes = round((sorted_minutes[mid - 1] + sorted_minutes[mid]) / 2.0, 1)
+            else:
+                questionnaire_median_minutes = round(sorted_minutes[mid], 1)
+
+        session_ids = [str(row.get("id")) for row in questionnaire_sessions if row.get("id")]
+        question_answers = []
+        if session_ids:
+            answers_resp = await _run(
+                lambda: supabase.table("questionnaire_answers")
+                .select("session_id,question_id,question_order")
+                .in_("session_id", session_ids)
+                .execute()
+            )
+            question_answers = answers_resp.data or []
+
+        max_order_by_session: Dict[str, int] = {}
+        question_id_by_order_counts: Dict[int, Dict[str, int]] = {}
+        for row in question_answers:
+            sid = str(row.get("session_id") or "")
+            if not sid:
+                continue
+            order = int(row.get("question_order") or 0)
+            if order <= 0:
+                continue
+            max_order_by_session[sid] = max(max_order_by_session.get(sid, 0), order)
+
+            qid = str(row.get("question_id") or "")
+            if qid:
+                bucket = question_id_by_order_counts.setdefault(order, {})
+                bucket[qid] = bucket.get(qid, 0) + 1
+
+        incomplete_sessions = [
+            row
+            for row in questionnaire_sessions
+            if str(row.get("status") or "").lower() != "completed"
+        ]
+        dropoff_order_counts: Dict[int, int] = {}
+        for row in incomplete_sessions:
+            sid = str(row.get("id") or "")
+            stop_order = max_order_by_session.get(sid, int(row.get("last_question_order") or 0))
+            if stop_order <= 0:
+                questionnaire_no_answer_incomplete += 1
+                continue
+            dropoff_order_counts[stop_order] = dropoff_order_counts.get(stop_order, 0) + 1
+
+        max_seen_order = max(max_order_by_session.values(), default=0)
+        for order in range(1, max_seen_order + 1):
+            sessions_reached = sum(1 for reached in max_order_by_session.values() if reached >= order)
+            if sessions_reached < safe_min_dropoff_reached:
+                continue
+            order_qids = question_id_by_order_counts.get(order, {})
+            question_id = max(order_qids, key=order_qids.get) if order_qids else f"order_{order}"
+            dropoff_count = dropoff_order_counts.get(order, 0)
+            questionnaire_dropoff_by_question.append(
+                {
+                    "question_order": order,
+                    "question_id": question_id,
+                    "sessions_reached": sessions_reached,
+                    "dropoff_count": dropoff_count,
+                    "dropoff_rate_pct": _rate(dropoff_count, sessions_reached),
+                }
+            )
+
+        all_days = sorted(set(daily_started_counts.keys()) | set(daily_completed_counts.keys()))
+        for day in all_days:
+            started = daily_started_counts.get(day, 0)
+            completed = daily_completed_counts.get(day, 0)
+            incomplete = max(0, started - completed)
+            questionnaire_daily_cohorts.append(
+                {
+                    "date": day,
+                    "started": started,
+                    "completed": completed,
+                    "incomplete": incomplete,
+                    "completion_rate_pct": _rate(completed, started),
+                }
+            )
+
+        def _confidence_from_sample(sample_size: int) -> str:
+            if sample_size >= 50:
+                return "high"
+            if sample_size >= 15:
+                return "medium"
+            if sample_size >= 1:
+                return "low"
+            return "unknown"
+
+        for day in all_days:
+            sample_size = int(daily_started_counts.get(day, 0))
+            questionnaire_confidence_daily.append(
+                {
+                    "date": day,
+                    "sample_size": sample_size,
+                    "level": _confidence_from_sample(sample_size),
+                }
+            )
+    except Exception as ex:
+        if not _is_missing_questionnaire_storage_error(ex):
+            raise
+
+    signups = len(signup_user_ids)
+    onboarding_completed = len(onboarding_user_ids)
+    first_upload_completed = len(first_upload_user_ids)
+    paywall_seen = len(paywall_user_ids)
+    paid_total = len(paid_user_ids)
+
+    def _dropoff_sort_key(row: Dict[str, Any]) -> tuple:
+        if safe_dropoff_sort == "rate":
+            return (
+                -float(row.get("dropoff_rate_pct") or 0),
+                -float(row.get("dropoff_count") or 0),
+                -float(row.get("sessions_reached") or 0),
+            )
+        if safe_dropoff_sort == "order":
+            return (
+                int(row.get("question_order") or 0),
+                -float(row.get("dropoff_count") or 0),
+            )
+        return (
+            -float(row.get("dropoff_count") or 0),
+            -float(row.get("sessions_reached") or 0),
+        )
+
+    sorted_dropoff = sorted(questionnaire_dropoff_by_question, key=_dropoff_sort_key)
+    sorted_dropoff = sorted_dropoff[:safe_dropoff_limit]
+
+    dropoff_sort_explainer = {
+        "count": "Sorted by highest dropoff_count, then sessions_reached.",
+        "rate": "Sorted by highest dropoff_rate_pct, then dropoff_count, then sessions_reached.",
+        "order": "Sorted by earliest question_order, then dropoff_count.",
+    }.get(safe_dropoff_sort, "Sorted by highest dropoff_count, then sessions_reached.")
+
+    # Rollup confidence summary across all daily points
+    if questionnaire_confidence_daily:
+        _cd_samples = [p["sample_size"] for p in questionnaire_confidence_daily]
+        _cd_avg = sum(_cd_samples) / len(_cd_samples)
+        _cd_level_counts: Dict[str, int] = {}
+        for p in questionnaire_confidence_daily:
+            _cd_level_counts[p["level"]] = _cd_level_counts.get(p["level"], 0) + 1
+        _dominant_level = max(_cd_level_counts, key=lambda k: _cd_level_counts[k])
+        _low_days = _cd_level_counts.get("low", 0) + _cd_level_counts.get("unknown", 0)
+        _low_days_share = round(_low_days / len(questionnaire_confidence_daily) * 100, 1)
+        confidence_rollup = {
+            "avg_sample_size": round(_cd_avg, 1),
+            "dominant_level": _dominant_level,
+            "low_days_share_pct": _low_days_share,
+            "total_days": len(questionnaire_confidence_daily),
+        }
+    else:
+        confidence_rollup = {
+            "avg_sample_size": 0,
+            "dominant_level": "unknown",
+            "low_days_share_pct": 100.0,
+            "total_days": 0,
+        }
+
+    if questionnaire_started_sessions >= 50:
+        confidence_level = "high"
+    elif questionnaire_started_sessions >= 15:
+        confidence_level = "medium"
+    else:
+        confidence_level = "low"
+
+    confidence_notes: List[str] = []
+    if questionnaire_started_sessions < 15:
+        confidence_notes.append("Low sample size: interpretation may be unstable.")
+    if questionnaire_no_answer_incomplete > 0:
+        confidence_notes.append("Some sessions ended before first answer.")
+    if len(sorted_dropoff) == 0:
+        confidence_notes.append("No drop-off rows matched the current threshold and window.")
+
+    return {
+        "window_days": safe_days,
+        "min_dropoff_reached": safe_min_dropoff_reached,
+        "dropoff_sort": safe_dropoff_sort,
+        "dropoff_limit": safe_dropoff_limit,
+        "counts": {
+            "signup": signups,
+            "onboarding_completed": onboarding_completed,
+            "first_upload_completed": first_upload_completed,
+            "paywall_seen": paywall_seen,
+            "paid_total_end_users": paid_total,
+        },
+        "rates": {
+            "signup_to_onboarding_pct": _rate(onboarding_completed, signups),
+            "onboarding_to_first_upload_pct": _rate(first_upload_completed, onboarding_completed),
+            "signup_to_first_upload_pct": _rate(first_upload_completed, signups),
+            "paywall_to_paid_pct": _rate(len(paywall_user_ids & paid_user_ids), paywall_seen),
+            "signup_to_paid_pct": _rate(len(signup_user_ids & paid_user_ids), signups),
+        },
+        "lag_days": {
+            "signup_to_onboarding_avg": _avg_lag_days(first_onboarding_at),
+            "signup_to_first_upload_avg": _avg_lag_days(first_upload_at),
+            "signup_to_paywall_avg": _avg_lag_days(first_paywall_at),
+        },
+        "daily_signups": daily_signups,
+        "questionnaire": {
+            "started_sessions": questionnaire_started_sessions,
+            "completed_sessions": questionnaire_completed_sessions,
+            "completion_rate_pct": _rate(questionnaire_completed_sessions, questionnaire_started_sessions),
+            "median_minutes_to_complete": questionnaire_median_minutes,
+            "incomplete_no_answers": questionnaire_no_answer_incomplete,
+            "dropoff_sort_explainer": dropoff_sort_explainer,
+            "dropoff_by_question": sorted_dropoff,
+            "data_confidence": {
+                "level": confidence_level,
+                "sample_size": questionnaire_started_sessions,
+                "dropoff_rows_available": len(questionnaire_dropoff_by_question),
+                "dropoff_rows_returned": len(sorted_dropoff),
+                "notes": confidence_notes,
+            },
+            "daily_cohorts": questionnaire_daily_cohorts,
+            "confidence_daily": questionnaire_confidence_daily,
+            "confidence_rollup": confidence_rollup,
+        },
+    }
+
+
+# ──────────────────────────────────────────────
+# PROFILE
+# ──────────────────────────────────────────────
+
+async def get_user_profile(user_id: str) -> Dict[str, Any]:
+    profile = await _select_first_by_id_with_fallback("user_profile", "*", user_id)
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="user_profile",
+        entity_id=user_id,
+        details={"found": bool(profile)},
+    )
+    return profile
+
+
+async def get_user_profile_with_account_name(user_id: str) -> Dict[str, Any]:
+    profile = await get_user_profile(user_id)
+    account = await get_user_account(user_id)
+    if "full_name" in account:
+        return {**profile, "full_name": account.get("full_name")}
+    return profile
+
+
+async def upsert_user_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    payload = {"id": user_id, **data, "updated_at": datetime.now(timezone.utc).isoformat()}
+    resp = await _run(
+        lambda: supabase.table("user_profile")
+        .upsert(payload, on_conflict="id")
+        .execute()
+    )
+    await _emit_timeline(user_id, "profile_updated", "Profile updated", metadata={"fields": list(data.keys())})
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="user_profile",
+        entity_id=user_id,
+        details={"fields": list(data.keys())},
+    )
+    return result
+
+
+async def get_user_location(user_id: str) -> Optional[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("user_locations")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("is_primary", True)
+        .limit(1)
+        .execute()
+    )
+    location = resp.data[0] if resp.data else None
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="user_location",
+        entity_id=user_id,
+        details={"found": bool(location)},
+    )
+    return location
+
+
+async def upsert_user_location(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    await _run(lambda: supabase.table("user_locations").delete().eq("user_id", user_id).execute())
+    payload = {"user_id": user_id, "is_primary": True, **data}
+    resp = await _run(lambda: supabase.table("user_locations").insert(payload).execute())
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="user_location",
+        entity_id=str(result.get("id") or user_id),
+        details={"fields": list(data.keys())},
+    )
+    return result
+
+
+# ──────────────────────────────────────────────
+# RECURRING COMPLAINTS
+# ──────────────────────────────────────────────
+
+async def get_complaints(user_id: str) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("recurring_complaints")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    complaints = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="recurring_complaints",
+        details={"count": len(complaints)},
+    )
+    return complaints
+
+
+async def add_complaint(user_id: str, complaint: str, duration: Optional[str] = None, tried: Optional[str] = None) -> Dict:
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {"user_id": user_id, "complaint": complaint}
+    if duration:
+        payload["duration_description"] = duration
+    if tried:
+        payload["tried_interventions"] = tried
+    resp = await _run(lambda: supabase.table("recurring_complaints").insert(payload).execute())
+    await _emit_timeline(user_id, "complaint_added", f"Complaint added: {complaint[:60]}")
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="recurring_complaints",
+        entity_id=str(result.get("id") or ""),
+        details={"has_duration": bool(duration), "has_tried_interventions": bool(tried)},
+    )
+    return result
+
+
+async def delete_complaint(user_id: str, complaint_id: str) -> None:
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("recurring_complaints")
+        .delete()
+        .eq("id", complaint_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="delete",
+        entity_type="recurring_complaints",
+        entity_id=complaint_id,
+    )
+
+
+# ──────────────────────────────────────────────
+# INTERVENTION MEMORY (P20) — stage-30-intervention-events.sql
+# ──────────────────────────────────────────────
+
+async def get_intervention_events(user_id: str) -> List[Dict]:
+    """Fail-open: if stage-30's migration has not been applied yet (table
+    missing), returns [] rather than raising — the same posture as every
+    other historical-data fetch feeding the pipeline (e.g.
+    _load_historical_biomarkers), so a report can still generate before
+    this migration is applied.
+    """
+    supabase = _get_supabase()
+    try:
+        resp = await _run(
+            lambda: supabase.table("intervention_events")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("started_at", desc=False)
+            .execute()
+        )
+    except Exception:
+        _logger.warning("intervention_events_fetch_failed user_id=%s (migration not applied?)", user_id)
+        return []
+    events = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="intervention_events",
+        details={"count": len(events)},
+    )
+    return events
+
+
+async def get_pending_retest_obligation(
+    user_id: str,
+    current_date: Optional[date] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the first valid pending retest obligation active today."""
+    supabase = _get_supabase()
+    today = current_date or datetime.now(timezone.utc).date()
+    try:
+        resp = await _run(
+            lambda: supabase.table("intervention_events")
+            .select(
+                "id,related_recommendation_id,retest_window_start,retest_window_end"
+            )
+            .eq("user_id", user_id)
+            .eq("action_type", "retest")
+            .eq("fulfillment_status", "pending")
+            .lte("retest_window_start", today.isoformat())
+            .gte("retest_window_end", today.isoformat())
+            .order("retest_window_start", desc=False)
+            .limit(10)
+            .execute()
+        )
+    except Exception:
+        _logger.warning("pending_retest_obligation_fetch_failed user_id=%s", user_id)
+        return None
+
+    for obligation in resp.data or []:
+        window_start = obligation.get("retest_window_start")
+        window_end = obligation.get("retest_window_end")
+        if not window_start or not window_end or window_start > window_end:
+            continue
+        return obligation
+    return None
+
+
+async def create_intervention_event(user_id: str, data: Dict[str, Any]) -> Dict:
+    supabase = _get_supabase()
+    payload = {**data, "user_id": user_id}
+    resp = await _run(lambda: supabase.table("intervention_events").insert(payload).execute())
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="intervention_events",
+        entity_id=str(result.get("id") or ""),
+        details={"event_type": data.get("event_type")},
+    )
+    return result
+
+
+async def update_intervention_event(user_id: str, event_id: str, data: Dict[str, Any]) -> Optional[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("intervention_events")
+        .update(data)
+        .eq("id", event_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not resp.data:
+        return None
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="intervention_events",
+        entity_id=event_id,
+        details={"fields": list(data.keys())},
+    )
+    return result
+
+
+async def delete_intervention_event(user_id: str, event_id: str) -> bool:
+    """Hard delete, scoped to (id, user_id) so a user can never delete
+    another user's row even if they guess a valid uuid. No soft-delete
+    convention exists elsewhere in this codebase for user-owned records
+    (see delete_complaint above) — matched here for consistency."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("intervention_events")
+        .delete()
+        .eq("id", event_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    deleted = bool(resp.data)
+    if deleted:
+        await _audit_medical_write(
+            user_id=user_id,
+            action="delete",
+            entity_type="intervention_events",
+            entity_id=event_id,
+        )
+    return deleted
+
+
+def derive_retest_window(timing: Any, anchor_date: date) -> Optional[tuple[date, date]]:
+    match = _RETEST_WEEKS_RE.match(str(timing or ""))
+    if not match:
+        return None
+    start_weeks, end_weeks = (int(value) for value in match.groups())
+    if start_weeks <= 0 or end_weeks < start_weeks:
+        return None
+    return (
+        anchor_date + timedelta(weeks=start_weeks),
+        anchor_date + timedelta(weeks=end_weeks),
+    )
+
+
+def resolve_reliable_retest_date(source_metadata: Dict[str, Any] | None) -> Optional[date]:
+    metadata = source_metadata or {}
+    if str(metadata.get("date_source") or "").strip().lower() not in _RELIABLE_RETEST_DATE_SOURCES:
+        return None
+    if str(metadata.get("date_confidence") or "").strip().lower() not in {"high", "medium"}:
+        return None
+    raw_date = metadata.get("test_date") or metadata.get("collected_at")
+    if isinstance(raw_date, datetime):
+        return raw_date.date()
+    if isinstance(raw_date, date):
+        return raw_date
+    try:
+        return date.fromisoformat(str(raw_date or "").strip()[:10])
+    except ValueError:
+        return None
+
+
+def _parse_retest_window_date(value: Any) -> Optional[date]:
+    try:
+        return date.fromisoformat(str(value or "").strip()[:10])
+    except ValueError:
+        return None
+
+
+def _marker_keys(value: Any) -> set[str]:
+    normalized = re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+    if not normalized:
+        return set()
+    keys = {normalized}
+    if normalized.startswith("canonical"):
+        keys.add(normalized[len("canonical"):])
+    return keys
+
+
+async def persist_retest_obligations(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    retest_plan: List[Dict[str, Any]] | None,
+) -> List[Dict[str, Any]]:
+    report_version_id = report_version.get("id")
+    if not report_version_id or not retest_plan:
+        return []
+
+    created_at = report_version.get("created_at")
+    if isinstance(created_at, datetime):
+        anchor_date = created_at.date()
+    else:
+        raw_created_at = str(created_at or "").replace("Z", "+00:00")
+        try:
+            anchor_date = datetime.fromisoformat(raw_created_at).date()
+        except ValueError:
+            return []
+
+    supabase = _get_supabase()
+    existing = await _run(
+        lambda: supabase.table("intervention_events")
+        .select("related_recommendation_id")
+        .eq("user_id", user_id)
+        .eq("source_report_version_id", str(report_version_id))
+        .eq("action_type", "retest")
+        .execute()
+    )
+    existing_targets = {
+        str(row.get("related_recommendation_id") or "").strip().lower()
+        for row in (existing.data or [])
+    }
+    created: List[Dict[str, Any]] = []
+    seen_targets: set[str] = set()
+    for item in retest_plan:
+        if not isinstance(item, dict):
+            continue
+        target = str(item.get("marker") or "").strip()
+        target_key = target.lower()
+        window = derive_retest_window(item.get("timing"), anchor_date)
+        if not target or not window or target_key in seen_targets or target_key in existing_targets:
+            continue
+        window_start, window_end = window
+        payload = {
+            "user_id": user_id,
+            "source": "system",
+            "event_type": "protocol_action",
+            "action_type": "retest",
+            "label": f"Retest {target}",
+            "description": item.get("reason"),
+            "related_recommendation_id": target,
+            "source_report_version_id": str(report_version_id),
+            "retest_window_start": window_start.isoformat(),
+            "retest_window_end": window_end.isoformat(),
+            "metadata": {
+                "action_type": "retest",
+                "retest_target": target,
+                "timing": item.get("timing"),
+                "priority": item.get("priority"),
+            },
+        }
+        payload["analysis_effect_key"] = analysis_effect_key(
+            str(report_version_id), "retest_obligations", target_key
+        )
+        response = await _run(
+            lambda payload=payload: supabase.table("intervention_events")
+            .upsert(payload, on_conflict="analysis_effect_key").execute()
+        )
+        created.extend(response.data or [])
+        seen_targets.add(target_key)
+    return created
+
+
+async def reconcile_retest_fulfillment(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    biomarkers: List[Dict[str, Any]] | None,
+    test_date: date | str | None,
+    date_source: str | None,
+    date_confidence: str | None,
+) -> List[Dict[str, Any]]:
+    report_version_id = report_version.get("id")
+    upload_id = report_version.get("upload_id")
+    if not report_version_id or not upload_id:
+        return []
+    reliable_date = resolve_reliable_retest_date({
+        "test_date": test_date,
+        "date_source": date_source,
+        "date_confidence": date_confidence,
+    })
+    if reliable_date is None:
+        return []
+
+    raw_created_at = str(report_version.get("created_at") or "").replace("Z", "+00:00")
+    try:
+        report_created_at = datetime.fromisoformat(raw_created_at)
+    except ValueError:
+        return []
+
+    marker_keys: set[str] = set()
+    for biomarker in biomarkers or []:
+        if not isinstance(biomarker, dict):
+            continue
+        for field in ("name", "canonical_name"):
+            marker_keys.update(_marker_keys(biomarker.get(field)))
+    if not marker_keys:
+        return []
+
+    supabase = _get_supabase()
+    pending_response = await _run(
+        lambda: supabase.table("intervention_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("action_type", "retest")
+        .eq("fulfillment_status", "pending")
+        .execute()
+    )
+    pending = pending_response.data or []
+    source_ids = {
+        str(row.get("source_report_version_id"))
+        for row in pending
+        if row.get("source_report_version_id")
+    }
+    if not source_ids:
+        return []
+    source_response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("id,created_at")
+        .eq("user_id", user_id)
+        .in_("id", list(source_ids))
+        .execute()
+    )
+    source_created_at = {}
+    for row in source_response.data or []:
+        try:
+            source_created_at[str(row["id"])] = datetime.fromisoformat(
+                str(row.get("created_at") or "").replace("Z", "+00:00")
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    fulfilled: List[Dict[str, Any]] = []
+    for obligation in pending:
+        target = str(obligation.get("related_recommendation_id") or "")
+        source_id = str(obligation.get("source_report_version_id") or "")
+        window_start = _parse_retest_window_date(obligation.get("retest_window_start"))
+        window_end = _parse_retest_window_date(obligation.get("retest_window_end"))
+        if (
+            not _marker_keys(target) & marker_keys
+            or report_created_at <= source_created_at.get(source_id, report_created_at)
+            or window_start is None
+            or window_end is None
+            or reliable_date < window_start
+            or reliable_date > window_end
+        ):
+            continue
+        response = await _run(
+            lambda obligation_id=obligation.get("id"): supabase.table("intervention_events")
+            .update({
+                "fulfillment_status": "fulfilled",
+                "fulfilled_by_upload_id": str(upload_id),
+                "fulfilled_by_report_version_id": str(report_version_id),
+                "fulfilled_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", obligation_id)
+            .eq("user_id", user_id)
+            .eq("fulfillment_status", "pending")
+            .execute()
+        )
+        fulfilled.extend(response.data or [])
+    return fulfilled
+
+
+async def reconcile_lab_plan_fulfillment(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    biomarkers: List[Dict[str, Any]] | None,
+    fulfilled_retest_obligations: List[Dict[str, Any]] | None = None,
+) -> List[Dict[str, Any]]:
+    report_version_id = str(report_version.get("id") or "")
+    upload_id = str(report_version.get("upload_id") or "")
+    if not report_version_id or not upload_id:
+        return []
+
+    current_report = await get_report_version_for_user(user_id, report_version_id)
+    if not current_report:
+        return []
+    current_created_at = _parse_report_created_at(current_report.get("created_at"))
+    if current_created_at is None:
+        return []
+
+    marker_keys: set[str] = set()
+    for biomarker in biomarkers or []:
+        if not isinstance(biomarker, dict):
+            continue
+        for field in ("name", "canonical_name"):
+            marker_keys.update(_marker_keys(biomarker.get(field)))
+    if not marker_keys:
+        return []
+
+    supabase = _get_supabase()
+    plans_response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("status", "planned")
+        .execute()
+    )
+    plans = plans_response.data or []
+    source_ids = {
+        str(item.get("source_report_version_id"))
+        for item in plans
+        if item.get("source_report_version_id")
+    }
+    if not source_ids:
+        return []
+    source_response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("id,created_at")
+        .eq("user_id", user_id)
+        .in_("id", list(source_ids))
+        .execute()
+    )
+    source_created_at = {
+        str(row.get("id")): _parse_report_created_at(row.get("created_at"))
+        for row in source_response.data or []
+    }
+
+    fulfilled_retest = fulfilled_retest_obligations or []
+    fulfilled: List[Dict[str, Any]] = []
+    for item in plans:
+        source_id = str(item.get("source_report_version_id") or "")
+        source_date = source_created_at.get(source_id)
+        if not source_date or current_created_at <= source_date:
+            continue
+        if not _marker_keys(item.get("normalized_test_name")) & marker_keys:
+            continue
+        if item.get("test_type") == "retest" and not any(
+            source_id == fulfilled_source
+            and _marker_keys(item.get("normalized_test_name")) & _marker_keys(
+                row.get("related_recommendation_id")
+            )
+            for row in fulfilled_retest
+            for fulfilled_source in [str(row.get("source_report_version_id") or "")]
+        ):
+            continue
+        response = await _run(
+            lambda item_id=item.get("id"): supabase.table("lab_plan_items")
+            .update({
+                "status": "fulfilled",
+                "fulfilled_by_upload_id": upload_id,
+                "fulfilled_by_report_version_id": report_version_id,
+                "fulfilled_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", item_id)
+            .eq("user_id", user_id)
+            .eq("status", "planned")
+            .execute()
+        )
+        fulfilled.extend(response.data or [])
+    return fulfilled
+
+
+def _parse_report_created_at(value: Any) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+# ──────────────────────────────────────────────
+# WEEKLY CHECK-INS
+# ──────────────────────────────────────────────
+
+async def submit_weekly_checkin(user_id: str, data: Dict[str, Any]) -> Dict:
+    supabase = _get_supabase()
+    for field_name in ("energy_score", "sleep_quality", "mood_score", "protocol_adherence"):
+        if field_name in data and data[field_name] is not None:
+            data[field_name] = max(1, min(int(data[field_name]), 10))
+    payload = {"user_id": user_id, **data}
+    resp = await _run(
+        lambda: supabase.table("checkins_weekly")
+        .upsert(payload, on_conflict="user_id,week_start")
+        .execute()
+    )
+    result = resp.data[0] if resp.data else payload
+    await _emit_timeline(user_id, "weekly_checkin_submitted", f"Weekly check-in submitted for {data.get('week_start', 'this week')}")
+    await _evaluate_checkin_red_flags(user_id, data)
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="weekly_checkin",
+        entity_id=str(result.get("id") or f"{user_id}:{data.get('week_start', '')}"),
+        details={"week_start": data.get("week_start")},
+    )
+    return result
+
+
+async def _evaluate_checkin_red_flags(user_id: str, data: Dict[str, Any]) -> None:
+    flags = []
+    if data.get("energy_score", 10) <= 2:
+        flags.append("Very low energy reported")
+    if data.get("mood_score", 10) <= 2:
+        flags.append("Very low mood reported")
+    if data.get("sleep_quality", 10) <= 2:
+        flags.append("Severely disrupted sleep reported")
+    if flags:
+        await create_red_flag(user_id, "checkin_response", "; ".join(flags), metadata={"checkin": data})
+
+
+async def get_weekly_checkins(user_id: str, limit: int = 12) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("checkins_weekly")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("week_start", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    checkins = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="weekly_checkin",
+        details={"count": len(checkins), "limit": limit},
+    )
+    return checkins
+
+
+async def get_report_version_for_user(user_id: str, report_version_id: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("id", str(report_version_id))
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+def _normalize_lab_plan_test_name(value: Any) -> str:
+    return " ".join(str(value or "").strip().casefold().split())
+
+
+def _canonical_lab_plan_test_name(value: Any) -> str:
+    normalized = _normalize_lab_plan_test_name(value)
+    return to_known_canonical_name(normalized) or normalized
+
+
+async def get_lab_plan_items(user_id: str) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return [
+        {
+            **item,
+            "canonical_normalized_test_name": _canonical_lab_plan_test_name(
+                item.get("normalized_test_name") or item.get("test_name")
+            ),
+        }
+        for item in response.data or []
+    ]
+
+
+async def _find_existing_lab_plan_item(
+    *,
+    user_id: str,
+    report_version_id: str,
+    canonical_test_name: str,
+) -> Optional[Dict[str, Any]]:
+    response = await _run(
+        lambda: _get_supabase()
+        .table("lab_plan_items")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("source_report_version_id", report_version_id)
+        .execute()
+    )
+    for item in response.data or []:
+        existing_name = item.get("normalized_test_name") or item.get("test_name")
+        if _canonical_lab_plan_test_name(existing_name) == canonical_test_name:
+            return item
+    return None
+
+
+async def create_lab_plan_item(
+    *,
+    user_id: str,
+    report_version_id: str,
+    test_name: str,
+    source_recommendation_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    report_version = await get_report_version_for_user(user_id, report_version_id)
+    if not report_version:
+        raise ValueError("Report version not found")
+
+    requested_name = str(test_name or "").strip()
+    requested_key = _canonical_lab_plan_test_name(requested_name)
+    if not requested_key:
+        raise ValueError("Test not found in report")
+
+    input_snapshot = report_version.get("input_snapshot") or {}
+    knowledge_report = report_version.get("knowledge_report") or {}
+    retest_plan = knowledge_report.get("retest_plan") or []
+    next_best_tests = input_snapshot.get("next_best_tests") or {}
+    evidence_gaps = input_snapshot.get("evidence_gaps") or {}
+
+    def matching_item(items: Any, *keys: str) -> Optional[Dict[str, Any]]:
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            candidate = next((item.get(key) for key in keys if item.get(key)), None)
+            if _canonical_lab_plan_test_name(candidate) == requested_key:
+                return item
+        return None
+
+    recommended_tests = next_best_tests.get("recommended_tests")
+    source_item = None
+    if source_recommendation_id:
+        source_item = next(
+            (
+                item
+                for item in recommended_tests or []
+                if isinstance(item, dict)
+                and item.get("recommendation_id") == source_recommendation_id
+            ),
+            None,
+        )
+        if source_item is None:
+            raise ValueError("Recommendation not found in report")
+        if source_item.get("source_report_version_id") != report_version_id:
+            raise ValueError("Recommendation does not belong to report")
+        source_marker = source_item.get("marker") or source_item.get("test_name") or ""
+        if _canonical_lab_plan_test_name(source_marker) != requested_key:
+            raise ValueError("Recommendation does not match test")
+
+    retest = matching_item(retest_plan, "marker", "test_name", "name")
+    if source_item is None:
+        source_item = retest or matching_item(
+            recommended_tests,
+            "marker",
+            "test_name",
+            "name",
+        )
+    if source_item is None:
+        source_item = matching_item(evidence_gaps.get("gaps"), "missing_marker", "marker", "test_name", "name")
+    if source_item is None:
+        raise ValueError("Test not found in report")
+
+    test_type = (
+        "retest"
+        if (source_item.get("source") == "pattern_retest_plan" or (source_item is retest))
+        else "new_test"
+    )
+    payload = {
+        "user_id": user_id,
+        "source_report_version_id": report_version_id,
+        "source_recommendation_id": source_item.get("recommendation_id"),
+        "test_name": str(source_item.get("marker") or source_item.get("missing_marker") or requested_name).strip(),
+        "normalized_test_name": requested_key,
+        "test_type": test_type,
+        "reason": str(source_item.get("reason") or source_item.get("description") or "Recommended to reduce uncertainty.").strip(),
+        "priority": str(source_item.get("priority") or "medium").strip().lower(),
+        "timing_text": source_item.get("timing"),
+        "status": "planned",
+    }
+    supabase = _get_supabase()
+    existing = await _find_existing_lab_plan_item(
+        user_id=user_id,
+        report_version_id=report_version_id,
+        canonical_test_name=requested_key,
+    )
+    if existing:
+        if source_recommendation_id and not existing.get("source_recommendation_id"):
+            linked = await _run(
+                lambda: supabase.table("lab_plan_items")
+                .update({"source_recommendation_id": source_recommendation_id})
+                .eq("id", existing["id"])
+                .execute()
+            )
+            return (linked.data or [existing])[0]
+        return existing
+
+    response = await _run(
+        lambda: supabase.table("lab_plan_items")
+        .upsert(
+            payload,
+            on_conflict="user_id,source_report_version_id,normalized_test_name,test_type",
+        )
+        .execute()
+    )
+    return (response.data or [payload])[0]
+
+
+async def complete_protocol_action(
+    user_id: str,
+    action_id: str,
+    report_version_id: str,
+    label: str,
+    description: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    existing_query = (
+        supabase.table("intervention_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("action_type", "protocol_action")
+        .eq("source_report_version_id", str(report_version_id))
+        .eq("related_recommendation_id", action_id)
+        .limit(1)
+    )
+    existing = await _run(lambda: existing_query.execute())
+    if existing.data:
+        return existing.data[0]
+
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {
+        "user_id": user_id,
+        "source": "user",
+        "event_type": "protocol_action",
+        "action_type": "protocol_action",
+        "label": label,
+        "description": description,
+        "related_recommendation_id": action_id,
+        "source_report_version_id": str(report_version_id),
+        "ended_at": now,
+        "ongoing": False,
+        "metadata": metadata or {},
+    }
+    try:
+        response = await _run(lambda: supabase.table("intervention_events").insert(payload).execute())
+    except Exception:
+        # A concurrent request may win the partial unique constraint. Return
+        # that winner so completion remains idempotent.
+        response = await _run(lambda: existing_query.execute())
+    if response.data:
+        return response.data[0]
+    raise RuntimeError("Failed to persist protocol action completion")
+
+
+# ──────────────────────────────────────────────
+# RED FLAGS
+# ──────────────────────────────────────────────
+
+async def create_red_flag(user_id: str, trigger_type: str, summary: str,
+                           severity: str = "high", metadata: Optional[Dict] = None) -> Dict:
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "trigger_type": trigger_type,
+        "summary": summary,
+        "severity": severity,
+        "metadata": metadata or {},
+    }
+    resp = await _run(lambda: supabase.table("red_flag_events").insert(payload).execute())
+    await _emit_timeline(user_id, "red_flag_triggered", f"Red flag: {summary[:80]}", metadata={"severity": severity})
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="red_flag",
+        entity_id=str(result.get("id") or ""),
+        details={"trigger_type": trigger_type, "severity": severity},
+    )
+    return result
+
+
+async def get_user_red_flags(user_id: str) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("red_flag_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    flags = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="red_flag",
+        details={"count": len(flags)},
+    )
+    return flags
+
+
+async def acknowledge_red_flag(user_id: str, flag_id: str) -> Dict:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("red_flag_events")
+        .update({"acknowledged": True, "acknowledged_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", flag_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    result = resp.data[0] if resp.data else {}
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="red_flag",
+        entity_id=flag_id,
+        details={"acknowledged": True},
+    )
+    return result
+
+
+async def get_all_red_flags(acknowledged: Optional[bool] = False) -> List[Dict]:
+    supabase = _get_supabase()
+    query = supabase.table("red_flag_events").select("*, users(email, full_name)")
+    if acknowledged is not None:
+        query = query.eq("acknowledged", acknowledged)
+    resp = await _run(lambda: query.order("created_at", desc=True).limit(200).execute())
+    return resp.data or []
+
+
+# ──────────────────────────────────────────────
+# INSIGHTS
+# ──────────────────────────────────────────────
+
+INSIGHT_PROVENANCE_VERSION = "insight_provenance_v1"
+INSIGHT_QUESTIONNAIRE_ROUTE = "/questionnaire"
+INSIGHT_REVIEW_SYMPTOM_LABEL = "Review symptom context"
+INSIGHT_CHECK_INS_ROUTE = "/check-ins"
+
+
+def _insight_provenance(
+    *,
+    source_type: str,
+    source_id: Optional[str] = None,
+    source_date: Optional[str] = None,
+    evidence_status: str = "observed",
+    related: Optional[Dict[str, Any]] = None,
+    reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    provenance: Dict[str, Any] = {
+        "version": INSIGHT_PROVENANCE_VERSION,
+        "source_type": source_type,
+        "source_id": source_id,
+        "source_date": source_date,
+        "evidence_status": evidence_status,
+        "related": related or {},
+    }
+    if reason:
+        provenance["reason"] = reason
+    return provenance
+
+
+def _insight_action(
+    action_type: str,
+    label: str,
+    route: str,
+    *,
+    safety_level: str = "routine",
+) -> Dict[str, Any]:
+    return {
+        "type": action_type,
+        "label": label,
+        "route": route,
+        "safety_level": normalize_report_level(safety_level),
+    }
+
+
+def _latest_symptom_source(summary: Dict[str, Any]) -> Dict[str, Any]:
+    latest = (summary.get("recent_logs") or [{}])[0]
+    related = {
+        "symptoms": [item.get("tag") for item in summary.get("top_symptoms", []) if item.get("tag")],
+        "window_days": summary.get("window_days"),
+    }
+    return _insight_provenance(
+        source_type="symptom_log",
+        source_id=str(latest.get("id")) if latest.get("id") else None,
+        source_date=latest.get("created_at"),
+        related=related,
+        reason=None if latest.get("id") else "Symptom summary has no identifiable source row.",
+        evidence_status="observed" if latest.get("id") else "unknown",
+    )
+
+
+def _questionnaire_symptom_evidence(session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    metadata = session.get("session_metadata") or {}
+    summary = metadata.get("summary") or {}
+    signal = summary.get("primary_signal")
+    severity = summary.get("severity")
+    if not signal or not isinstance(severity, (int, float)) or severity <= 0:
+        return None
+
+    return {
+        "source_type": "questionnaire_session",
+        "source_id": str(session.get("id")) if session.get("id") else None,
+        "source_date": session.get("completed_at") or session.get("updated_at") or session.get("created_at"),
+        "current_severity": float(severity),
+        "context": {
+            "primary_signal": signal,
+            "overall_wellbeing": summary.get("overall_wellbeing"),
+            "duration_bucket": summary.get("duration_bucket"),
+            "symptom_pattern": summary.get("symptom_pattern"),
+            "functional_impact": summary.get("functional_impact"),
+            "domain_detail": summary.get("domain_detail"),
+        },
+    }
+
+
+async def _resolve_symptom_evidence(user_id: str) -> Dict[str, Any]:
+    """Resolve current symptom evidence with questionnaire-first precedence."""
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("questionnaire_sessions")
+        .select("id,status,completed_at,updated_at,created_at,session_metadata")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .order("completed_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+    questionnaire_evidence = [
+        evidence
+        for evidence in (_questionnaire_symptom_evidence(row) for row in (response.data or []))
+        if evidence
+    ]
+    if questionnaire_evidence:
+        return {
+            "source_type": "questionnaire_session",
+            "current": questionnaire_evidence[0],
+            "previous": questionnaire_evidence[1] if len(questionnaire_evidence) > 1 else None,
+        }
+
+    current = await get_user_symptom_summary(user_id, days=30)
+    previous = await get_user_symptom_summary(user_id, days=60)
+    return {
+        "source_type": "symptom_log",
+        "current": {
+            "source_type": "symptom_log",
+            "source_id": (current.get("recent_logs") or [{}])[0].get("id"),
+            "source_date": (current.get("recent_logs") or [{}])[0].get("created_at"),
+            "current_severity": current.get("average_severity", 0),
+            "summary": current,
+        },
+        "previous": {
+            "current_severity": previous.get("average_severity", 0),
+            "summary": previous,
+        },
+    }
+
+
+def _questionnaire_symptom_provenance(evidence: Dict[str, Any], related: Dict[str, Any]) -> Dict[str, Any]:
+    return _insight_provenance(
+        source_type="questionnaire_session",
+        source_id=evidence.get("source_id"),
+        source_date=evidence.get("source_date"),
+        related=related,
+        evidence_status="observed",
+    )
+
+
+def _checkin_source(checkin: Dict[str, Any], related: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    source_id = checkin.get("id")
+    source_date = checkin.get("week_start") or checkin.get("created_at")
+    return _insight_provenance(
+        source_type="weekly_checkin" if source_id else "unknown",
+        source_id=str(source_id) if source_id else None,
+        source_date=source_date,
+        related=related,
+        evidence_status="observed" if source_id else "unknown",
+        reason=None if source_id else "The generated insight has no identifiable check-in row.",
+    )
+
+
+def _unknown_insight_provenance(reason: str) -> Dict[str, Any]:
+    return _insight_provenance(
+        source_type="unknown",
+        evidence_status="unknown",
+        reason=reason,
+    )
+
+
+def _insight_equivalence_key(insight: Dict[str, Any]) -> str:
+    return json.dumps(
+        {
+            "insight_type": insight.get("insight_type"),
+            "title": insight.get("title"),
+            "body": insight.get("body"),
+            "provenance": insight.get("provenance"),
+            "next_action": insight.get("next_action"),
+        },
+        sort_keys=True,
+        default=str,
+    )
+
+
+async def _resolve_insight_candidates(user_id: str, persist: bool = False) -> List[Dict]:
+    """Rule-based MVP insight engine."""
+    supabase = _get_supabase()
+    insights_list: List[Dict] = []
+
+    symptom_evidence = await _resolve_symptom_evidence(user_id)
+    current_symptom = symptom_evidence["current"]
+    previous_symptom = symptom_evidence.get("previous")
+    current_severity = current_symptom.get("current_severity", 0)
+    previous_severity = previous_symptom.get("current_severity", 0) if previous_symptom else 0
+    symptom_trend_added = False
+    if current_severity > 0 and previous_severity > 0:
+        delta = current_severity - previous_severity
+        if delta <= -1.0:
+            insights_list.append({
+                "insight_type": "symptom_trend",
+                "title": "Symptom severity improving",
+                "body": f"Your average symptom severity decreased by {abs(delta):.1f} points over the last 30 days.",
+                "priority": 1,
+                "provenance": (
+                    _questionnaire_symptom_provenance(current_symptom, {"field": "severity", "delta": delta})
+                    if symptom_evidence["source_type"] == "questionnaire_session"
+                    else _latest_symptom_source(current_symptom["summary"])
+                ),
+                "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
+            })
+            symptom_trend_added = True
+        elif delta >= 1.5:
+            insights_list.append({
+                "insight_type": "symptom_trend",
+                "title": "Symptom severity increasing",
+                "body": "Your symptoms appear to be worsening. Consider consulting a physician if this persists.",
+                "priority": 4,
+                "provenance": (
+                    _questionnaire_symptom_provenance(current_symptom, {"field": "severity", "delta": delta})
+                    if symptom_evidence["source_type"] == "questionnaire_session"
+                    else _latest_symptom_source(current_symptom["summary"])
+                ),
+                "next_action": _insight_action(
+                    "clinician_review",
+                    INSIGHT_REVIEW_SYMPTOM_LABEL,
+                    INSIGHT_QUESTIONNAIRE_ROUTE,
+                    safety_level="clinician_review",
+                ),
+            })
+            symptom_trend_added = True
+
+    if symptom_evidence["source_type"] == "questionnaire_session" and not symptom_trend_added:
+        context = current_symptom["context"]
+        insights_list.append({
+            "insight_type": "general",
+            "title": "Symptom context recorded",
+            "body": f"Your latest symptom check recorded {context['primary_signal']} at severity {int(current_severity)}/9.",
+            "priority": 2,
+            "provenance": _questionnaire_symptom_provenance(
+                current_symptom,
+                {"field": "symptom_context", "primary_signal": context["primary_signal"]},
+            ),
+            "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
+        })
+
+    uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id, created_at, test_date, collected_at, reported_at")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if uploads_resp.data:
+        last_upload = uploads_resp.data[0]["created_at"]
+        try:
+            upload_dt = datetime.fromisoformat(str(last_upload).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            upload_dt = datetime.now(timezone.utc)
+        days_since = (datetime.now(timezone.utc) - upload_dt).days
+        if days_since >= 60:
+            insights_list.append({
+                "insight_type": "retest_suggestion",
+                "title": "Time to re-test your labs",
+                "body": f"Your last lab upload was {days_since} days ago. Re-testing helps track progress accurately.",
+                "priority": 3,
+                "provenance": _insight_provenance(
+                    source_type="lab_upload",
+                    source_id=str(uploads_resp.data[0].get("id")) if uploads_resp.data[0].get("id") else None,
+                    source_date=(
+                        uploads_resp.data[0].get("test_date")
+                        or uploads_resp.data[0].get("collected_at")
+                        or uploads_resp.data[0].get("reported_at")
+                        or last_upload
+                    ),
+                    related={"days_since_upload": days_since},
+                    evidence_status="observed" if uploads_resp.data[0].get("id") else "unknown",
+                ),
+                "next_action": _insight_action("upload_follow_up", "Upload follow-up labs", "/upload"),
+            })
+
+    checkins = await get_weekly_checkins(user_id, limit=4)
+    if checkins:
+        latest_checkin = checkins[0]
+        adherence = latest_checkin.get("protocol_adherence")
+        symptom_changes = (latest_checkin.get("symptom_changes") or "").strip()
+        low_scores = [
+            ("energy", latest_checkin.get("energy_score")),
+            ("sleep", latest_checkin.get("sleep_quality")),
+            ("mood", latest_checkin.get("mood_score")),
+        ]
+        concerning_scores = [name for name, value in low_scores if isinstance(value, int) and value <= 3]
+
+        if isinstance(adherence, int) and adherence <= 4:
+            insights_list.append({
+                "insight_type": "adherence",
+                "title": "Protocol adherence is slipping",
+                "body": "Your latest weekly check-in shows low adherence. Tighten the routine before changing the protocol.",
+                "priority": 3,
+                "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", INSIGHT_CHECK_INS_ROUTE),
+            })
+        elif isinstance(adherence, int) and adherence >= 8:
+            insights_list.append({
+                "insight_type": "adherence",
+                "title": "Adherence looks strong",
+                "body": "You are following the protocol consistently. Keep this pace and retest to validate biomarker changes.",
+                "priority": 2,
+                "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", INSIGHT_CHECK_INS_ROUTE),
+            })
+
+        if concerning_scores:
+            insights_list.append({
+                "insight_type": "general",
+                "title": "Weekly check-in shows high strain",
+                "body": f"Your latest check-in shows pressure in {', '.join(concerning_scores)}. Review recovery, sleep, and escalation signals closely.",
+                "priority": 4,
+                "provenance": _checkin_source(latest_checkin, {"fields": concerning_scores}),
+                "next_action": _insight_action(
+                    "clinician_review",
+                    "Review check-in before clinician discussion",
+                    INSIGHT_CHECK_INS_ROUTE,
+                    safety_level="clinician_review",
+                ),
+            })
+        elif symptom_changes:
+            insights_list.append({
+                "insight_type": "general",
+                "title": "Symptom changes recorded",
+                "body": f"Latest note: {symptom_changes[:160]}",
+                "priority": 2,
+                "provenance": _checkin_source(latest_checkin, {"field": "symptom_changes"}),
+                "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
+            })
+    else:
+        insights_list.append({
+            "insight_type": "adherence",
+            "title": "Start your weekly check-ins",
+            "body": "Weekly check-ins personalize your health guidance. Complete your first check-in now.",
+            "priority": 2,
+            "provenance": _unknown_insight_provenance("No weekly check-in exists for this insight."),
+            "next_action": _insight_action("start_checkin", "Start weekly check-in", INSIGHT_CHECK_INS_ROUTE),
+        })
+
+    existing = await _run(
+        lambda: supabase.table("insights")
+        .select("insight_type, title, body, provenance, next_action, dismissed")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    dismissed_keys = {
+        _insight_equivalence_key(row)
+        for row in (existing.data or [])
+        if row.get("dismissed", False)
+    }
+    insights_list = [
+        insight for insight in insights_list
+        if _insight_equivalence_key(insight) not in dismissed_keys
+    ]
+
+    if not persist:
+        return insights_list
+
+    if insights_list:
+        rows = [{"user_id": user_id, **i} for i in insights_list]
+        response = await _run(lambda: supabase.table("insights").insert(rows).execute())
+        await _emit_timeline(user_id, "insight_created", f"{len(insights_list)} new insight(s) generated")
+        await _audit_medical_write(
+            user_id=user_id,
+            action="create",
+            entity_type="insights",
+            details={"count": len(insights_list)},
+        )
+
+        return response.data or insights_list
+
+    return insights_list
+
+
+async def generate_insights(user_id: str) -> List[Dict]:
+    return await _resolve_insight_candidates(user_id, persist=True)
+
+
+async def get_user_insights(user_id: str) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("insights")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("dismissed", False)
+        .order("priority", desc=True)
+        .order("created_at", desc=True)
+        .limit(10)
+        .execute()
+    )
+    insights = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="insights",
+        details={"count": len(insights)},
+    )
+    return insights
+
+
+async def get_user_insight_state(user_id: str) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("insights")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("priority", desc=True)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    rows = resp.data or []
+    active = [row for row in rows if not row.get("dismissed", False)]
+    dismissed = [row for row in rows if row.get("dismissed", False)]
+    active_structured = any(
+        row.get("provenance") and row.get("next_action")
+        for row in active
+    )
+    candidates = await _resolve_insight_candidates(user_id)
+
+    if active_structured:
+        generation_allowed = False
+        generation_reason = "active_structured_insight"
+    elif candidates:
+        generation_allowed = True
+        generation_reason = "current_candidate_not_dismissed"
+    else:
+        generation_allowed = False
+        generation_reason = "no_current_candidate_or_equivalent_dismissal"
+
+    return {
+        "active": active,
+        "dismissed": dismissed,
+        "generation_allowed": generation_allowed,
+        "generation_reason": generation_reason,
+    }
+
+
+async def dismiss_insight(user_id: str, insight_id: str) -> None:
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("insights")
+        .update({"dismissed": True})
+        .eq("id", insight_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="insights",
+        entity_id=insight_id,
+        details={"dismissed": True},
+    )
+
+
+# ──────────────────────────────────────────────
+# HEALTH SCORE
+# ──────────────────────────────────────────────
+
+async def get_latest_symptom_signal(user_id: str) -> Optional[float]:
+    """0-100 wellness signal (higher = feeling better), sourced from whichever
+    is more recent: the last completed questionnaire session's completion_score
+    (already a 0-100 composite of the adaptive wellness-dimension answers), or
+    the last weekly check-in's structured energy/sleep/mood scores (1-10 each,
+    averaged and scaled to 0-100 so both sources share the same direction and
+    range). Returns None when neither exists yet - caller decides the neutral
+    default, same "no data yet" convention biomarker_component already uses
+    below rather than silently claiming a perfect or empty score.
+
+    Replaces the previous computation, which read the `symptoms` table via
+    get_user_symptom_summary() - that table has no write path from any current
+    frontend flow (confirmed via full-repo search), so avg_severity was always
+    0 and symptom_component was a hardcoded 100 for every user, regardless of
+    what they actually reported in the questionnaire or check-ins.
+    """
+    supabase = _get_supabase()
+
+    session_resp = await _run(
+        lambda: supabase.table("questionnaire_sessions")
+        .select("completion_score, completed_at")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .order("completed_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    session_row = session_resp.data[0] if session_resp.data else None
+
+    checkins = await get_weekly_checkins(user_id, limit=1)
+    checkin_row = checkins[0] if checkins else None
+
+    session_date = None
+    if session_row and session_row.get("completed_at"):
+        try:
+            session_date = datetime.fromisoformat(str(session_row["completed_at"]).replace("Z", "+00:00")).date()
+        except ValueError:
+            session_date = None
+
+    checkin_date = None
+    if checkin_row and checkin_row.get("week_start"):
+        try:
+            checkin_date = datetime.fromisoformat(str(checkin_row["week_start"])).date()
+        except ValueError:
+            checkin_date = None
+
+    use_checkin = checkin_date is not None and (session_date is None or checkin_date >= session_date)
+
+    if use_checkin:
+        scores = [
+            checkin_row.get("energy_score"),
+            checkin_row.get("sleep_quality"),
+            checkin_row.get("mood_score"),
+        ]
+        scores = [s for s in scores if s is not None]
+        if scores:
+            return round((sum(scores) / len(scores)) * 10, 2)
+
+    if session_row and session_row.get("completion_score") is not None:
+        return round(float(session_row["completion_score"]), 2)
+
+    return None
+
+
+async def calculate_health_score(user_id: str) -> Dict[str, Any]:
+    checkins = await get_weekly_checkins(user_id, limit=4)
+    supabase = _get_supabase()
+
+    symptom_signal = await get_latest_symptom_signal(user_id)
+    # 50.0 mirrors biomarker_component's own "no data yet" fallback a few
+    # lines below - neutral/unknown, not a false "everything is fine" 100.
+    symptom_component = symptom_signal if symptom_signal is not None else 50.0
+    adherence_component = round(min(100.0, (len(checkins) / 4) * 100), 2)
+
+    uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    live_upload_ids = [row.get("id") for row in (uploads_resp.data or []) if row.get("id")]
+    if live_upload_ids:
+        bio_resp = await _run(
+            lambda: supabase.table("biomarkers")
+            .select("status")
+            .eq("user_id", user_id)
+            .in_("upload_id", live_upload_ids)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+        bio_rows = bio_resp.data or []
+    else:
+        bio_rows = []
+    if bio_rows:
+        optimal = sum(1 for b in bio_rows if b["status"] == "OPTIMAL")
+        # Exclude UNEVALUATED markers from health score calculation
+        # UNEVALUATED means unverified reference range — they're non-clinical
+        # and should not affect the biomarker_component score
+        classifiable = [
+            b for b in bio_rows
+            if b.get("status") not in {"UNEVALUATED"}
+        ]
+        if classifiable:
+            biomarker_component = round((optimal / len(classifiable)) * 100, 2)
+        else:
+            biomarker_component = 50.0
+    else:
+        biomarker_component = 50.0
+
+    score = round((symptom_component * 0.4 + adherence_component * 0.2 + biomarker_component * 0.4), 2)
+    result = {
+        "score": score,
+        "symptom_component": symptom_component,
+        "biomarker_component": biomarker_component,
+        "adherence_component": adherence_component,
+        "calculated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await _run(lambda: supabase.table("health_scores").insert({"user_id": user_id, **result}).execute())
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="biomarkers",
+        details={"sample_size": len(bio_rows), "source": "health_score_calc"},
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="health_scores",
+        details={"score": result.get("score")},
+    )
+    return result
+
+
+# ──────────────────────────────────────────────
+# TIMELINE
+# ──────────────────────────────────────────────
+
+async def _emit_timeline(user_id: str, event_type: str, summary: str,
+                          source: Optional[str] = None, metadata: Optional[Dict] = None,
+                          analysis_effect_key: Optional[str] = None,
+                          require_durable: bool = False) -> None:
+    payload = {
+        "user_id": user_id,
+        "event_type": event_type,
+        "summary": summary,
+        "source": source or "system",
+        "metadata": metadata or {},
+    }
+    if analysis_effect_key:
+        payload["analysis_effect_key"] = analysis_effect_key
+    try:
+        supabase = _get_supabase()
+        table = supabase.table("timeline_events")
+        await _run(lambda: table.upsert(payload, on_conflict="analysis_effect_key").execute()
+                   if analysis_effect_key else table.insert(payload).execute())
+    except Exception:
+        # Ordinary product timeline telemetry remains best-effort. Recovery
+        # ledger items must instead retain their lease until the idempotent
+        # database write is confirmed.
+        if require_durable:
+            raise AtomicFinalizationError("timeline_effect_write_failed") from None
+
+
+async def save_timeline_event(user_id: str, event_type: str, summary: str,
+                              source: Optional[str] = None, metadata: Optional[Dict] = None,
+                              analysis_effect_key: Optional[str] = None,
+                              require_durable: bool = False) -> None:
+    await _emit_timeline(user_id, event_type, summary, source=source, metadata=metadata,
+                         analysis_effect_key=analysis_effect_key, require_durable=require_durable)
+
+
+async def get_user_timeline(user_id: str, limit: int = 30) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("timeline_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("occurred_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    timeline = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="timeline_events",
+        details={"count": len(timeline), "limit": limit},
+    )
+    return timeline
+
+
+# ──────────────────────────────────────────────
+# NOTIFICATIONS
+# ──────────────────────────────────────────────
+
+async def get_user_notifications(user_id: str, limit: int = 20) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("notifications")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return resp.data or []
+
+
+async def create_notification(user_id: str, trigger_type: str, subject: str,
+                               body: str, channel: str = "in_app") -> Dict:
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "trigger_type": trigger_type,
+        "channel": channel,
+        "subject": subject,
+        "body": body,
+    }
+    resp = await _run(lambda: supabase.table("notifications").insert(payload).execute())
+    await _emit_timeline(user_id, "notification_sent", f"Notification: {subject[:60]}")
+    return resp.data[0] if resp.data else payload
+
+
+# ──────────────────────────────────────────────
+# ADMIN HELPERS
+# ──────────────────────────────────────────────
+
+async def get_all_users_for_admin(limit: int = 200) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("users")
+        .select("id, email, full_name, age, sex, sub_status, created_at")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return resp.data or []
+
+
+async def get_platform_overview() -> Dict[str, Any]:
+    """Multi-org platform aggregation for super-admin dashboards."""
+    supabase = _get_supabase()
+    cutoff_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+
+    users_total_resp = await _run(lambda: supabase.table("users").select("id", count="exact").execute())
+    org_total_resp = await _run(lambda: supabase.table("organizations").select("id", count="exact").execute())
+
+    active_programs_resp = await _run(
+        lambda: supabase.table("practitioner_assignments")
+        .select("id", count="exact")
+        .eq("status", "active")
+        .execute()
+    )
+
+    registrations_24h_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .gte("created_at", cutoff_24h)
+        .execute()
+    )
+
+    return {
+        "total_users": users_total_resp.count or len(users_total_resp.data),
+        "total_organizations": org_total_resp.count or len(org_total_resp.data),
+        "active_programs": active_programs_resp.count or len(active_programs_resp.data),
+        "new_registrations_24h": registrations_24h_resp.count or len(registrations_24h_resp.data),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Return latest platform audit events for Ops visibility.
+
+    audit_logs real schema: id, user_id, action, entity_type, entity_id, created_at
+    (no timestamp, organization_id, old_value, new_value columns in current DB).
+    Falls back to timeline_events when audit_logs is empty.
+    """
+    supabase = _get_supabase()
+
+    try:
+        resp = await _run(
+            lambda: supabase.table("audit_logs")
+            .select("id,user_id,action,entity_type,entity_id,created_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        rows = resp.data or []
+        if rows:
+            # Normalize to a consistent shape for the CRM Ops feed
+            return [
+                {
+                    "id": row.get("id"),
+                    "user_id": row.get("user_id"),
+                    "action": row.get("action"),
+                    "entity_type": row.get("entity_type"),
+                    "entity_id": row.get("entity_id"),
+                    "organization_id": None,
+                    "old_value": {},
+                    "new_value": {},
+                    "timestamp": row.get("created_at"),
+                }
+                for row in rows
+            ]
+
+        # Fallback: if audit feed is empty, expose recent timeline events for Ops visibility.
+        timeline_resp = await _run(
+            lambda: supabase.table("timeline_events")
+            .select("id,user_id,event_type,summary,occurred_at")
+            .order("occurred_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        timeline_rows = timeline_resp.data or []
+        return [
+            {
+                "id": row.get("id"),
+                "user_id": row.get("user_id"),
+                "action": row.get("event_type") or "timeline_event",
+                "entity_type": "timeline_event",
+                "entity_id": row.get("id") or str(uuid4()),
+                "organization_id": None,
+                "old_value": {},
+                "new_value": {"summary": row.get("summary")},
+                "timestamp": row.get("occurred_at"),
+            }
+            for row in timeline_rows
+        ]
+
+    except Exception as ex:
+        # Keep Ops UI available even if audit feed backend storage is misconfigured.
+        _logger.warning("audit_logs_read_failed returning_empty_feed error=%s", ex)
+        return []
+
+
+async def write_audit_log(
+    *,
+    user_id: Optional[str],
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    old_value: Optional[Dict[str, Any]] = None,
+    new_value: Optional[Dict[str, Any]] = None,
+    organization_id: Optional[str] = None,
+    analysis_effect_key: Optional[str] = None,
+    require_durable: bool = False,
+) -> None:
+    """Best-effort audit helper, with an explicit durable recovery mode."""
+    try:
+        supabase = _get_supabase()
+        payload_full = {
+            "user_id": user_id,
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": entity_id or str(uuid4()),
+            "old_value": old_value or {},
+            "new_value": new_value or {},
+            "organization_id": organization_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if analysis_effect_key:
+            payload_full["analysis_effect_key"] = analysis_effect_key
+
+        payload_minimal = {
+            "user_id": user_id,
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": payload_full["entity_id"],
+        }
+
+        allowed_actions = {"create", "read", "update", "delete", "assign", "reassign"}
+        allowed_entity_types = {"client", "practitioner", "program", "subscription", "questionnaire", "client_program"}
+        legacy_entity_type = entity_type if entity_type in allowed_entity_types else "client"
+
+        payload_legacy = {
+            "user_id": user_id,
+            "action": action if action in allowed_actions else "update",
+            "entity_type": legacy_entity_type,
+            "entity_id": str(uuid4()),
+            "changes": {
+                "source_action": action,
+                "source_entity_type": entity_type,
+                "source_entity_id": payload_full["entity_id"],
+                "old_value": old_value or {},
+                "new_value": new_value or {},
+                "organization_id": organization_id,
+            },
+        }
+
+        try:
+            table = supabase.table("audit_logs")
+            await _run(lambda: table.upsert(payload_full, on_conflict="analysis_effect_key").execute()
+                       if analysis_effect_key else table.insert(payload_full).execute())
+            return
+        except Exception:
+            if analysis_effect_key:
+                # A recovery effect may never downgrade to a legacy insert that
+                # lacks its database-enforced identity.
+                raise
+            # Fallback for partially migrated schemas where extended audit columns are absent.
+            try:
+                await _run(lambda: supabase.table("audit_logs").insert(payload_minimal).execute())
+                return
+            except Exception:
+                # Final fallback for legacy constraints: action/entity_type/check-limited schema.
+                await _run(lambda: supabase.table("audit_logs").insert(payload_legacy).execute())
+    except Exception as ex:
+        if require_durable:
+            # Do not surface provider exception text; recovery records a stable
+            # code and leaves the ledger item retryable.
+            raise AtomicFinalizationError("audit_effect_write_failed") from None
+        _logger.warning("audit_log_write_failed action=%s entity_type=%s error=%s", action, entity_type, ex)
+
+
+async def get_admin_user_detail(user_id: str) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    user_resp, profile_resp, location_resp, complaints_resp, checkins_resp, uploads_resp, red_flags_resp, timeline_resp = \
+        await asyncio.gather(
+            _run(lambda: supabase.table("users").select("*").eq("id", user_id).limit(1).execute()),
+            _run(lambda: supabase.table("user_profile").select("*").eq("id", user_id).limit(1).execute()),
+            _run(lambda: supabase.table("user_locations").select("*").eq("user_id", user_id).execute()),
+            _run(lambda: supabase.table("recurring_complaints").select("*").eq("user_id", user_id).execute()),
+            _run(lambda: supabase.table("checkins_weekly").select("*").eq("user_id", user_id).order("week_start", desc=True).limit(12).execute()),
+            _run(lambda: supabase.table("lab_uploads").select("id,lab_name,created_at,status").eq("user_id", user_id).order("created_at", desc=True).limit(10).execute()),
+            _run(lambda: supabase.table("red_flag_events").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()),
+            _run(lambda: supabase.table("timeline_events").select("*").eq("user_id", user_id).order("occurred_at", desc=True).limit(20).execute()),
+        )
+    return {
+        "user": user_resp.data[0] if user_resp.data else None,
+        "profile": profile_resp.data[0] if profile_resp.data else None,
+        "locations": location_resp.data or [],
+        "complaints": complaints_resp.data or [],
+        "checkins": checkins_resp.data or [],
+        "uploads": uploads_resp.data or [],
+        "red_flags": red_flags_resp.data or [],
+        "timeline": timeline_resp.data or [],
+    }
+
+
+async def redact_old_lab_upload_text(
+    *,
+    retention_days: int,
+    batch_size: int,
+    dry_run: bool = True,
+) -> Dict[str, Any]:
+    """Redact old raw extracted_text values while preserving biomarker history.
+
+    This keeps longitudinal insights but minimizes storage of raw medical text.
+    """
+    supabase = _get_supabase()
+    safe_days = max(30, min(retention_days, 3650))
+    safe_batch = max(1, min(batch_size, 5000))
+    cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=safe_days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id,created_at,extracted_text")
+        .lt("created_at", cutoff_iso)
+        .order("created_at", desc=False)
+        .limit(safe_batch)
+        .execute()
+    )
+
+    rows = resp.data or []
+    to_redact = [row for row in rows if str(row.get("extracted_text") or "").strip()]
+    target_ids = [str(row.get("id")) for row in to_redact if row.get("id")]
+
+    result: Dict[str, Any] = {
+        "cutoff": cutoff_iso,
+        "retention_days": safe_days,
+        "batch_size": safe_batch,
+        "candidates_scanned": len(rows),
+        "redaction_candidates": len(target_ids),
+        "dry_run": dry_run,
+        "updated": 0,
+        "sample_ids": target_ids[:10],
+    }
+
+    if dry_run or not target_ids:
+        return result
+
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update({"extracted_text": "[REDACTED_BY_RETENTION_POLICY]"})
+        .in_("id", target_ids)
+        .execute()
+    )
+    result["updated"] = len(target_ids)
+
+    await write_audit_log(
+        user_id=None,
+        action="retention_redaction",
+        entity_type="lab_uploads",
+        entity_id=str(uuid4()),
+        new_value={
+            "retention_days": safe_days,
+            "batch_size": safe_batch,
+            "updated": result["updated"],
+            "sample_ids": result["sample_ids"],
+        },
+    )
+
+    _logger.info(
+        "retention_redaction_completed scanned=%s candidates=%s updated=%s cutoff=%s",
+        result["candidates_scanned"],
+        result["redaction_candidates"],
+        result["updated"],
+        cutoff_iso,
+    )
+    return result
+
+
+def _parse_iso_datetime(value: Any) -> Optional[datetime]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+async def get_retention_redaction_status() -> Dict[str, Any]:
+    """Return retention run health summary for admin dashboards."""
+    supabase = _get_supabase()
+    since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    try:
+        resp = await _run(
+            lambda: supabase.table("audit_logs")
+            .select("action,created_at,new_value,entity_type")
+            .eq("entity_type", "lab_uploads")
+            .in_("action", ["retention_redaction_job", "retention_redaction", "retention_redaction_failed"])
+            .order("created_at", desc=True)
+            .limit(200)
+            .execute()
+        )
+        rows = resp.data or []
+    except Exception:
+        rows = []
+
+    def _row_status(row: Dict[str, Any]) -> str:
+        action = str(row.get("action") or "")
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        if action == "retention_redaction_failed":
+            return "failed"
+        if action == "retention_redaction":
+            return "success"
+        status = str(nv.get("status") or "").strip().lower()
+        return status or "unknown"
+
+    def _row_updated(row: Dict[str, Any]) -> int:
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        return _safe_int(nv.get("updated"), 0)
+
+    def _row_compact(row: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not row:
+            return None
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        return {
+            "action": row.get("action"),
+            "timestamp": row.get("created_at") or row.get("timestamp"),
+            "status": _row_status(row),
+            "updated": _row_updated(row),
+            "dry_run": bool(nv.get("dry_run")) if "dry_run" in nv else None,
+            "error": nv.get("error"),
+        }
+
+    last_run = rows[0] if rows else None
+    last_success = next((row for row in rows if _row_status(row) == "success"), None)
+    last_failure = next((row for row in rows if _row_status(row) == "failed"), None)
+
+    runs_24h = 0
+    failures_24h = 0
+    updated_24h = 0
+    for row in rows:
+        dt = _parse_iso_datetime(row.get("created_at") or row.get("timestamp"))
+        if not dt or dt < since_24h:
+            continue
+        runs_24h += 1
+        if _row_status(row) == "failed":
+            failures_24h += 1
+        if _row_status(row) == "success":
+            updated_24h += _row_updated(row)
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "runs_24h": runs_24h,
+        "failures_24h": failures_24h,
+        "updated_24h": updated_24h,
+        "last_run": _row_compact(last_run),
+        "last_success": _row_compact(last_success),
+        "last_failure": _row_compact(last_failure),
+    }
+
+
+# ============================================================================
+# GDPR & USER ACCOUNT MANAGEMENT
+# ============================================================================
+
+async def delete_user_cascade(user_id: str) -> None:
+    """
+    Delete user account and all associated data (GDPR right to be forgotten).
+
+    Deletion order respects foreign key constraints:
+    1. insights, recommendations → depend on biomarkers
+    2. biomarkers → depend on lab_uploads
+    3. lab_uploads, weekly_checkins, protocols → depend on users
+    4. audit_logs, user_preferences, notification_preferences → have user_id foreign key
+    5. users → last (Supabase auth will be deleted separately)
+
+    Args:
+        user_id: UUID of user to delete
+
+    Raises:
+        Exception: If deletion fails at any step (transaction rolls back)
+    """
+    def get_supabase():
+        return _get_supabase()
+
+    # Tables to delete in order (FK dependencies matter)
+    tables_to_delete = [
+        "insights",
+        "recommendations",
+        "biomarkers",
+        "lab_uploads",
+        "weekly_checkins",
+        "protocols",
+        "audit_logs",
+        "user_preferences",
+        "notification_preferences",
+        "users",
+    ]
+
+    _logger.info(f"delete_cascade_start user_id={user_id}")
+
+    deleted_counts = {}
+    try:
+        for table in tables_to_delete:
+            try:
+                result = await _run(
+                    lambda t=table, uid=user_id: get_supabase().table(t)
+                    .delete()
+                    .eq("user_id", uid)
+                    .execute()
+                )
+                # Count deleted rows from response
+                deleted_count = len(result.data) if hasattr(result, 'data') else 0
+                deleted_counts[table] = deleted_count
+                _logger.info(f"delete_cascade_table table={table} user_id={user_id} deleted_rows={deleted_count}")
+            except Exception as e:
+                _logger.error(f"delete_cascade_table_failed table={table} user_id={user_id} error={str(e)}")
+                raise
+
+        # Log the deletion action in audit table (if it wasn't already deleted)
+        try:
+            await write_audit_log(
+                user_id=user_id,
+                action="delete",
+                entity_type="user_account",
+                entity_id=user_id,
+                new_value={
+                    "reason": "user_requested_gdpr_deletion",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "tables_deleted": deleted_counts,
+                }
+            )
+        except Exception as e:
+            _logger.warning(f"delete_cascade_audit_log_failed user_id={user_id} error={str(e)}")
+            # Don't fail the whole operation if audit logging fails
+
+        _logger.info(f"delete_cascade_complete user_id={user_id} summary={deleted_counts}")
+
+    except Exception as e:
+        _logger.error(f"delete_cascade_failed user_id={user_id} error={str(e)} deleted_tables={list(deleted_counts.keys())}")
+        raise

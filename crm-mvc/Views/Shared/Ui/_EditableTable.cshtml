@@ -1,0 +1,241 @@
+@model EditableTableViewModel
+
+<section class="vo-card" style="margin-bottom: var(--vo-space-6);">
+  <div class="vo-card-head">
+    <h3>@Model.Title</h3>
+    @if (Model.Rows.Count > 0)
+    {
+      <span class="vo-pill tone-gray">@Model.Rows.Count</span>
+    }
+  </div>
+
+  @if (Model.Rows.Count == 0)
+  {
+    <div class="vo-empty-state">
+      <span class="vo-empty-state-icon">🔍</span>
+      <h3>Nothing here yet</h3>
+      <p>@Model.EmptyMessage</p>
+    </div>
+  }
+  else
+  {
+    var hasActions = Model.Rows.Any(r => r.PrimaryAction is not null || r.SecondaryActions.Count > 0);
+    <div class="vo-table-wrap">
+      <table class="vo-table">
+        <thead>
+          <tr>
+            @foreach (var column in Model.Columns)
+            {
+              <th>@column</th>
+            }
+            @if (hasActions)
+            {
+              <th>Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var row in Model.Rows)
+          {
+            var primaryFormId = row.PrimaryAction is null ? null : $"editable-row-{row.RowKey}";
+            <tr>
+              @foreach (var cell in row.Cells)
+              {
+                <td>
+                  @switch (cell.Kind)
+                  {
+                    case EditableTableCellKind.Code:
+                      <code>@cell.Text</code>
+                      break;
+                    case EditableTableCellKind.Badge:
+                      <span class="badge badge-@cell.BadgeTone">@cell.Text</span>
+                      break;
+                    case EditableTableCellKind.InputText:
+                      <input
+                        type="text"
+                        name="@cell.Name"
+                        value="@cell.Value"
+                        placeholder="@cell.Placeholder"
+                        class="inline-input @cell.CssClass"
+                        form="@primaryFormId" />
+                      break;
+                    case EditableTableCellKind.InputNumber:
+                      <input
+                        type="number"
+                        name="@cell.Name"
+                        value="@cell.Value"
+                        placeholder="@cell.Placeholder"
+                        class="inline-input @cell.CssClass"
+                        form="@primaryFormId" />
+                      break;
+                    case EditableTableCellKind.Select:
+                      <select name="@cell.Name" class="inline-input @cell.CssClass" form="@primaryFormId">
+                        @foreach (var option in cell.Options)
+                        {
+                          if (option.Selected)
+                          {
+                            <option selected="selected" value="@option.Value">@option.Label</option>
+                          }
+                          else
+                          {
+                            <option value="@option.Value">@option.Label</option>
+                          }
+                        }
+                      </select>
+                      break;
+                    default:
+                      @cell.Text
+                      break;
+                  }
+                </td>
+              }
+
+              @if (hasActions)
+              {
+                <td>
+                  <div class="editable-actions-stack">
+                    @if (row.PrimaryAction is not null)
+                    {
+                      <form
+                        id="@primaryFormId"
+                        method="@row.PrimaryAction.Method"
+                        action="@row.PrimaryAction.ActionUrl"
+                        class="inline-form"
+                        onsubmit="@(string.IsNullOrWhiteSpace(row.PrimaryAction.ConfirmMessage) ? null : $"return confirm('{row.PrimaryAction.ConfirmMessage}');")">
+                        @Html.AntiForgeryToken()
+                        @foreach (var field in row.PrimaryAction.Fields)
+                        {
+                          switch (field.Kind)
+                          {
+                            case EditableTableFieldKind.Hidden:
+                              <input type="hidden" name="@field.Name" value="@field.Value" />
+                              break;
+                            case EditableTableFieldKind.Number:
+                              <input type="number" name="@field.Name" value="@field.Value" placeholder="@field.Placeholder" class="inline-input @field.CssClass" />
+                              break;
+                            case EditableTableFieldKind.Select:
+                              <select name="@field.Name" class="inline-input @field.CssClass">
+                                @foreach (var option in field.Options)
+                                {
+                                  if (option.Selected)
+                                  {
+                                    <option selected="selected" value="@option.Value">@option.Label</option>
+                                  }
+                                  else
+                                  {
+                                    <option value="@option.Value">@option.Label</option>
+                                  }
+                                }
+                              </select>
+                              break;
+                            default:
+                              <input type="text" name="@field.Name" value="@field.Value" placeholder="@field.Placeholder" class="inline-input @field.CssClass" />
+                              break;
+                          }
+                        }
+                        <button type="submit" class="@row.PrimaryAction.SubmitButtonClass">@row.PrimaryAction.SubmitLabel</button>
+                      </form>
+                    }
+
+                    @foreach (var action in row.SecondaryActions)
+                    {
+                      <form
+                        method="@action.Method"
+                        action="@action.ActionUrl"
+                        class="inline-form"
+                        onsubmit="@(string.IsNullOrWhiteSpace(action.ConfirmMessage) ? null : $"return confirm('{action.ConfirmMessage}');")">
+                        @Html.AntiForgeryToken()
+                        @foreach (var field in action.Fields)
+                        {
+                          switch (field.Kind)
+                          {
+                            case EditableTableFieldKind.Hidden:
+                              <input type="hidden" name="@field.Name" value="@field.Value" />
+                              break;
+                            case EditableTableFieldKind.Number:
+                              <input type="number" name="@field.Name" value="@field.Value" placeholder="@field.Placeholder" class="inline-input @field.CssClass" />
+                              break;
+                            case EditableTableFieldKind.Select:
+                              <select name="@field.Name" class="inline-input @field.CssClass">
+                                @foreach (var option in field.Options)
+                                {
+                                  if (option.Selected)
+                                  {
+                                    <option selected="selected" value="@option.Value">@option.Label</option>
+                                  }
+                                  else
+                                  {
+                                    <option value="@option.Value">@option.Label</option>
+                                  }
+                                }
+                              </select>
+                              break;
+                            default:
+                              <input type="text" name="@field.Name" value="@field.Value" placeholder="@field.Placeholder" class="inline-input @field.CssClass" />
+                              break;
+                          }
+                        }
+                        <button type="submit" class="@action.SubmitButtonClass">@action.SubmitLabel</button>
+                      </form>
+                    }
+                  </div>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<style>
+  .editable-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 280px;
+  }
+
+  .inline-form {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .inline-input {
+    min-width: 92px;
+    padding: 0.3rem 0.45rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+  }
+
+  .badge-warning {
+    background: rgba(234, 179, 8, 0.1);
+    color: #eab308;
+  }
+
+  .badge-primary {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+  }
+
+  .badge-secondary {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+  }
+</style>

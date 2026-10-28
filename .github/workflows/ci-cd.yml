@@ -1,0 +1,569 @@
+name: CI / CD
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # JOB 1: Backend lint + unit tests (no Supabase needed)
+  # ─────────────────────────────────────────────────────────
+  backend-test:
+    name: Backend — lint & unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Syntax-check all .py files
+        run: |
+          python - <<'EOF'
+          import ast, os, sys
+          errors = []
+          for root, dirs, files in os.walk("app"):
+              dirs[:] = [d for d in dirs if d != "__pycache__"]
+              for f in files:
+                  if not f.endswith(".py"):
+                      continue
+                  path = os.path.join(root, f)
+                  with open(path) as fh:
+                      src = fh.read()
+                  try:
+                      ast.parse(src)
+                  except SyntaxError as e:
+                      errors.append(f"{path}: {e}")
+          if errors:
+              for e in errors:
+                  print("SYNTAX ERROR:", e)
+              sys.exit(1)
+          print(f"Syntax OK — {sum(1 for r,d,fs in os.walk('app') for f in fs if f.endswith('.py'))} files checked")
+          EOF
+
+      - name: Run unit tests
+        env:
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_SERVICE_ROLE_KEY: "placeholder"
+        run: pytest tests -q --tb=short
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 2: CRM .NET tests
+  # ─────────────────────────────────────────────────────────
+  crm-test:
+    name: CRM — .NET unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./crm-mvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore tests/Vitaloop.Crm.Web.Tests/
+
+      # `dotnet test ... -q` on this SDK misclassifies benign diagnostic
+      # messages (e.g. "Creating directory obj/Debug/net8.0/staticwebassets/",
+      # "Building target X completely" — normal detailed-verbosity build
+      # chatter, not errors) as "error :" and fails the whole run with exit
+      # code 1, even though nothing actually went wrong. Reproduced locally
+      # with the exact pinned SDK (8.0.425): identical command WITH -q
+      # failed on a rotating cast of unrelated "error :"-prefixed messages
+      # (first StaticWebAssets' MakeDir step, then — after trying to route
+      # around that with -p:StaticWebAssetsEnabled=false —
+      # "Building target GenerateTargetFrameworkMonikerAttribute completely"
+      # instead); the identical command WITHOUT -q passed clean both times,
+      # 39/39 tests green. Dropping -q is the actual, minimal fix — no
+      # property overrides needed. (This also means CI logs are more
+      # verbose now, which is a feature, not a cost: -q was hiding useful
+      # build output the whole time.)
+      - name: Run xUnit tests
+        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 3: Frontend build + Playwright smoke
+  # ─────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend — build & E2E smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run completion UI Vitest tests
+        run: npx --no-install vitest run src/pages/ProtocolPage.test.jsx src/api/interventions.test.js
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Static routes, links, and claims
+        run: npm run qa:routes && npm run qa:links:strict && npm run qa:claims
+
+      - name: Build production bundle
+        run: NODE_OPTIONS=--max-old-space-size=1536 npx vite build --mode production
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Preflight Playwright Chromium
+        run: |
+          set -euo pipefail
+          executable_path=$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')
+          echo "Resolved Chromium executable: $executable_path"
+          echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
+          if [[ ! -x "$executable_path" ]]; then
+            echo "Chromium executable does not exist or is not executable"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 6 -print 2>/dev/null || true
+            exit 1
+          fi
+          if ! node - <<'EOF'
+          const { chromium } = require("playwright");
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            await browser.close();
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+          then
+            echo "Chromium launch failed"
+            echo "Resolved Chromium executable: $executable_path"
+            echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 6 -print 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Run canonical user-flow E2E
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+        run: |
+          npm run dev -- --mode production --host 127.0.0.1 > /tmp/vitaloop-vite.log 2>&1 &
+          vite_pid=$!
+          ready=0
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:5173 >/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$vite_pid" 2>/dev/null; then
+              cat /tmp/vitaloop-vite.log
+              exit 1
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != "1" ]]; then
+            cat /tmp/vitaloop-vite.log
+            exit 1
+          fi
+          npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
+
+  # ─────────────────────────────────────────────────────────
+  # Compose contract gate. This runs on pull requests with only synthetic
+  # values: it must never need production credentials or contact production.
+  # ─────────────────────────────────────────────────────────
+  compose-production-validation:
+    name: Production Compose — immutable release contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate rendered production Compose contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_tag=0123456789abcdef0123456789abcdef01234567
+          created_env_file=""
+          if [[ ! -e backend/.env ]]; then
+            created_env_file=backend/.env
+            cat > "$created_env_file" <<'EOF'
+          SUPABASE_URL=https://ci-placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY=ci-placeholder-not-a-secret
+          EOF
+          fi
+          trap '[[ -z "$created_env_file" ]] || rm -f "$created_env_file"' EXIT
+
+          VITALOOP_IMAGE_TAG="$image_tag" docker compose -f docker-compose.prod.yml config --quiet
+          compose_config="$(VITALOOP_IMAGE_TAG="$image_tag" docker compose -f docker-compose.prod.yml config --format json)"
+
+          jq -e --arg tag "$image_tag" '
+            .services.backend.image == "vitaloop-backend:\($tag)" and
+            .services.frontend.image == "vitaloop-frontend:\($tag)" and
+            .services["recovery-worker"].image == "vitaloop-backend:\($tag)" and
+            .services["recovery-worker"].restart == "unless-stopped" and
+            ((.services["recovery-worker"].ports // []) | length == 0) and
+            ((.services["recovery-worker"].command | if type == "array" then join(" ") else . end)
+              == "python -m app.workers.autonomous_recovery")
+          ' <<<"$compose_config" >/dev/null
+
+          if grep -Eq 'VITALOOP_IMAGE_TAG:-latest|image:.*:latest' docker-compose.prod.yml; then
+            echo "Production Compose must not contain a latest-image fallback."
+            exit 1
+          fi
+          if grep -Fq ':latest' <<<"$compose_config"; then
+            echo "Rendered production Compose must not resolve any latest image."
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/ci-cd.yml").read_text(encoding="utf-8")
+          expected = (
+              "VITALOOP_IMAGE_TAG=$" + "{{ github.sha }} "
+              "docker compose -f docker-compose.prod.yml up -d --no-build "
+              "--force-recreate backend recovery-worker frontend"
+          )
+          if expected not in workflow:
+              raise SystemExit("Production deploy must pass its immutable Git SHA to Compose.")
+          PY
+          grep -Fq 'PREVIOUS_RELEASE_SHA=<40-character previously deployed Git SHA>' docs/autonomous-recovery-operations.md
+          grep -Fq 'VITALOOP_IMAGE_TAG="$PREVIOUS_RELEASE_SHA" docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend' docs/autonomous-recovery-operations.md
+
+          echo "Production Compose immutable-image, worker, deploy, and rollback contracts verified."
+
+  # ─────────────────────────────────────────────────────────
+  # ─────────────────────────────────────────────────────────
+  # Production schema gate. This is deliberately a main-only job: service-role
+  # credentials must never be available to pull-request workflows. The protected
+  # Environment is an operator-configured release boundary; an unconfigured
+  # Environment provides no protection and must block release approval.
+  # ─────────────────────────────────────────────────────────
+  production-schema-preflight:
+    name: Production — atomic schema preflight
+    runs-on: ubuntu-latest
+    needs: [backend-test, crm-test, frontend-build, compose-production-validation]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+    env:
+      SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Verify the required atomic-finalization schema contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing production schema endpoint secret}"
+          : "${SUPABASE_SERVICE_ROLE_KEY:?Missing production service-role secret}"
+
+          response_file="$(mktemp)"
+          recovery_response_file="$(mktemp)"
+          trap 'rm -f "$response_file" "$recovery_response_file"' EXIT
+          status="$(curl --request POST --silent --show-error \
+            --output "$response_file" --write-out '%{http_code}' --max-time 20 \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/atomic_finalization_schema_preflight")"
+          if [[ "$status" != "200" ]]; then
+            echo "Production schema preflight RPC did not return HTTP 200."
+            exit 1
+          fi
+
+          python - "$response_file" <<'PY'
+          import json
+          import sys
+
+          expected = {
+              "schema_ready": True,
+              "migration_contract": "20261016120000_atomic_lab_analysis_finalization",
+          }
+          try:
+              with open(sys.argv[1], encoding="utf-8") as response:
+                  payload = json.load(response)
+          except (OSError, json.JSONDecodeError):
+              raise SystemExit("Production schema preflight returned an invalid response.")
+          if payload != expected:
+              raise SystemExit("Production schema contract is absent, incomplete, or incompatible.")
+          PY
+          echo "Production atomic schema contract verified."
+
+          recovery_status="$(curl --request POST --silent --show-error \
+            --output "$recovery_response_file" --write-out '%{http_code}' --max-time 20 \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            "${SUPABASE_URL%/}/rest/v1/rpc/autonomous_recovery_schema_preflight")"
+          if [[ "$recovery_status" != "200" ]]; then
+            echo "Production autonomous-recovery schema preflight RPC did not return HTTP 200."
+            exit 1
+          fi
+
+          python - "$recovery_response_file" <<'PY'
+          import json
+          import sys
+
+          expected = {
+              "schema_ready": True,
+              "migration_contract": "20261019090000_autonomous_recovery_worker",
+          }
+          try:
+              with open(sys.argv[1], encoding="utf-8") as response:
+                  payload = json.load(response)
+          except (OSError, json.JSONDecodeError):
+              raise SystemExit("Production autonomous-recovery preflight returned an invalid response.")
+          if payload != expected:
+              raise SystemExit("Production autonomous-recovery schema contract is absent, incomplete, or incompatible.")
+          PY
+          echo "Production autonomous-recovery schema contract verified."
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 4: Deploy to production (only on push to main)
+  # ─────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: [backend-test, crm-test, frontend-build, compose-production-validation, production-schema-preflight]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 20
+    environment:
+      name: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
+
+      # All production images are built on this GitHub runner. The server is
+      # only an image transport/runtime host: it must never run npm or docker
+      # build during deployment. See RUNBOOK.md for the invariant.
+      - name: Pull latest code on server
+        run: |
+          ssh root@${{ secrets.PROD_HOST }} "
+            cd /var/www/VITALOOP &&
+            git fetch origin main &&
+            git reset --hard origin/main
+          "
+
+      - name: Validate production frontend build secrets
+        env:
+          PROD_VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+          PROD_VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$PROD_VITE_SUPABASE_URL" || { echo "Missing PROD_VITE_SUPABASE_URL"; exit 1; }
+          test -n "$PROD_VITE_SUPABASE_ANON_KEY" || { echo "Missing PROD_VITE_SUPABASE_ANON_KEY"; exit 1; }
+
+      - name: Free runner disk before production image build
+        run: |
+          echo "Disk before cleanup"
+          df -h
+          for path in \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/share/powershell \
+            /usr/local/share/chromium; do
+            if [[ -e "$path" ]]; then
+              sudo rm -rf "$path"
+            fi
+          done
+          docker system prune --all --force --volumes
+          echo "Disk after cleanup"
+          df -h
+
+      - name: Build production Docker images on CI runner
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
+          VITE_API_BASE_URL: https://api.vitaloop.today
+          VITE_APP_BASE_URL: https://app.vitaloop.today
+          VITE_CRM_BASE_URL: https://crm.vitaloop.today
+          VITE_EMAIL_CONFIRMATION_PATH: https://app.vitaloop.today/auth/confirmation
+        run: |
+          docker build -t vitaloop-backend:${{ github.sha }} ./backend
+          docker build \
+            --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
+            --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+            --build-arg VITE_APP_BASE_URL="$VITE_APP_BASE_URL" \
+            --build-arg VITE_CRM_BASE_URL="$VITE_CRM_BASE_URL" \
+            --build-arg VITE_EMAIL_CONFIRMATION_PATH="$VITE_EMAIL_CONFIRMATION_PATH" \
+            -t vitaloop-frontend:${{ github.sha }} \
+            -f frontend/Dockerfile.prod frontend
+
+      - name: Transfer images to production without server-side builds
+        run: |
+          docker save vitaloop-backend:${{ github.sha }} vitaloop-frontend:${{ github.sha }} \
+            | gzip \
+            | ssh root@${{ secrets.PROD_HOST }} 'gunzip | docker load'
+
+      - name: Restart production containers without building
+        run: |
+          ssh root@${{ secrets.PROD_HOST }} "
+            cd /var/www/VITALOOP &&
+            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend recovery-worker frontend
+          "
+
+      - name: Install and reload nginx routing
+        run: |
+          scp nginx.vitaloop.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/vitaloop.today
+          # API vhost keeps CORS at the edge; app.vitaloop.today must be
+          # allowlisted here as well as in FastAPI settings.
+          scp ops/nginx/api.vitaloop.today.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/api.vitaloop.today
+          # Stage the app vhost only. It is deliberately not enabled here:
+          # DNS and an origin certificate must be in place before cutover.
+          scp ops/nginx/app.vitaloop.today.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/app.vitaloop.today
+          # Stage, but do not include, English cabinet legacy redirects.
+          scp ops/nginx/vitaloop-cabinet-legacy-redirects.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/snippets/vitaloop-cabinet-legacy-redirects.conf
+          ssh root@${{ secrets.PROD_HOST }} 'nginx -t && systemctl reload nginx'
+
+      - name: Health check
+        run: |
+          sleep 8
+          backend_status=$(curl -sf -o /dev/null -w "%{http_code}" https://api.vitaloop.today/health || echo "000")
+          echo "Backend health endpoint returned: $backend_status"
+          if [[ "$backend_status" != "200" ]]; then
+            echo "Backend health check FAILED (status=$backend_status)"
+            exit 1
+          fi
+
+          frontend_status=$(curl -sf -o /dev/null -w "%{http_code}" https://vitaloop.today || echo "000")
+          echo "Frontend returned: $frontend_status"
+          if [[ "$frontend_status" != "200" ]]; then
+            echo "Frontend check FAILED (status=$frontend_status)"
+            exit 1
+          fi
+          echo "Health check PASSED"
+
+      - name: Rotate old production Docker images
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+        run: |
+          ssh "root@$PROD_HOST" 'bash -s' <<'REMOTE'
+          set -u
+
+          skip_rotation() {
+            echo "Image rotation skipped: $1"
+            echo "Removed image count: 0"
+            echo "Kept images:"
+            docker image ls --format '{{.Repository}}:{{.Tag}}' \
+              | grep -E '^vitaloop-(backend|frontend):' || true
+            docker system df || true
+            df -h || true
+            exit 0
+          }
+
+          backend_image=$(docker inspect -f '{{.Config.Image}}' vitaloop-backend 2>/dev/null) || \
+            skip_rotation "current backend container could not be inspected"
+          frontend_image=$(docker inspect -f '{{.Config.Image}}' vitaloop-frontend 2>/dev/null) || \
+            skip_rotation "current frontend container could not be inspected"
+
+          if [[ ! "$backend_image" =~ ^vitaloop-backend:[0-9a-f]{40}$ ]] || \
+             [[ ! "$frontend_image" =~ ^vitaloop-frontend:[0-9a-f]{40}$ ]]; then
+            skip_rotation "current containers do not use immutable Vitaloop SHA tags"
+          fi
+
+          current_backend_sha=${backend_image#vitaloop-backend:}
+          current_frontend_sha=${frontend_image#vitaloop-frontend:}
+          if [[ "$current_backend_sha" != "$current_frontend_sha" ]]; then
+            skip_rotation "backend and frontend current SHAs differ"
+          fi
+          current_sha=$current_backend_sha
+
+          previous_sha=$(for sha in $(docker image ls --format '{{.Tag}}' vitaloop-backend \
+            | grep -E '^[0-9a-f]{40}$' || true); do
+            [[ "$sha" == "$current_sha" ]] && continue
+            docker image inspect "vitaloop-frontend:$sha" >/dev/null 2>&1 || continue
+            created=$(docker image inspect -f '{{.Created}}' "vitaloop-backend:$sha" 2>/dev/null) || continue
+            printf '%s\t%s\n' "$created" "$sha"
+          done | sort -r | awk 'NR == 1 { print $2; exit }')
+
+          if [[ ! "$previous_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            skip_rotation "no previous matching backend/frontend pair was found"
+          fi
+
+          keep_backend_current="vitaloop-backend:$current_sha"
+          keep_frontend_current="vitaloop-frontend:$current_sha"
+          keep_backend_previous="vitaloop-backend:$previous_sha"
+          keep_frontend_previous="vitaloop-frontend:$previous_sha"
+          remove_refs=()
+          while IFS=$'\t' read -r repository tag; do
+            ref="$repository:$tag"
+            case "$ref" in
+              "$keep_backend_current"|"$keep_frontend_current"|\
+              "$keep_backend_previous"|"$keep_frontend_previous") continue ;;
+            esac
+            remove_refs+=("$ref")
+          done < <(docker image ls --format '{{.Repository}}\t{{.Tag}}' \
+            | awk '$1 == "vitaloop-backend" || $1 == "vitaloop-frontend"')
+
+          removed_count=0
+          for ref in "${remove_refs[@]}"; do
+            if docker image rm "$ref"; then
+              removed_count=$((removed_count + 1))
+            else
+              echo "Image rotation retained $ref because Docker refused its removal"
+            fi
+          done
+
+          docker image prune -f
+          echo "Removed image count: $removed_count"
+          echo "Kept images:"
+          printf '%s\n' "$keep_backend_current" "$keep_frontend_current" \
+            "$keep_backend_previous" "$keep_frontend_previous"
+          echo "Docker system usage:"
+          docker system df
+          echo "Filesystem usage:"
+          df -h
+          REMOTE

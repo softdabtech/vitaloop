@@ -1,0 +1,123 @@
+import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
+import { navigateToApp } from '../../lib/appUrl.js'
+
+const HERO_SCREEN = {
+  src: '/images/vitaloop-mobile-dashboard-hero.png?v=20261020',
+  alt: 'VITALOOP mobile dashboard and clinical progress screens',
+}
+
+const TRUST_CHIPS = [
+  { icon: FileText, label: 'PDF, image, CSV/XLSX upload' },
+  { icon: Sparkles, label: 'Explainable Knowledge Base' },
+  { icon: ListChecks, label: 'Priority report and retest plan' },
+  { icon: ShieldCheck, label: 'Privacy-first flow' },
+]
+
+export function LightHero() {
+  const navigate = useNavigate()
+
+  return (
+    <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Two-column grid */}
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-12 lg:gap-16 items-center">
+          {/* LEFT: Content */}
+          <div className="min-w-0 space-y-8">
+            {/* Eyebrow badge */}
+            <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-2 sm:rounded-full sm:px-4">
+              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">CLINICAL REASONING FOR SYMPTOMS + LABS</span>
+            </div>
+
+            {/* Headline */}
+            <h1 className="max-w-full break-words text-[38px] font-bold leading-[1.04] tracking-[-0.035em] text-slate-900 sm:text-5xl lg:text-6xl">
+              Understand your symptoms
+              <br className="hidden sm:block" />
+              {' '}
+              <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
+                and blood test results
+              </span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
+              <span className="block">Start with symptoms. Upload labs when you have them.</span>
+              <span className="block font-semibold text-slate-900">From scattered signals to a clinical reasoning map.</span>
+              <span className="block text-base text-slate-500">
+                VITALOOP connects biomarker results, symptom context, priority findings, evidence gaps, clinician discussion points, retest timing, and weekly follow-through.
+              </span>
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+              <button
+                onClick={() => navigateToApp('/symptom-intake')}
+                className="group vtl-public-button vtl-public-button--primary shrink-0 px-6 text-sm sm:text-base"
+              >
+                Start assessment
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+
+              <button
+                onClick={() => navigate('/example-report')}
+                className="vtl-public-button vtl-public-button--secondary shrink-0 px-6 text-sm sm:text-base"
+              >
+                View example
+              </button>
+            </div>
+
+            <div className="hidden flex-wrap gap-2 sm:flex">
+              {TRUST_CHIPS.map((chip) => {
+                const Icon = chip.icon
+                return (
+                  <span key={chip.label} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
+                    <Icon className="h-4 w-4 text-teal-600" />
+                    {chip.label}
+                  </span>
+                )
+              })}
+            </div>
+
+            {/* Key stats */}
+            <div className="hidden grid-cols-2 gap-6 border-t border-slate-200 pt-8 sm:grid">
+              <div>
+                {/* Read from lib/pricing.js instead of a hardcoded string —
+                    this exact stat drifted to a stale "$19.99/mo" (the real
+                    price is $4.99/mo) because it was a fourth independent
+                    copy of the number; sourcing it removes that failure mode
+                    here. */}
+                <div className="text-2xl font-bold text-slate-900">{CLIENT_PREMIUM_PLAN.monthly}/mo</div>
+                <div className="text-sm text-slate-600">Premium plan</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-emerald-600">1 upload</div>
+                <div className="text-sm text-slate-600">Free plan includes one lab upload</div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Mobile product preview */}
+          <div className="min-w-0 flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[540px]">
+              <div className="absolute inset-x-10 bottom-6 h-24 rounded-full bg-teal-200/50 blur-3xl" />
+              <img
+                src={HERO_SCREEN.src}
+                alt={HERO_SCREEN.alt}
+                width="1195"
+                height="1316"
+                fetchPriority="high"
+                decoding="async"
+                className="relative h-auto w-full drop-shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Background accent */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-teal-50 rounded-full opacity-30 blur-3xl -z-10" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-50 rounded-full opacity-20 blur-3xl -z-10" />
+    </section>
+  )
+}

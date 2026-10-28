@@ -1,0 +1,254 @@
+@model OrganizationDetailViewModel
+@{
+    ViewData["Title"] = $"Organization: {Model?.Name}";
+    Layout = "_CrmLayout";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+<div class="container-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">@Model?.Name</h1>
+            <p class="page-subtitle">Organization: @Model?.Slug</p>
+        </div>
+        <div class="header-badges">
+            <span class="badge badge-@(Model?.Status == "active" ? "success" : "warning")">
+                @Model?.Status
+            </span>
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <div class="tab-panel">
+            <div class="section-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="action-buttons">
+                <a class="btn btn-primary" href="/org/orgs/@Model?.Id/switch?returnUrl=%2Fadmin%2Forganizations%2F@Model?.Id">Use As Active Org</a>
+                <a class="btn btn-outline" href="/org/orgs/@Model?.Id/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D@Model?.Id">Open Organization Settings</a>
+                <a class="btn btn-outline" href="/org/members">Manage Members</a>
+                <a class="btn btn-outline" href="/org/assignments">Manage Assignments</a>
+            </div>
+            <form method="post" action="/org/organizations/@Model?.Id/status" style="margin-top:16px;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="@(string.Equals(Model?.Status, "active", StringComparison.OrdinalIgnoreCase) ? "inactive" : "active")" />
+                <button type="submit" class="btn btn-danger">
+                    @(string.Equals(Model?.Status, "active", StringComparison.OrdinalIgnoreCase) ? "Suspend Organization" : "Activate Organization")
+                </button>
+            </form>
+        </div>
+
+        <div class="tab-panel">
+            <h2>Organization Details</h2>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Organization ID</span>
+                    <span class="detail-value"><code>@Model?.Id</code></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Slug</span>
+                    <span class="detail-value">@Model?.Slug</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Owner</span>
+                    <span class="detail-value">@Model?.OwnerName</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Model?.Description))
+                {
+                    <div class="detail-row">
+                        <span class="detail-label">Description</span>
+                        <span class="detail-value">@Model.Description</span>
+                    </div>
+                }
+                <div class="detail-row">
+                    <span class="detail-label">Total Members</span>
+                    <span class="detail-value">@Model?.MemberCount</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Practitioners</span>
+                    <span class="detail-value">@Model?.PractitionerCount</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-panel">
+            <div class="section-header">
+                <h2>Team Members (@Model?.Members.Count)</h2>
+                <a href="/org/members" class="btn btn-sm btn-primary">
+                    Manage Team
+                </a>
+            </div>
+
+            @{
+                var memberRows = (Model?.Members ?? Array.Empty<MemberViewModel>())
+                    .Select(member => new EditableTableRowViewModel
+                    {
+                        RowKey = member.UserId.ToString("N"),
+                        Cells = new List<EditableTableCellViewModel>
+                        {
+                            new() { Kind = EditableTableCellKind.Text, Text = string.IsNullOrWhiteSpace(member.FullName) ? member.Email : member.FullName },
+                            new() { Kind = EditableTableCellKind.Code, Text = member.Email },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.OrgRole, BadgeTone = "primary" },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.GlobalRole, BadgeTone = "secondary" },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.MembershipStatus, BadgeTone = string.Equals(member.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase) ? "success" : "warning" },
+                        },
+                        SecondaryActions = new List<EditableTableActionViewModel>
+                        {
+                            new()
+                            {
+                                ActionUrl = "/org/members",
+                                Method = "get",
+                                SubmitLabel = "Manage",
+                            },
+                        }
+                    })
+                    .ToList();
+            }
+
+            @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
+            {
+                Title = $"Team Members ({Model?.Members.Count ?? 0})",
+                Columns = new[] { "Name", "Email", "Organization Role", "Global Role", "Status" },
+                EmptyMessage = "No members in this organization yet.",
+                Rows = memberRows,
+            })
+
+            @if ((Model?.Members.Count ?? 0) == 0)
+            {
+                <div class="empty-state" style="padding-top:0;">
+                    <a href="/org/members/invite" class="btn btn-primary">
+                        Invite First Member
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+
+    .header-badges {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .badge-secondary {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+
+    .tabs-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .tab-panel {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 2rem;
+    }
+
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .detail-row {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+        font-size: 1rem;
+        color: var(--color-text);
+    }
+
+    .detail-value code {
+        background: var(--color-bg);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        text-decoration: none;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .btn-primary {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+    }
+</style>

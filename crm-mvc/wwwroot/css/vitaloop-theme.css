@@ -1,0 +1,100 @@
+:root {
+  /* ─── Brand Palette ─────────────────────────────── */
+  --vo-teal-900: #04342c;
+  --vo-teal-800: #085041;
+  --vo-teal-600: #0f6e56;
+  --vo-teal-500: #1d9e75;
+  --vo-teal-300: #5dcaa5;
+  --vo-teal-100: #b8e8d5;
+  --vo-teal-50:  #e1f5ee;
+
+  /* ─── Neutral Scale ─────────────────────────────── */
+  --vo-gray-950: #0a0a0a;
+  --vo-gray-900: #1d1d1f;
+  --vo-gray-800: #2c2c2e;
+  --vo-gray-700: #3d3d3f;
+  --vo-gray-600: #545456;
+  --vo-gray-500: #6e6e73;
+  --vo-gray-400: #8e8e93;
+  --vo-gray-300: #aeaeb2;
+  --vo-gray-200: #d1d1d6;
+  --vo-gray-100: #e9e9ec;
+  --vo-gray-50:  #f5f5f7;
+  --vo-white:    #ffffff;
+
+  /* ─── Semantic Status Tokens ────────────────────── */
+  --vo-success-bg:     #e6f7ef;
+  --vo-success-text:   #0e5c37;
+  --vo-success-border: rgba(14, 92, 55, 0.18);
+
+  --vo-danger-bg:     #fef2f2;
+  --vo-danger-text:   #b91c1c;
+  --vo-danger-border: rgba(185, 28, 28, 0.18);
+
+  --vo-warning-bg:     #fffbeb;
+  --vo-warning-text:   #92400e;
+  --vo-warning-border: rgba(146, 64, 14, 0.18);
+
+  --vo-info-bg:     #eff6ff;
+  --vo-info-text:   #1e40af;
+  --vo-info-border: rgba(30, 64, 175, 0.18);
+
+  /* ─── Typography ────────────────────────────────── */
+  --vo-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                  "Helvetica Neue", Arial, sans-serif;
+
+  --vo-text-xs:   11px;
+  --vo-text-sm:   13px;
+  --vo-text-base: 14px;
+  --vo-text-md:   16px;
+  --vo-text-lg:   18px;
+  --vo-text-xl:   22px;
+  --vo-text-2xl:  28px;
+  --vo-text-3xl:  36px;
+
+  --vo-lh:        1.5;
+  --vo-lh-tight:  1.25;
+
+  --vo-fw-normal:   400;
+  --vo-fw-medium:   500;
+  --vo-fw-semibold: 600;
+  --vo-fw-bold:     700;
+
+  /* ─── Radius ────────────────────────────────────── */
+  --vo-radius-xs:   6px;
+  --vo-radius-sm:   10px;
+  --vo-radius-md:   14px;
+  --vo-radius-lg:   18px;
+  --vo-radius-xl:   24px;
+  --vo-radius-pill: 999px;
+
+  /* ─── Shadows ────────────────────────────────────── */
+  --vo-shadow-xs:    0 1px 3px  rgba(4, 52, 44, 0.06);
+  --vo-shadow-sm:    0 2px 8px  rgba(4, 52, 44, 0.08);
+  --vo-shadow-md:    0 12px 24px rgba(4, 52, 44, 0.12);
+  --vo-shadow-lg:    0 20px 48px rgba(4, 52, 44, 0.16);
+  --vo-shadow-popup: 0 8px 32px rgba(0, 0, 0, 0.14);
+
+  /* ─── Transitions ────────────────────────────────── */
+  --vo-tr-fast: 0.12s ease;
+  --vo-tr:      0.2s  ease;
+  --vo-tr-slow: 0.35s ease;
+
+  /* ─── Spacing ────────────────────────────────────── */
+  --vo-space-1:  4px;
+  --vo-space-2:  8px;
+  --vo-space-3:  12px;
+  --vo-space-4:  16px;
+  --vo-space-5:  20px;
+  --vo-space-6:  24px;
+  --vo-space-8:  32px;
+  --vo-space-10: 40px;
+  --vo-space-12: 48px;
+
+  /* ─── Z-Index Stack ─────────────────────────────── */
+  --vo-z-toast:   9000;
+  --vo-z-modal:     40;
+  --vo-z-dropdown:  30;
+  --vo-z-topbar:    10;
+  --vo-z-sidebar:   20;
+}

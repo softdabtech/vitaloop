@@ -1,0 +1,10 @@
+[Unit]
+Description=Run VITALOOP retention redaction nightly
+
+[Timer]
+OnCalendar=*-*-* 03:10:00
+Persistent=true
+Unit=vitaloop-retention-redaction.service
+
+[Install]
+WantedBy=timers.target

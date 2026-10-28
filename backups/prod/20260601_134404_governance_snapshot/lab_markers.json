@@ -1,0 +1,119 @@
+[
+  {
+    "id": "2a2fea0a-af32-4e11-8a31-3d2cffa5ddd0",
+    "key": "triglycerides",
+    "display_name": "Triglycerides",
+    "common_units": [
+      "mg/dL",
+      "mmol/L"
+    ],
+    "description": "Triglyceride concentration.",
+    "category": "lipids",
+    "metadata": {}
+  },
+  {
+    "id": "2b4486c1-641f-4aef-a75a-1bc75c5be472",
+    "key": "alt",
+    "display_name": "ALT",
+    "common_units": [
+      "U/L"
+    ],
+    "description": "Alanine aminotransferase.",
+    "category": "liver",
+    "metadata": {}
+  },
+  {
+    "id": "6087e7e4-b5c4-4016-bca5-6e95f5f57b7e",
+    "key": "vitamin_d",
+    "display_name": "Vitamin D (25-OH)",
+    "common_units": [
+      "ng/mL",
+      "nmol/L"
+    ],
+    "description": "Vitamin D status marker.",
+    "category": "micronutrient",
+    "metadata": {}
+  },
+  {
+    "id": "708ec23f-3f7c-41ba-84e2-7218132295c6",
+    "key": "ast",
+    "display_name": "AST",
+    "common_units": [
+      "U/L"
+    ],
+    "description": "Aspartate aminotransferase.",
+    "category": "liver",
+    "metadata": {}
+  },
+  {
+    "id": "72a16fd3-3235-4518-a91e-4c5a84963b6c",
+    "key": "ldl",
+    "display_name": "LDL Cholesterol",
+    "common_units": [
+      "mg/dL",
+      "mmol/L"
+    ],
+    "description": "Low-density lipoprotein cholesterol.",
+    "category": "lipids",
+    "metadata": {}
+  },
+  {
+    "id": "95ec540d-e410-45b9-8ad9-478dc73e072e",
+    "key": "tsh",
+    "display_name": "TSH",
+    "common_units": [
+      "uIU/mL",
+      "mIU/L"
+    ],
+    "description": "Thyroid stimulating hormone.",
+    "category": "endocrine",
+    "metadata": {}
+  },
+  {
+    "id": "ade53475-5077-4f9f-9c27-d680050b5960",
+    "key": "ferritin",
+    "display_name": "Ferritin",
+    "common_units": [
+      "ng/mL",
+      "ug/L"
+    ],
+    "description": "Iron storage biomarker.",
+    "category": "hematology",
+    "metadata": {}
+  },
+  {
+    "id": "beb309f5-8b0b-4838-8765-8521abbe8d34",
+    "key": "hba1c",
+    "display_name": "HbA1c",
+    "common_units": [
+      "%"
+    ],
+    "description": "Average blood glucose marker over prior months.",
+    "category": "metabolic",
+    "metadata": {}
+  },
+  {
+    "id": "f8379056-a853-4387-b41e-9363712bcbf6",
+    "key": "hdl",
+    "display_name": "HDL Cholesterol",
+    "common_units": [
+      "mg/dL",
+      "mmol/L"
+    ],
+    "description": "High-density lipoprotein cholesterol.",
+    "category": "lipids",
+    "metadata": {}
+  },
+  {
+    "id": "f87a7d9d-3917-4d2c-ace7-5d97d43a0346",
+    "key": "glucose",
+    "display_name": "Glucose",
+    "common_units": [
+      "mg/dL",
+      "mmol/L"
+    ],
+    "description": "Blood glucose concentration.",
+    "category": "metabolic",
+    "metadata": {}
+  }
+]

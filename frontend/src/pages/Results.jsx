@@ -1,0 +1,2675 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import api from '../lib/api.js'
+import { listInterventions } from '../api/interventions.js'
+import { addLabPlanItem, listLabPlanItems } from '../api/labPlan.js'
+import { labPlanItemLabel } from '../lib/labPlanStatus.js'
+import FeatureGate from '../components/FeatureGate.jsx'
+import { useUserEntitlements } from '../hooks/useQueries.js'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import DecisionHeader, { decisionRetestSummary } from '../components/dashboard/DecisionHeader.jsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
+import { gaResultsView } from '../lib/analytics.js'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  ExternalLink,
+  FileText,
+  HeartPulse,
+  HelpCircle,
+  Info,
+  MessageCircle,
+  Network,
+  RefreshCw,
+  ShieldAlert,
+  Stethoscope,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react'
+import { isUkrainianLocale } from '../lib/locale.js'
+import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
+import { buildResultOverview, isBiomarkerCountSummary } from '../lib/resultOverview.js'
+import {
+  BIOMARKER_STATUS_META,
+  biomarkerStatusLabel,
+  normalizeBiomarkerStatus,
+  summarizeBiomarkerStatuses,
+} from '../lib/biomarkerStatus.js'
+import { embedReportFonts, formatPdfComparisonOperators } from '../lib/reportPdf.js'
+import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
+import { DoctorEscalationDetails } from '../lib/doctorEscalation.jsx'
+import { createRetestCopy, formatRetestDate, normalizeRetestMarker, retestState, selectRetestObligations } from '../lib/retest.js'
+import { actionSourceLabel as recommendationSourceLabel } from './ProtocolPage.jsx'
+import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
+// CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
+// splits CSS per lazy route chunk, so this page must import it directly.
+import '../styles/dashboard2026.css'
+
+const STATUS_META = BIOMARKER_STATUS_META
+
+const BIOMARKER_NAME_TRANSLATIONS = [
+  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
+  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
+  [/^Ретикулоцити$/i, 'Reticulocytes'],
+  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
+  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
+  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
+  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
+  [/^Еритроцити|^RBC|^Red blood cells?/i, 'Red Blood Cells (RBC)'],
+  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, 'Hemoglobin'],
+  [/^Гематокрит|^Hematocrit|^HCT$/i, 'Hematocrit'],
+  [/^MCV|^Середній об[‘’]єм еритроцита/i, 'Mean Cell Volume (MCV)'],
+  [/^MCH|^Середній вміст гемоглобіна/i, 'Mean Cell Hemoglobin (MCH)'],
+  [/^MCHC|^Середня концентрація гемоглобіна/i, 'Mean Cell Hemoglobin Concentration (MCHC)'],
+  [/^Лейкоцити|^WBC|^White blood cells?/i, 'White Blood Cells (WBC)'],
+  [/^Нейтрофіли|^Neutrophils?/i, 'Neutrophils'],
+  [/^Лімфоцити|^Lymphocytes?/i, 'Lymphocytes'],
+  [/^Моноцити|^Monocytes?/i, 'Monocytes'],
+  [/^Еозинофіли|^Eosinophils?/i, 'Eosinophils'],
+  [/^Базофіли|^Basophils?/i, 'Basophils'],
+  [/^Тромбоцити|^Platelets?|^PLT$/i, 'Platelets'],
+  [/^Глюкоза|^Glucose$/i, 'Glucose'],
+  [/^Креатинін|^Creatinine$/i, 'Creatinine'],
+  [/^Сечовина|^BUN|^Urea$/i, 'Blood Urea Nitrogen (BUN)'],
+  [/^Білірубін|^Bilirubin$/i, 'Bilirubin'],
+  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, 'Alanine Aminotransferase (ALT)'],
+  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, 'Aspartate Aminotransferase (AST)'],
+  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, 'Alkaline Phosphatase'],
+  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, 'Gamma-Glutamyl Transferase (GGT)'],
+  [/^Холестерин|^Total cholesterol|^TC$/i, 'Total Cholesterol'],
+  [/^Тригліцериди|^Triglycerides?$/i, 'Triglycerides'],
+  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, 'Low-Density Lipoprotein (LDL)'],
+  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, 'High-Density Lipoprotein (HDL)'],
+  [/^Альбумін|^Albumin$/i, 'Albumin'],
+  [/^Кальцій|^Calcium$/i, 'Calcium'],
+  [/^Магній|^Magnesium$/i, 'Magnesium'],
+  [/^Калій|^Potassium|^K$/i, 'Potassium'],
+  [/^Натрій|^Sodium|^Na$/i, 'Sodium'],
+  [/^CRP|^C-reactive protein/i, 'C-Reactive Protein (CRP)'],
+]
+
+const RESULTS_HINTS = [
+  'Start with the priority markers, not the full table. The goal is to understand what deserves attention first.',
+  'Use the doctor discussion list when you want a concise way to talk about the report with a clinician.',
+  'VITALOOP is educational software. It helps organize the next step, but it does not diagnose or prescribe treatment.',
+]
+
+const RESULTS_RETEST_COPY = {
+  en: createRetestCopy(
+    'Not due yet',
+    'Due now',
+    'Overdue',
+    'Pending',
+    'Completed',
+    (start, end) => `Retest window: ${start} – ${end}`,
+    'Based on this report',
+    'Completed by a later result.',
+    'View later result',
+  ),
+  uk: createRetestCopy(
+    'Ще не час',
+    'Час повторити',
+    'Прострочено',
+    'Очікується',
+    'Завершено',
+    (start, end) => `Вікно повторного тесту: ${start} – ${end}`,
+    'На основі цього звіту',
+    'Завершено наступним результатом.',
+    'Переглянути наступний результат',
+  ),
+}
+
+const RESULTS_ADDED_COPY = [
+  ['narrativeTitle', 'Your personal interpretation', 'Ваша персональна інтерпретація'],
+  ['narrativeHeadline', 'What this report means for you', 'Що цей звіт означає саме для вас'],
+  ['narrativeFound', 'What we found', 'Що ми виявили'],
+  ['narrativeConnections', 'How it connects to you', 'Як це пов’язано з вами'],
+  ['narrativeChanged', 'What changed over time', 'Що змінилося з часом'],
+  ['narrativeUncertainty', 'What we are not sure about', 'Що ми поки не можемо визначити'],
+  ['narrativePriority', 'Why this is a priority', 'Чому це важливо'],
+  ['narrativeNext', 'What to do next', 'Що робити далі'],
+  ['narrativeNoChange', 'No verified change over time was available for this report.', 'Перевірених змін у часі для цього звіту не знайдено.'],
+  ['progressPatternFallback', 'Pattern insight', 'Виявлена закономірність'],
+  ['noRange', 'Reference range could not be verified', 'Референсний діапазон не вдалося перевірити'],
+  ['unknownReportDate', 'Unknown date', 'Невідома дата'],
+]
+
+const SAFETY_STATUS_COPY = {
+  blocked: ['Safety review required', 'Потрібен перегляд безпеки'],
+  approved_with_warnings: ['Reviewed with cautions', 'Перевірено із застереженнями'],
+  educational: ['Educational information', 'Освітня інформація'],
+}
+
+function buildResultsAddedCopy(isUk) {
+  return {
+    ...Object.fromEntries(RESULTS_ADDED_COPY.map(([key, en, uk]) => [key, isUk ? uk : en])),
+    safetyStatus: Object.fromEntries(
+      Object.entries(SAFETY_STATUS_COPY).map(([key, [en, uk]]) => [key, isUk ? uk : en])
+    ),
+  }
+}
+
+const RESULTS_COPY = {
+  en: {
+    ...buildResultsAddedCopy(false),
+    hints: RESULTS_HINTS,
+    loading: 'Loading your report…',
+    back: 'Back to Lab Results',
+    export: 'Export summary',
+    eyebrow: 'Lab report summary',
+    fallbackHeadline: 'Your results are organized into clear priorities.',
+    healthSummary: 'Your Health Summary',
+    healthSummarySubtitle: 'What is happening, why it matters, and what to do next.',
+    sourceNarrative: 'Report narrative (source text; not a status classification)',
+    topFindings: 'Top Findings',
+    whyMatters: 'Why this matters',
+    doctorQuestions: 'Questions for your doctor',
+    evidence: 'Evidence & Sources',
+    today: 'Today',
+    thisWeek: 'This week',
+    thisMonth: 'This month',
+    intro: 'VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.',
+    actionPlan: 'View personal action plan',
+    checkIn: 'Start a check-in',
+    markersRead: 'markers read',
+    watchList: 'watch list',
+    outOfRange: 'out of range',
+    biomarkerSummary: (total, review, optimal, unknown) => `${total} biomarkers found. ${review} need review, ${optimal} are currently in range, ${unknown} could not be classified.`,
+    classificationUnavailable: 'Biomarker classification is unavailable.',
+    medicalSignal: 'Medical review signal',
+    urgentSignal: 'Prompt medical review signal',
+    urgentFallback: 'Some values in this report may require prompt medical review. Contact a qualified clinician or urgent care if symptoms are severe or worsening.',
+    alertFallback: (marker) => `${marker || 'A marker'} should be reviewed with a clinician.`,
+    priorityMarkers: 'Priority markers',
+    reference: 'reference',
+    noPriorities: 'This report does not show obvious out-of-range priorities. Tracking trends over time is still useful.',
+    meaning: 'What this may mean',
+    noPattern: 'No deeper knowledge pattern matched this panel yet. Your biomarker table and status groups are still available below.',
+    nextSteps: 'Next steps',
+    nextFallback: 'Save this report, compare it with your symptoms, and review meaningful changes with a clinician.',
+    discuss: 'Discuss with a clinician',
+    discussFallback: 'Ask whether the priority markers fit your symptoms, medications, history, and recent lifestyle changes.',
+    retest: 'Retest plan',
+    retestFallback: 'Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.',
+    decision: {
+      title: 'What matters now',
+      why: 'Why',
+      nextAction: 'Next action',
+      retest: 'Retest',
+    },
+    tableTitle: 'Full biomarker table',
+    tableSummary: (optimal, watch, out, unknown) => `${optimal} in range · ${watch} worth watching · ${out} out of range · ${unknown} not classified`,
+    biomarker: 'Biomarker',
+    value: 'Value',
+    ref: 'Reference',
+    status: 'Status',
+    unlockTrends: 'Unlock trends',
+    viewTrends: 'View trends',
+    readyTitle: 'Ready for the next step?',
+    readyBody: 'Turn this report into a practical action plan with priorities, clinician discussion points, and follow-up tracking.',
+    openPlan: 'Open action plan',
+    premiumTeaser: 'Want to track changes over time? Premium adds personal baseline, progress trends, and deeper follow-up across reports.',
+    premiumTeaserCta: 'See what Premium adds',
+    disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
+    emptyTitle: 'Results & Interpretation',
+    emptySubtitle: 'No processed biomarkers yet.',
+    loadFailedTitle: 'Report unavailable',
+    loadFailedBody: 'We could not load this report. Check your connection and try again.',
+    retry: 'Try again',
+    focusNow: 'Focus now',
+    watchListLabel: 'Watch list',
+    noImmediate: 'No immediate out-of-range marker',
+    stableZone: 'Stable zone',
+    markersNearBorder: (count) => `${count} marker${count === 1 ? '' : 's'} near the border`,
+    markersInRange: (count) => `${count} marker${count === 1 ? '' : 's'} in range`,
+    whyThisAppears: 'Why this appears',
+    whyDefault: 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.',
+    evidenceSummary: 'Connected to report signals and knowledge-base context. This is not a diagnosis.',
+    reviewTopFinding: 'Review the top finding and avoid starting high-dose supplements from one marker alone.',
+    shoppingEyebrow: 'Suggested iHerb searches',
+    shoppingTitle: 'Optional items to discuss before buying',
+    shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
+    findIherb: 'Find on iHerb',
+    v2Eyebrow: 'VITALOOP Health Intelligence Engine',
+    domainsTitle: 'Health domain states',
+    domainsBody: 'Domain-level interpretation from biomarkers, symptoms, profile context, and knowledge-base rules.',
+    whyConclusion: 'Why this conclusion',
+    dataUsed: 'Data used',
+    analysisQuality: 'Analysis quality',
+    trends: 'Trends',
+    noTrendData: 'No prior comparable upload yet. Trends will appear after the next result.',
+    expectedTimeline: 'Expected timeline',
+    safetyNotes: 'Safety notes',
+    completeness: 'Completeness',
+    sourceVersion: 'Core version',
+    missingData: 'Missing data',
+    score: 'score',
+    confidence: 'confidence',
+    reasoningTitle: 'Clinical Reasoning',
+    reasoningIntro: 'How each finding was reached — the markers and symptoms behind it, how confident we are, and what would change the picture.',
+    reasoningBasedOn: 'Based on',
+    reasoningSupporting: 'Supporting',
+    reasoningContradicting: 'Argues against',
+    reasoningGaps: "What we still don't know",
+    reasoningNextTests: 'Suggested next tests',
+    reasoningDoctorFlag: 'Discuss with a doctor',
+    reasoningSafety: {
+      high_confidence_urgent: 'Needs prompt attention',
+      moderate_confidence: 'Worth reviewing',
+      low_confidence: 'Early signal, limited certainty',
+      blocked_by_missing_data: 'Not enough data for a confident read',
+      doctor_only: 'Discuss with a doctor',
+    },
+    reasoningEmpty: 'No detailed reasoning trace is available for this report yet.',
+    mapTitle: 'How VITALOOP connected the dots',
+    mapIntro: 'The top possibilities this upload points to, what supports and limits each one, and who should act on it.',
+    mapWhatSupports: 'What supports this',
+    mapWhatLimits: 'What limits confidence',
+    mapNextTests: 'What could reduce uncertainty',
+    mapContext: 'Reported context',
+    mapConfidence: 'Confidence',
+    mapActionBucket: {
+      self: 'You can act on this yourself',
+      practitioner: 'Worth bringing to a practitioner',
+      doctor: 'Discuss with a doctor',
+      urgent: 'Needs prompt attention',
+    },
+    mapConfidenceLabel: {
+      high: 'High',
+      moderate: 'Moderate',
+      low: 'Low',
+      blocked: 'Not enough data',
+      doctor_only: 'Discuss with a doctor',
+      likely: 'Likely',
+      possible: 'Possible',
+      unlikely_but_flagged: 'Unlikely, still noted',
+    },
+    mapEmptyWithDomains: (stable, underTested) =>
+      `No strong hypothesis was generated from this upload. VITALOOP still checked available domains and found ${stable} stable area${stable === 1 ? '' : 's'} and ${underTested} under-tested area${underTested === 1 ? '' : 's'}.`,
+    mapEmptyNoDomains: 'No strong hypothesis was generated from this upload, and no domain summary is available yet for this report.',
+    mapStableDomains: 'No strong signal detected in this upload',
+    mapUnderTestedDomains: 'Not enough data to assess confidently',
+    progressTitle: 'Progress Since Last Time',
+    progressIntro: 'How your patterns changed compared with your previous upload.',
+    progressStrengthened: 'Stronger signal than last time',
+    progressWeakened: 'Weaker signal than last time',
+    progressNew: 'New since last time',
+    progressResolved: 'No longer detected — improved or resolved',
+    progressStable: 'Unchanged since last time',
+    progressNoPrevious: 'Upload another report in the future to see how this changes over time.',
+    progressConfidenceWas: (from, to) => `${from} → ${to}`,
+    evidenceGapsTitle: 'What Could Make This Clearer',
+    evidenceGapsIntro: 'A few things are still unclear here — adding them could sharpen the picture. This is about missing context, not a problem with you.',
+    evidenceGapsEmpty: 'Nothing stood out as unclear in this report.',
+    evidenceGapsHighPriority: 'high priority',
+    evidenceGapDomainLabels: {
+      knowledge_coverage: 'Not yet interpreted',
+      data_quality: 'Data quality',
+      general: 'General context',
+    },
+    testingPlanTitle: 'Testing & Retest Plan',
+    testingPlanIntro: 'Ranked by how much each would clarify this report. High-priority items are worth discussing sooner; the rest can wait for your next check-in.',
+    testingPlanEmpty: 'No specific tests to suggest from this report right now.',
+    testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
+    testingPlanTiming: 'Suggested timing',
+    testingPlanCompletedTitle: '✓ Completed since your last report',
+    ...RESULTS_RETEST_COPY.en,
+    retestNext: 'Next retest',
+    addToLabPlan: 'Add to lab plan',
+    savingToLabPlan: 'Saving...',
+    inLabPlan: 'In lab plan',
+    baselineTitle: 'Your Personal Baseline',
+    baselineIntro: 'Not just in-range or out-of-range — is this normal for YOU, based on your own history.',
+    baselineEmpty: 'Not enough repeat history yet to establish a personal baseline. This builds up as you upload more reports.',
+    baselineSilentSignalLabel: 'In range, but a real shift for you',
+    baselineSilentSignalIntro: 'These markers are reported as normal by the lab, but have moved meaningfully away from your own typical range — worth a second look.',
+    baselineOtherLabel: 'Other tracked markers',
+    baselineWas: (value) => `Your typical: ${value}`,
+    baselineHistoryPoints: (n) => `based on ${n} prior result${n === 1 ? '' : 's'}`,
+    systemMapTitle: 'Your System Map',
+    systemMapIntro: 'Every system we checked — not just the ones flagged. Stable systems are reassurance, not an absence of data.',
+    systemMapPersonalDrift: 'Personal baseline shift detected here',
+    systemMapNoData: 'No markers for this system yet',
+    actionPlanTitle: 'Your next actions',
+    actionPlanIntro: 'Your primary next-action list: what you can do yourself, what to bring to a specialist, what needs a doctor, and what’s urgent.',
+    actionPlanBuckets: {
+      urgent: { label: 'Urgent — discuss promptly', tone: 'critical' },
+      doctor: { label: 'Discuss with a doctor', tone: 'warning' },
+      practitioner: { label: 'Bring to a specialist / nutritionist', tone: 'info' },
+      self: { label: 'You can do yourself', tone: 'success' },
+    },
+    actionPlanEmptyBucket: 'Nothing in this category right now.',
+    doctorEscalationTitle: 'Doctor discussion',
+    doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Needs prompt medical attention',
+      doctor: 'Worth discussing with a doctor',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'As soon as possible',
+      prompt: 'Within the next few days',
+      soon: 'In the near term',
+      routine: 'At your next routine check-in',
+    },
+    doctorEscalationMarkersLabel: 'Related markers',
+    doctorEscalationDisclaimer: 'This is educational information, not a diagnosis, and does not replace a doctor.',
+    overviewResultsTitle: 'What your results show',
+    overviewConnectionsTitle: 'How this may connect to how you feel',
+    overviewActionsTitle: 'Three priority actions',
+    overviewMissingTitle: 'What information is missing',
+    overviewConsultationTitle: 'When to seek clinical advice',
+    overviewResultsEmpty: 'There is not enough verified information to summarize this report yet.',
+    overviewConnectionsEmpty: 'No report-specific symptom connection was confirmed from the information provided.',
+    overviewActionsEmpty: 'No report-specific priority action is available yet.',
+    overviewMissingEmpty: 'No specific missing information was identified for this report.',
+    overviewConsultationEmpty: 'No prompt medical-review signal was identified. Discuss new, severe, or worsening symptoms with a qualified clinician.',
+    overviewEvidence: 'Based on',
+    overviewMissingEvidence: 'Missing',
+    technicalDisclosureTitle: 'Why the system reached this conclusion',
+    technicalDisclosureIntro: 'Open the technical evidence, confidence calibration, reasoning map, missing-data analysis, and engine trace.',
+    evidenceDebtTitle: 'Evidence debt',
+    evidenceDebtOverall: 'Overall evidence debt',
+    evidenceDebtDomains: 'Domains assessed',
+    confidenceCalibrationTitle: 'Confidence calibration',
+    confidenceCalibrationOverall: 'Overall calibrated confidence',
+    confidenceCalibrationItems: 'Items calibrated',
+    fallbackBadge: 'AI fallback: verified report data',
+    fallbackBody: 'AI selection was unavailable, so this summary was assembled only from verified statements and evidence in this report.',
+  },
+  uk: {
+    ...buildResultsAddedCopy(true),
+    hints: [
+      'Починайте з пріоритетних показників, а не з усієї таблиці одразу.',
+      'Використовуйте список питань до лікаря, щоб коротко обговорити результат.',
+      'VITALOOP має освітній характер: допомагає структурувати наступний крок, але не ставить діагноз.',
+    ],
+    loading: 'Завантажуємо ваш звіт…',
+    back: 'До результатів',
+    export: 'Експортувати підсумок',
+    eyebrow: 'Підсумок аналізів',
+    fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
+    healthSummary: 'Підсумок здоровʼя',
+    healthSummarySubtitle: 'Що відбувається, чому це важливо і що робити далі.',
+    sourceNarrative: 'Текстова інтерпретація звіту (не класифікація статусів)',
+    topFindings: 'Головні знахідки',
+    whyMatters: 'Чому це важливо',
+    doctorQuestions: 'Питання до лікаря',
+    evidence: 'Докази й джерела',
+    today: 'Сьогодні',
+    thisWeek: 'Цього тижня',
+    thisMonth: 'Цього місяця',
+    intro: 'VITALOOP групує показники: що виглядає стабільно, що варто відстежити і що краще обговорити з лікарем.',
+    actionPlan: 'Переглянути план дій',
+    checkIn: 'Почати чек-ін',
+    markersRead: 'показників',
+    watchList: 'спостерігати',
+    outOfRange: 'поза референсом',
+    biomarkerSummary: (total, review, optimal, unknown) => `Знайдено ${total} показників. ${review} потребують перегляду, ${optimal} наразі у референсі, ${unknown} не класифіковано.`,
+    classificationUnavailable: 'Класифікація показників недоступна.',
+    medicalSignal: 'Сигнал для медичного перегляду',
+    urgentSignal: 'Сигнал для швидкого медичного перегляду',
+    urgentFallback: 'Деякі значення у звіті можуть потребувати швидкого медичного перегляду. Зверніться до лікаря або невідкладної допомоги, якщо симптоми виражені чи погіршуються.',
+    alertFallback: (marker) => `${marker || 'Показник'} варто обговорити з лікарем.`,
+    priorityMarkers: 'Пріоритетні показники',
+    reference: 'референс',
+    noPriorities: 'У цьому звіті немає очевидних пріоритетів поза референсом. Відстеження динаміки все одно корисне.',
+    meaning: 'Що це може означати',
+    noPattern: 'Глибший патерн із бази знань поки не знайдено. Таблиця показників і статуси доступні нижче.',
+    nextSteps: 'Наступні кроки',
+    nextFallback: 'Збережіть цей звіт, порівняйте його із симптомами та обговоріть значущі зміни з лікарем.',
+    discuss: 'Обговорити з лікарем',
+    discussFallback: 'Запитайте, чи відповідають пріоритетні показники вашим симптомам, лікам, історії та змінам способу життя.',
+    retest: 'План повторної перевірки',
+    retestFallback: 'Повторна перевірка залежить від показника, симптомів і рекомендацій лікаря. Збережіть звіт для порівняння.',
+    decision: {
+      title: 'Що важливо зараз',
+      why: 'Чому',
+      nextAction: 'Наступна дія',
+      retest: 'Повторна перевірка',
+    },
+    tableTitle: 'Повна таблиця показників',
+    tableSummary: (optimal, watch, out, unknown) => `${optimal} у референсі · ${watch} потребують спостереження · ${out} поза референсом · ${unknown} не класифіковано`,
+    biomarker: 'Показник',
+    value: 'Значення',
+    ref: 'Референс',
+    status: 'Статус',
+    unlockTrends: 'Відкрити динаміку',
+    viewTrends: 'Переглянути динаміку',
+    readyTitle: 'Готові до наступного кроку?',
+    readyBody: 'Перетворіть звіт на практичний план дій із пріоритетами, питаннями до лікаря і відстеженням.',
+    openPlan: 'Відкрити план дій',
+    premiumTeaser: 'Хочете відстежувати зміни з часом? Premium додає особисту динаміку, графіки прогресу та глибший супровід між звітами.',
+    premiumTeaserCta: 'Дізнатись, що дає Premium',
+    disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
+    emptyTitle: 'Результати й інтерпретація',
+    emptySubtitle: 'Оброблених показників ще немає.',
+    loadFailedTitle: 'Не вдалося завантажити звіт',
+    loadFailedBody: 'Перевірте з’єднання та спробуйте ще раз.',
+    retry: 'Спробувати ще раз',
+    focusNow: 'Фокус зараз',
+    watchListLabel: 'Спостереження',
+    noImmediate: 'Немає термінового показника поза референсом',
+    stableZone: 'Стабільна зона',
+    markersNearBorder: (count) => `${count} ${count === 1 ? 'показник біля межі' : 'показників біля межі'}`,
+    markersInRange: (count) => `${count} ${count === 1 ? 'показник у референсі' : 'показників у референсі'}`,
+    whyThisAppears: 'Чому це показано',
+    whyDefault: 'На основі розпізнаного значення, референсу, контексту симптомів і збігів у базі знань, якщо вони доступні.',
+    evidenceSummary: 'Повʼязано із сигналами звіту та контекстом бази знань. Це не діагноз.',
+    reviewTopFinding: 'Перегляньте головну знахідку й не починайте високі дози добавок лише за одним показником.',
+    shoppingEyebrow: 'Пошук на iHerb',
+    shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
+    shoppingBody: 'Це освітні пошукові посилання на основі вашого звіту. Підтвердьте вибір добавки, дозу й взаємодії з кваліфікованим фахівцем.',
+    findIherb: 'Знайти на iHerb',
+    v2Eyebrow: 'VITALOOP Health Intelligence Engine',
+    domainsTitle: 'Доменний стан здоровʼя',
+    domainsBody: 'Доменна інтерпретація на основі біомаркерів, симптомів, профілю та правил бази знань.',
+    whyConclusion: 'Чому зроблено висновок',
+    dataUsed: 'Які дані використані',
+    analysisQuality: 'Якість аналізу',
+    trends: 'Тренди',
+    noTrendData: 'Попереднього порівнянного завантаження ще немає. Тренди зʼявляться після наступного результату.',
+    expectedTimeline: 'Очікуваний строк',
+    safetyNotes: 'Примітки безпеки',
+    completeness: 'Повнота',
+    sourceVersion: 'Версія ядра',
+    missingData: 'Бракує даних',
+    score: 'оцінка',
+    confidence: 'впевненість',
+    reasoningTitle: 'Клінічне обґрунтування',
+    reasoningIntro: 'Як зроблено кожен висновок — які показники й симптоми його підтверджують, наскільки ми впевнені і що може змінити картину.',
+    reasoningBasedOn: 'На основі',
+    reasoningSupporting: 'Підтверджують',
+    reasoningContradicting: 'Проти цього свідчить',
+    reasoningGaps: 'Чого ще не вистачає для впевненості',
+    reasoningNextTests: 'Рекомендовані наступні аналізи',
+    reasoningDoctorFlag: 'Обговорити з лікарем',
+    reasoningSafety: {
+      high_confidence_urgent: 'Потребує швидкої уваги',
+      moderate_confidence: 'Варто переглянути',
+      low_confidence: 'Ранній сигнал, обмежена впевненість',
+      blocked_by_missing_data: 'Недостатньо даних для впевненого висновку',
+      doctor_only: 'Обговорити з лікарем',
+    },
+    reasoningEmpty: 'Детальне обґрунтування для цього звіту поки недоступне.',
+    mapTitle: 'Як VITALOOP з’єднав дані',
+    mapIntro: 'Найімовірніші пояснення цього завантаження, що їх підтримує й обмежує, та хто має діяти далі.',
+    mapWhatSupports: 'Що це підтримує',
+    mapWhatLimits: 'Що обмежує впевненість',
+    mapNextTests: 'Що могло б зменшити невизначеність',
+    mapContext: 'Зазначений контекст',
+    mapConfidence: 'Впевненість',
+    mapActionBucket: {
+      self: 'Можна діяти самостійно',
+      practitioner: 'Варто обговорити зі спеціалістом',
+      doctor: 'Обговоріть з лікарем',
+      urgent: 'Потребує невідкладної уваги',
+    },
+    mapConfidenceLabel: {
+      high: 'Висока',
+      moderate: 'Помірна',
+      low: 'Низька',
+      blocked: 'Недостатньо даних',
+      doctor_only: 'Обговоріть з лікарем',
+      likely: 'Ймовірно',
+      possible: 'Можливо',
+      unlikely_but_flagged: 'Малоймовірно, але відмічено',
+    },
+    mapEmptyWithDomains: (stable, underTested) =>
+      `Із цього завантаження не сформувалась виражена гіпотеза. VITALOOP усе ж перевірив доступні напрямки: стабільних — ${stable}, недостатньо перевірених — ${underTested}.`,
+    mapEmptyNoDomains: 'Із цього завантаження не сформувалась виражена гіпотеза, а огляд напрямків для цього звіту поки недоступний.',
+    mapStableDomains: 'У цьому завантаженні не виявлено вираженого сигналу',
+    mapUnderTestedDomains: 'Недостатньо даних для впевненої оцінки',
+    progressTitle: 'Прогрес з минулого разу',
+    progressIntro: 'Як змінилися ваші патерни порівняно з попереднім завантаженням.',
+    progressStrengthened: 'Сигнал сильніший, ніж минулого разу',
+    progressWeakened: 'Сигнал слабший, ніж минулого разу',
+    progressNew: 'Нове з минулого разу',
+    progressResolved: 'Більше не виявлено — покращення або вирішення',
+    progressStable: 'Без змін з минулого разу',
+    progressNoPrevious: 'Завантажте ще один звіт у майбутньому, щоб побачити динаміку з часом.',
+    progressConfidenceWas: (from, to) => `${from} → ${to}`,
+    evidenceGapsTitle: 'Що може прояснити картину',
+    evidenceGapsIntro: 'Дещо тут ще не зовсім зрозуміло — доповнення могло б прояснити картину. Це про брак контексту, а не про вас.',
+    evidenceGapsEmpty: 'У цьому звіті не виявлено нічого незрозумілого.',
+    evidenceGapsHighPriority: 'високий пріоритет',
+    evidenceGapDomainLabels: {
+      knowledge_coverage: 'Ще не інтерпретовано',
+      data_quality: 'Якість даних',
+      general: 'Загальний контекст',
+    },
+    testingPlanTitle: 'План тестування та повторної перевірки',
+    testingPlanIntro: 'Впорядковано за тим, наскільки кожен аналіз прояснить звіт. Пріоритетні пункти варто обговорити скоріше; решта може почекати до наступного огляду.',
+    testingPlanEmpty: 'Наразі немає конкретних аналізів для пропозиції з цього звіту.',
+    testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
+    testingPlanTiming: 'Рекомендований термін',
+    testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
+    ...RESULTS_RETEST_COPY.uk,
+    retestNext: 'Наступний тест',
+    addToLabPlan: 'Додати до плану аналізів',
+    savingToLabPlan: 'Збереження...',
+    inLabPlan: 'У плані аналізів',
+    baselineTitle: 'Ваша особиста базова лінія',
+    baselineIntro: 'Не просто в межах чи поза межами референсу — чи це нормально саме для вас, на основі вашої історії.',
+    baselineEmpty: 'Поки що недостатньо повторної історії для особистої базової лінії. Вона формується з новими завантаженими звітами.',
+    baselineSilentSignalLabel: 'У межах референсу, але реальна зміна для вас',
+    baselineSilentSignalIntro: 'Ці показники лабораторія вважає нормальними, але вони суттєво відхилились від вашого типового рівня — варто звернути увагу.',
+    baselineOtherLabel: 'Інші відстежені показники',
+    baselineWas: (value) => `Ваш типовий рівень: ${value}`,
+    baselineHistoryPoints: (n) => `на основі ${n} попередн${n === 1 ? 'ього результату' : 'іх результатів'}`,
+    systemMapTitle: 'Карта ваших систем',
+    systemMapIntro: 'Кожна система, яку ми перевірили — не тільки позначені. Стабільні системи — це підтвердження, а не брак даних.',
+    systemMapPersonalDrift: 'Тут виявлено зміну відносно вашої базової лінії',
+    systemMapNoData: 'Поки немає показників для цієї системи',
+    actionPlanTitle: 'Ваші наступні дії',
+    actionPlanIntro: 'Ваш основний список наступних дій: що можна зробити самостійно, що обговорити з фахівцем, що потребує лікаря, і що термінове.',
+    actionPlanBuckets: {
+      urgent: { label: 'Терміново — обговоріть якнайшвидше', tone: 'critical' },
+      doctor: { label: 'Обговорити з лікарем', tone: 'warning' },
+      practitioner: { label: 'Обговорити з фахівцем / нутриціологом', tone: 'info' },
+      self: { label: 'Можна зробити самостійно', tone: 'success' },
+    },
+    actionPlanEmptyBucket: 'У цій категорії поки нічого немає.',
+    doctorEscalationTitle: 'Обговорення з лікарем',
+    doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Потребує швидкої медичної уваги',
+      doctor: 'Варто обговорити з лікарем',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'Якнайшвидше',
+      prompt: 'Протягом кількох днів',
+      soon: 'Найближчим часом',
+      routine: 'У плановому порядку',
+    },
+    doctorEscalationMarkersLabel: 'Пов’язані показники',
+    doctorEscalationDisclaimer: 'VITALOOP не ставить діагноз і не замінює лікаря.',
+    overviewResultsTitle: 'Що показують ваші результати',
+    overviewConnectionsTitle: 'Як це може бути пов’язано з вашим самопочуттям',
+    overviewActionsTitle: 'Три пріоритетні дії',
+    overviewMissingTitle: 'Яких даних не вистачає',
+    overviewConsultationTitle: 'Коли потрібна консультація',
+    overviewResultsEmpty: 'Перевірених даних поки недостатньо, щоб підсумувати цей звіт.',
+    overviewConnectionsEmpty: 'За наданими даними не підтверджено зв’язок результатів із конкретними симптомами.',
+    overviewActionsEmpty: 'Для цього звіту поки немає конкретної пріоритетної дії.',
+    overviewMissingEmpty: 'Для цього звіту не виявлено конкретних відсутніх даних.',
+    overviewConsultationEmpty: 'Сигналу для швидкого медичного перегляду не виявлено. Нові, виражені або наростаючі симптоми обговоріть із лікарем.',
+    overviewEvidence: 'На основі',
+    overviewMissingEvidence: 'Відсутнє',
+    technicalDisclosureTitle: 'Чому система зробила такий висновок',
+    technicalDisclosureIntro: 'Відкрийте технічні докази, калібрування впевненості, карту міркувань, аналіз відсутніх даних і трасування системи.',
+    evidenceDebtTitle: 'Дефіцит доказів',
+    evidenceDebtOverall: 'Загальний дефіцит доказів',
+    evidenceDebtDomains: 'Оцінено напрямків',
+    confidenceCalibrationTitle: 'Калібрування впевненості',
+    confidenceCalibrationOverall: 'Загальна калібрована впевненість',
+    confidenceCalibrationItems: 'Калібровано пунктів',
+    fallbackBadge: 'AI fallback: перевірені дані звіту',
+    fallbackBody: 'AI-відбір був недоступний, тому цей підсумок складено лише з перевірених тверджень і доказів цього звіту.',
+  },
+}
+
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  'inflammation load': 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  'thyroid context': 'Щитоподібна залоза',
+  liver: 'Печінка',
+  'liver stress context': 'Печінка',
+  kidney: 'Нирки',
+  'kidney function context': 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  'micronutrient status': 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
+}
+
+function toEnglishBiomarkerName(name) {
+  const raw = String(name || '').trim()
+  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+  return raw
+}
+
+export { normalizeBiomarkerStatus, summarizeBiomarkerStatuses }
+
+function scoreStatus(status) {
+  return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
+}
+
+function formatMetric(biomarker) {
+  if (!biomarker) return '—'
+  const unit = biomarker.unit ? ` ${biomarker.unit}` : ''
+  return `${biomarker.value ?? '—'}${unit}`
+}
+
+export function formatRange(biomarker, copy = RESULTS_COPY.en) {
+  const originalRange = typeof biomarker?.reference_range === 'string'
+    ? biomarker.reference_range.trim()
+    : ''
+  if (originalRange) {
+    const unit = String(biomarker.unit || '').trim()
+    return unit && !originalRange.toLocaleLowerCase().includes(unit.toLocaleLowerCase())
+      ? `${originalRange} ${unit}`
+      : originalRange
+  }
+  const hasLow = biomarker?.ref_low != null && String(biomarker.ref_low).trim() !== ''
+  const hasHigh = biomarker?.ref_high != null && String(biomarker.ref_high).trim() !== ''
+  if (hasLow && !hasHigh) return `≥ ${biomarker.ref_low}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+  if (!hasLow && hasHigh) return `≤ ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+  if (!hasLow && !hasHigh) return copy.noRange
+  const low = Number(biomarker.ref_low)
+  const high = Number(biomarker.ref_high)
+  if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) return copy.noRange
+  return `${biomarker.ref_low} - ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+}
+
+export function safetyStatusLabel(status, copy) {
+  const key = String(status || '').trim().toLowerCase()
+  return copy.safetyStatus?.[key] || copy.safetyStatus?.educational
+}
+
+function displayBiomarkerName(biomarker, isUk) {
+  if (!biomarker) return '—'
+  const value = isUk
+    ? biomarker.canonical_name || biomarker.name || biomarker.source_name || biomarker.name_en
+    : biomarker.name_en || biomarker.canonical_name || biomarker.name || biomarker.source_name
+  return biomarkerDisplayName(value, isUk) || '—'
+}
+
+export function reportContext(data) {
+  const reportVersion = data?.report_version || {}
+  const snapshot = reportVersion.input_snapshot || {}
+  const metadata = data?.metadata || snapshot.metadata || {}
+  const source = metadata.source || snapshot.source
+  const sourceObject = typeof source === 'object' && source ? source : {}
+  const patientFacingSources = [
+    data?.upload?.lab_name,
+    metadata.lab_name,
+    sourceObject.lab_name,
+    sourceObject.filename,
+    sourceObject.file_name,
+    snapshot.metadata?.lab_name,
+    snapshot.lab_name,
+    data?.lab_name,
+  ]
+  const internalSources = new Set(['b2c_file', 'manual', 'api', 'parser', 'synthetic', 'qa', 'smoke', 'validation'])
+  const sourceValue = patientFacingSources.find((value) => typeof value === 'string' && value.trim())
+    || (typeof source === 'string' && !internalSources.has(source.trim().toLowerCase()) ? source : '')
+  const dateValue = data?.measurement_date
+    || metadata.measurement_date
+    || source?.test_date
+    || source?.collected_at
+    || source?.reported_at
+    || snapshot.measurement_date
+    || data?.upload?.measurement_date
+  return {
+    source: typeof sourceValue === 'string' ? sourceValue.trim() : '',
+    date: typeof dateValue === 'string' ? dateValue : '',
+  }
+}
+
+export function formatReportDate(dateValue, locale, unknownDate) {
+  if (typeof dateValue !== 'string' || !dateValue.trim()) return unknownDate
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue.trim())
+  const parsedDate = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(dateValue)
+  if (
+    Number.isNaN(parsedDate.getTime())
+    || (dateOnly && (
+      parsedDate.getFullYear() !== Number(dateOnly[1])
+      || parsedDate.getMonth() !== Number(dateOnly[2]) - 1
+      || parsedDate.getDate() !== Number(dateOnly[3])
+    ))
+  ) return unknownDate
+  return parsedDate.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function triggerSubscriptionRequiredPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+  }
+}
+
+function SectionCard({ icon: Icon, title, children, className = '' }) {
+  return (
+    <section className={`results-content-card min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h2 className="min-w-0 text-balance text-lg font-semibold text-slate-950">{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (!item || typeof item !== 'object') return String(item)
+        return item.label || item.name || item.marker || item.biomarker || item.reason || item.summary || item.key || ''
+      })
+      .filter(Boolean)
+  }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+// P31d: asTextList()'s object fallback chain (label/name/.../key) can map
+// two distinct gap entries onto the same display string (e.g. two gaps
+// with no more specific label falling back to the same domain/key) --
+// this collapses those into one, preserving first-seen order, before the
+// list is rendered. Presentation-only: never touches the source trace
+// data.
+function dedupeTextList(list) {
+  const seen = new Set()
+  const result = []
+  for (const item of list) {
+    if (seen.has(item)) continue
+    seen.add(item)
+    result.push(item)
+  }
+  return result
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+function formatOverviewEvidence(reference, copy) {
+  const label = String(reference?.label || reference?.id || '').trim()
+  if (!label) return ''
+  if (reference?.availability === 'missing') return `${copy.overviewMissingEvidence}: ${label}`
+  const value = reference?.value
+  const measured = value == null || value === ''
+    ? ''
+    : ` ${typeof value === 'object' ? JSON.stringify(value) : value}${reference?.unit ? ` ${reference.unit}` : ''}`
+  return `${label}${measured}`
+}
+
+function OverviewEvidence({ references, copy }) {
+  const items = (Array.isArray(references) ? references : [])
+    .map((reference) => formatOverviewEvidence(reference, copy))
+    .filter(Boolean)
+    .slice(0, 4)
+  if (!items.length) return null
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-medium text-slate-400">{copy.overviewEvidence}:</span>
+      {items.map((item) => (
+        <span key={item} className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">{item}</span>
+      ))}
+    </div>
+  )
+}
+
+function OverviewList({ items, emptyText, copy, numbered = false }) {
+  if (!items.length) return <p className="text-sm leading-6 text-slate-500">{emptyText}</p>
+  const ListTag = numbered ? 'ol' : 'ul'
+  return (
+    <ListTag className="space-y-3">
+      {items.map((item, index) => (
+        <li key={item.statementId || `${item.text}-${index}`} className="text-sm leading-6 text-slate-700">
+          <div className="flex items-start gap-2">
+            {numbered ? (
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">{index + 1}</span>
+            ) : (
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+            )}
+            <span>{item.text}</span>
+          </div>
+          <div className="pl-7"><OverviewEvidence references={item.evidence} copy={copy} /></div>
+        </li>
+      ))}
+    </ListTag>
+  )
+}
+
+function narrativeTextItems(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => typeof item === 'string' ? item.trim() : item?.text?.trim())
+    .filter(Boolean)
+}
+
+function normalizedCopy(value) {
+  return String(value || '').trim().toLocaleLowerCase().replace(/\s+/g, ' ')
+}
+
+export function filterRepeatedActions(items, authoritativeItems) {
+  const authoritativeIds = new Set(
+    authoritativeItems
+      .map((item) => item?.action_id || item?.source_id || item?.id)
+      .filter(Boolean)
+      .map(String)
+  )
+  const authoritative = new Set(
+    authoritativeItems
+      .flatMap((item) => [item?.title, item?.text, item?.reason])
+      .map(normalizedCopy)
+      .filter(Boolean)
+  )
+  return items.filter((item) => {
+    const itemId = item?.action_id || item?.source_id || item?.id
+    if (itemId && authoritativeIds.has(String(itemId))) return false
+    return !authoritative.has(normalizedCopy(item.text))
+  })
+}
+
+function actionPlanItems(actionPlan) {
+  return ['urgent', 'doctor', 'practitioner', 'self'].flatMap((bucket) =>
+    Array.isArray(actionPlan?.buckets?.[bucket]) ? actionPlan.buckets[bucket] : []
+  )
+}
+
+export function UnifiedNarrativeSection({ narrative, copy, authoritativeActions }) {
+  if (!narrative || typeof narrative !== 'object') return null
+  const sections = [
+    [copy.narrativeFound, narrativeTextItems(narrative.what_we_found)],
+    [copy.narrativeConnections, narrativeTextItems(narrative.how_it_connects_to_you)],
+    [copy.narrativeChanged, narrativeTextItems(narrative.what_changed_over_time)],
+    [copy.narrativeUncertainty, narrativeTextItems(narrative.what_we_are_not_sure_about)],
+    [copy.narrativePriority, narrativeTextItems(narrative.why_this_is_priority)],
+    [copy.narrativeNext, filterRepeatedActions(
+      narrativeTextItems(narrative.what_to_do_next).map((text) => ({ text })),
+      authoritativeActions,
+    ).map((item) => item.text)],
+  ].filter(([, items]) => items.length)
+  if (!sections.length) return null
+
+  return (
+    <SectionCard icon={ClipboardList} title={copy.narrativeTitle} className="mb-6" >
+      <p className="mb-4 text-base font-semibold leading-6 text-slate-900">{copy.narrativeHeadline}</p>
+      <div className="space-y-4">
+        {sections.map(([title, items]) => (
+          <div key={title}>
+            <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+            <ul className="mt-1 space-y-1 text-sm leading-6 text-slate-600">
+              {items.map((item, index) => <li key={`${title}-${index}`}>{item}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  )
+}
+
+function ResultOverviewPanel({ overview, finalAnalysis, copy, isUk }) {
+  const consultationTone = overview.urgent
+    ? 'border-rose-300 bg-rose-50/60'
+    : overview.consultation.some((item) => item.level === 'doctor')
+      ? 'border-amber-200 bg-amber-50/50'
+      : 'border-slate-200 bg-white'
+
+  return (
+    <section className="mb-6 grid gap-4 lg:grid-cols-2" data-testid="p4-result-overview">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm lg:col-span-2">
+        <div className="mb-3 flex items-center gap-3">
+          <ClipboardList className="h-5 w-5 text-emerald-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewResultsTitle}</h2>
+        </div>
+        {overview.fallbackUsed && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950" data-testid="p5-fallback-disclosure">
+            <p className="text-xs font-semibold uppercase tracking-wide">{copy.fallbackBadge}</p>
+            <p className="mt-1 text-sm leading-5">{copy.fallbackBody}</p>
+          </div>
+        )}
+        <OverviewList items={overview.results} emptyText={copy.overviewResultsEmpty} copy={copy} />
+      </div>
+
+      <div className="rounded-2xl border border-sky-200 bg-sky-50/40 p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <HeartPulse className="h-5 w-5 text-sky-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewConnectionsTitle}</h2>
+        </div>
+        <OverviewList items={overview.connections} emptyText={copy.overviewConnectionsEmpty} copy={copy} />
+        <SymptomImpactNotice finalAnalysis={finalAnalysis} isUk={isUk} compact />
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewActionsTitle}</h2>
+        </div>
+        <OverviewList items={overview.actions} emptyText={copy.overviewActionsEmpty} copy={copy} numbered />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <HelpCircle className="h-5 w-5 text-slate-600" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewMissingTitle}</h2>
+        </div>
+        <OverviewList items={overview.missing} emptyText={copy.overviewMissingEmpty} copy={copy} />
+      </div>
+
+      <div className={`rounded-2xl border p-5 shadow-sm ${consultationTone}`}>
+        <div className="mb-3 flex items-center gap-3">
+          {overview.urgent ? <ShieldAlert className="h-5 w-5 text-rose-700" /> : <Stethoscope className="h-5 w-5 text-amber-700" />}
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewConsultationTitle}</h2>
+        </div>
+        <OverviewList items={overview.consultation} emptyText={copy.overviewConsultationEmpty} copy={copy} />
+      </div>
+    </section>
+  )
+}
+
+function localizeDomainLabel(value, copy) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (copy === RESULTS_COPY.uk) {
+    const key = raw.toLowerCase().replace(/\s+/g, '_')
+    const textKey = raw.toLowerCase()
+    return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
+  }
+  return raw
+}
+
+function HealthDomainCard({ state, copy }) {
+  const labelSource = copy === RESULTS_COPY.uk
+    ? state?.domain || state?.key || state?.label || state?.domain_label || 'Health domain'
+    : state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain'
+  const label = localizeDomainLabel(labelSource, copy)
+  const score = Number(state?.score ?? state?.health_score)
+  const risk = riskDisplayLabel(state?.risk_level || state?.status || state?.state, copy === RESULTS_COPY.uk)
+  const confidence = formatPercent(state?.confidence)
+  const dataUsed = asTextList(state?.used_biomarkers || state?.biomarkers || state?.contributing_biomarkers || state?.matched_biomarkers).slice(0, 5)
+  const missing = asTextList(state?.missing_data || state?.missing_markers).slice(0, 4)
+  const reasons = asTextList(state?.why || state?.reasons || state?.matched_signals || state?.evidence).slice(0, 3)
+  if (!reasons.length) {
+    const parts = [
+      risk ? `risk: ${risk}` : null,
+      Number.isFinite(score) ? `${copy.score}: ${Math.round(score)}` : null,
+      dataUsed.length ? `${copy.dataUsed.toLowerCase()}: ${dataUsed.join(', ')}` : null,
+    ].filter(Boolean)
+    if (parts.length) reasons.push(parts.join(' · '))
+  }
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-slate-950">{label}</h3>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {[risk, Number.isFinite(score) ? `${copy.score} ${Math.round(score)}` : null, confidence ? `${confidence} ${copy.confidence}` : null].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      </div>
+      {!!reasons.length && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.whyConclusion}</p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {reasons.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!dataUsed.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.dataUsed}:</span> {dataUsed.join(', ')}
+        </p>
+      )}
+      {!!missing.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.missingData}:</span> {missing.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const SYSTEM_MAP_RISK_META = {
+  high_attention: 'border-rose-200 bg-rose-50 text-rose-700',
+  needs_attention: 'border-amber-200 bg-amber-50 text-amber-800',
+  watch: 'border-amber-200 bg-amber-50 text-amber-700',
+  stable: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  unknown: 'border-slate-200 bg-slate-100 text-slate-500',
+}
+
+// P7 System Map: shows EVERY domain health_state_engine.py evaluated, not
+// just the filtered top_priorities subset AnalysisCoreV2Panel below
+// falls back to hiding when even one domain is flagged — the whole point
+// of a system map is that stable systems are visible reassurance, not
+// omitted because they're not the problem. Cross-references
+// personal_baseline's silent_signal markers (P6) by canonical_name against
+// each domain's contributing_biomarkers, per the product plan's own
+// suggestion that the system map should get smarter once a personal
+// baseline exists, not just report current status.
+function SystemMapSection({ healthStates, personalBaseline, copy }) {
+  const states = Array.isArray(healthStates?.states) ? healthStates.states : []
+  if (!states.length) return null
+
+  const silentSignalNames = new Set(
+    (Array.isArray(personalBaseline?.markers) ? personalBaseline.markers : [])
+      .filter((m) => m?.silent_signal)
+      .map((m) => String(m?.canonical_name || '').toLowerCase())
+  )
+
+  return (
+    <SectionCard icon={HeartPulse} title={copy.systemMapTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.systemMapIntro}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {states.map((state, index) => {
+          const badgeClass = SYSTEM_MAP_RISK_META[state?.risk_level] || SYSTEM_MAP_RISK_META.unknown
+          const riskLabel = riskDisplayLabel(state?.risk_level, copy === RESULTS_COPY.uk)
+          const label = localizeDomainLabel(state?.label || state?.domain, copy)
+          const hasDrift = (state?.contributing_biomarkers || []).some((b) =>
+            silentSignalNames.has(String(b?.canonical_name || '').toLowerCase())
+          )
+          return (
+            <div key={state?.domain || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold text-slate-950">{label}</h3>
+                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>{riskLabel}</span>
+              </div>
+              {state?.risk_level === 'unknown' ? (
+                <p className="mt-2 text-xs text-slate-500">{copy.systemMapNoData}</p>
+              ) : (
+                Number.isFinite(Number(state?.score)) && (
+                  <p className="mt-2 text-xs text-slate-500">{copy.score}: {Math.round(Number(state.score))}</p>
+                )
+              )}
+              {hasDrift && (
+                <p className="mt-2 text-xs font-semibold text-amber-700">{copy.systemMapPersonalDrift}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </SectionCard>
+  )
+}
+
+const ACTION_PLAN_BUCKET_STYLE = {
+  critical: { icon: ShieldAlert, badge: 'border-rose-200 bg-rose-50 text-rose-700' },
+  warning: { icon: Stethoscope, badge: 'border-amber-200 bg-amber-50 text-amber-800' },
+  info: { icon: MessageCircle, badge: 'border-sky-200 bg-sky-50 text-sky-700' },
+  success: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+}
+const ACTION_PLAN_BUCKET_ORDER = ['urgent', 'doctor', 'practitioner', 'self']
+
+// P9 Action Plan by Role: renders action_plan_by_role
+// (backend/app/services/action_plan_by_role.py) as four always-visible
+// buckets — the simplest possible answer after everything else on this
+// page: what to do yourself, what to bring to a specialist, what needs a
+// doctor, what's urgent. Pure display over data already bucketed
+// server-side; this component does no classification of its own.
+function ActionPlanByRoleSection({ actionPlan, copy, isUk }) {
+  if (!actionPlan?.buckets) return null
+  return (
+    <SectionCard icon={CheckCircle2} title={copy.actionPlanTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.actionPlanIntro}</p>
+      <div className="space-y-4">
+        {ACTION_PLAN_BUCKET_ORDER.map((bucketKey) => {
+          const meta = copy.actionPlanBuckets[bucketKey]
+          const style = ACTION_PLAN_BUCKET_STYLE[meta.tone] || ACTION_PLAN_BUCKET_STYLE.info
+          const Icon = style.icon
+          const items = Array.isArray(actionPlan.buckets[bucketKey]) ? actionPlan.buckets[bucketKey] : []
+          if (!items.length) return null
+          return (
+            <div key={bucketKey}>
+              <div className={`mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
+                <Icon className="h-3.5 w-3.5" /> {meta.label}
+              </div>
+              <div className="space-y-2">
+                {items.slice(0, 8).map((item, index) => (
+                  <div key={`${item.source_id || item.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                    {!!recommendationSourceLabel(item.source, isUk) && (
+                      <p className="mt-1 text-xs font-medium text-slate-500">{recommendationSourceLabel(item.source, isUk)}</p>
+                    )}
+                    {!!item.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </SectionCard>
+  )
+}
+
+// P29: renders doctor_escalation_precision (backend/app/services/
+// doctor_escalation_precision.py) as a small, restrained "doctor
+// discussion" card — never a full-width panic banner, even for an
+// "urgent" entry. Renders nothing at all when there is no doctor/urgent
+// level escalation: a practitioner/self-only report already has its
+// own place in ActionPlanByRoleSection above, so this section would
+// otherwise duplicate it. Deliberately does not display reason_codes,
+// internal ids, related_profiles, related_hypotheses, raw
+// contradictions, or pattern_escalation_reasons — see P29's scope: the
+// first UI pass only shows fields already vetted as consumer-safe
+// (docs/P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md).
+const DOCTOR_ESCALATION_LEVEL_ORDER = { urgent: 0, doctor: 1 }
+const DOCTOR_ESCALATION_MAX_ITEMS = 3
+
+function DoctorEscalationSection({ doctorEscalationPrecision, copy }) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  const relevant = escalations
+    .filter((item) => item?.level === 'urgent' || item?.level === 'doctor')
+    .sort((a, b) => DOCTOR_ESCALATION_LEVEL_ORDER[a.level] - DOCTOR_ESCALATION_LEVEL_ORDER[b.level])
+    .slice(0, DOCTOR_ESCALATION_MAX_ITEMS)
+
+  if (!relevant.length) return null
+
+  return (
+    <SectionCard icon={Stethoscope} title={copy.doctorEscalationTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.doctorEscalationIntro}</p>
+      <div className="space-y-3">
+        {relevant.map((item, index) => {
+          const style = item.level === 'urgent' ? ACTION_PLAN_BUCKET_STYLE.critical : ACTION_PLAN_BUCKET_STYLE.warning
+          const Icon = style.icon
+          const levelLabel = copy.doctorEscalationLevelLabels?.[item.level]
+          const timingLabel = copy.doctorEscalationTimingLabels?.[item.recommended_timing]
+          const markers = asTextList(item.related_markers).slice(0, 6)
+          return (
+            <div key={item.id || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div className={`mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
+                <Icon className="h-3.5 w-3.5" /> {levelLabel}
+              </div>
+              <DoctorEscalationDetails
+                reason={item.human_readable_reason}
+                markers={markers}
+                timingLabel={timingLabel}
+                copy={copy}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">{copy.doctorEscalationDisclaimer}</p>
+    </SectionCard>
+  )
+}
+
+const REASONING_SAFETY_BADGE = {
+  high_confidence_urgent: 'border-rose-200 bg-rose-50 text-rose-700',
+  doctor_only: 'border-rose-200 bg-rose-50 text-rose-700',
+  moderate_confidence: 'border-amber-200 bg-amber-50 text-amber-800',
+  low_confidence: 'border-slate-200 bg-slate-100 text-slate-600',
+  blocked_by_missing_data: 'border-slate-200 bg-slate-100 text-slate-600',
+}
+
+// Surfaces the clinical_reasoning_trace object the backend now assembles
+// per detected pattern (see backend/app/services/clinical_reasoning_trace.py):
+// what matched, how confident, what still argues against it, what's
+// missing, and what to test next — a transparent chain instead of a single
+// opaque recommendation. Reads from the same data every other card on this
+// page already gets via the /results response (final_analysis fallback).
+function ReasoningTraceCard({ trace, copy }) {
+  const confidence = formatPercent(trace?.confidence)
+  const safetyKey = String(trace?.safety_level || '').trim()
+  const safetyLabel = copy.reasoningSafety?.[safetyKey]
+  const badgeClass = REASONING_SAFETY_BADGE[safetyKey] || 'border-slate-200 bg-slate-100 text-slate-600'
+  const supporting = asTextList(trace?.supporting_markers).slice(0, 5)
+  const contradicting = asTextList(trace?.contradicting_markers).slice(0, 4)
+  const gaps = dedupeTextList(asTextList(trace?.evidence_gaps)).slice(0, 4)
+  const nextTests = asTextList(trace?.next_best_tests).slice(0, 4)
+  const matchedBiomarkers = asTextList(trace?.matched_biomarkers).slice(0, 5)
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-semibold text-slate-950">
+          {trace?.user_explanation?.headline || trace?.pattern_name || copy.reasoningTitle}
+        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidence && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {confidence} {copy.confidence}
+            </span>
+          )}
+          {(trace?.doctor_flag || safetyLabel) && (
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
+              {trace?.doctor_flag ? copy.reasoningDoctorFlag : safetyLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {!!trace?.user_explanation?.summary && (
+        <p className="mt-2 text-sm leading-6 text-slate-600">{trace.user_explanation.summary}</p>
+      )}
+
+      {!!matchedBiomarkers.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningBasedOn}:</span> {matchedBiomarkers.join(', ')}
+        </p>
+      )}
+      {!!supporting.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningSupporting}:</span> {supporting.join(', ')}
+        </p>
+      )}
+      {!!contradicting.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.reasoningContradicting}:</span> {contradicting.join(', ')}
+        </p>
+      )}
+      {!!gaps.length && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <HelpCircle className="h-3.5 w-3.5" /> {copy.reasoningGaps}
+          </p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {gaps.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningNextTests}:</span> {nextTests.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const PROGRESS_STATUS_META = {
+  strengthened: { icon: TrendingUp, badge: 'border-amber-200 bg-amber-50 text-amber-800', labelKey: 'progressStrengthened' },
+  weakened: { icon: TrendingDown, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700', labelKey: 'progressWeakened' },
+  new_signal: { icon: TrendingUp, badge: 'border-rose-200 bg-rose-50 text-rose-700', labelKey: 'progressNew' },
+  resolved_or_improved: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700', labelKey: 'progressResolved' },
+  stable: { icon: RefreshCw, badge: 'border-slate-200 bg-slate-100 text-slate-600', labelKey: 'progressStable' },
+}
+
+// Surfaces progress_intelligence (see backend/app/services/progress_intelligence.py):
+// a per-pattern diff of THIS upload's clinical_reasoning_traces against the
+// user's previous upload — the pattern-level counterpart to the
+// biomarker-level trend cards already shown elsewhere on this page.
+function ProgressIntelligenceSection({ progress, copy }) {
+  if (!progress) return null
+  const changes = Array.isArray(progress.changes) ? progress.changes : []
+
+  return (
+    <SectionCard icon={TrendingUp} title={copy.progressTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.progressIntro}</p>
+      {!progress.available || !changes.length ? (
+        <p className="text-sm leading-6 text-slate-600">{copy.progressNoPrevious}</p>
+      ) : (
+        <div className="space-y-3">
+          {changes.slice(0, 8).map((change, index) => {
+            const meta = PROGRESS_STATUS_META[change.status] || PROGRESS_STATUS_META.stable
+            const Icon = meta.icon
+            const currentPct = formatPercent(change.current_confidence)
+            const previousPct = formatPercent(change.previous_confidence)
+            return (
+              <div key={change.pattern_id || index} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${meta.badge}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold text-slate-950">{change.pattern_name || copy.progressPatternFallback}</h3>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{copy[meta.labelKey]}</span>
+                  </div>
+                  {(currentPct || previousPct) && (
+                    <p className="mt-1 text-sm text-slate-500">
+                      {copy.confidence}: {copy.progressConfidenceWas(previousPct || '—', currentPct || '—')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
+// Standalone "What We Can't Say Yet" block, sourced from the report-level
+// evidence_gaps object (backend/app/services/evidence_gaps.py) rather than
+// the per-pattern subset already shown inside each Reasoning Trace card.
+// Report-level gaps include entries with no detected pattern at all yet —
+// knowledge_coverage (measured but no active rule interprets it),
+// data_quality (unit/profile issues), and domain-expected markers that
+// were never drawn — none of which live inside any single trace card.
+// P31e: backend evidence-gap/testing-plan entries often reuse one of a
+// handful of generic boilerplate sentences across many items (e.g. the
+// same "add or review this context" line for ten different markers) --
+// repeating that sentence under every single card is the literal
+// repetition flagged in the P31c QA pass. When any text repeats across
+// two or more items, this drops it from the per-item cards and lists
+// each distinct message once at the end instead; a report where every
+// item's message is genuinely unique is left per-item, unchanged. Pure
+// presentation grouping over already-fetched data -- never mutates the
+// source list or re-fetches anything. Shared by EvidenceGapsSection and
+// TestingPlanSection.
+function collapseRepeatedNotes(values) {
+  const present = values.filter(Boolean)
+  const distinct = [...new Set(present)]
+  return { distinct, hasRepeats: present.length > distinct.length }
+}
+
+function EvidenceGapsSection({ evidenceGaps, copy }) {
+  const gaps = Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []
+  if (!gaps.length) {
+    return (
+      <SectionCard icon={HelpCircle} title={copy.evidenceGapsTitle} className="mb-6">
+        <p className="text-sm leading-6 text-slate-600">{copy.evidenceGapsEmpty}</p>
+      </SectionCard>
+    )
+  }
+
+  const visibleGaps = gaps.slice(0, 12)
+  const { distinct: distinctSteps, hasRepeats } = collapseRepeatedNotes(visibleGaps.map((g) => g?.suggested_next_step))
+
+  return (
+    <SectionCard icon={HelpCircle} title={copy.evidenceGapsTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.evidenceGapsIntro}</p>
+      <div className="space-y-2">
+        {visibleGaps.map((gap, index) => {
+          const domainLabel = copy.evidenceGapDomainLabels?.[gap?.domain] || gap?.domain
+          const isHighPriority = gap?.priority === 'high'
+          return (
+            <div key={index} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-950">
+                  {gap?.missing_marker ? gap.missing_marker : domainLabel}
+                </span>
+                {isHighPriority && (
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                    {copy.evidenceGapsHighPriority}
+                  </span>
+                )}
+              </div>
+              {!!gap?.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{String(gap.reason).replaceAll('_', ' ')}</p>}
+              {!!gap?.suggested_next_step && !hasRepeats && (
+                <p className="mt-1 text-xs text-slate-500">{gap.suggested_next_step}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {hasRepeats && !!distinctSteps.length && (
+        <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
+          {distinctSteps.map((step, index) => <li key={index}>{step}</li>)}
+        </ul>
+      )}
+    </SectionCard>
+  )
+}
+
+const TESTING_PRIORITY_BADGE = {
+  high: 'border-rose-200 bg-rose-50 text-rose-700',
+  medium: 'border-amber-200 bg-amber-50 text-amber-800',
+  low: 'border-slate-200 bg-slate-100 text-slate-600',
+}
+const TESTING_PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
+
+// Merges the report-level next_best_tests (globally ranked across every
+// domain — previously only ever shown as a per-pattern, unranked subset
+// inside trace cards) with the existing knowledge-report retest_plan
+// (which has timing, next_best_tests does not) into one deduplicated,
+// priority-sorted plan — a single canonical "what to test and when"
+// instead of the same marker potentially appearing in several places
+// with no consistent priority ordering.
+function normalizePlanTestName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function canonicalPlanTestName(item) {
+  return normalizePlanTestName(item?.canonical_marker || item?.marker)
+}
+
+function buildTestingPlan(nextBestTests, retestPlan, evidenceGaps) {
+  const byMarker = new Map()
+  for (const item of Array.isArray(nextBestTests?.recommended_tests) ? nextBestTests.recommended_tests : []) {
+    const marker = String(item?.marker || '').trim()
+    if (!marker) continue
+    byMarker.set(canonicalPlanTestName(item), {
+      marker,
+      canonical_marker: item?.canonical_marker,
+      domain: item?.domain,
+      priority: String(item?.priority || 'medium').toLowerCase(),
+      reason: item?.reason,
+      timing: null,
+      recommendation_id: item?.recommendation_id,
+      source_report_version_id: item?.source_report_version_id,
+    })
+  }
+  for (const item of Array.isArray(retestPlan) ? retestPlan : []) {
+    const marker = String(item?.marker || '').trim()
+    if (!marker) continue
+    const key = canonicalPlanTestName(item)
+    const existing = byMarker.get(key)
+    if (existing) {
+      existing.timing = item?.timing || existing.timing
+      existing.reason = existing.reason || item?.reason
+    } else {
+      byMarker.set(key, {
+        marker,
+        canonical_marker: item?.canonical_marker,
+        domain: null,
+        priority: String(item?.priority || 'medium').toLowerCase(),
+        reason: item?.reason,
+        timing: item?.timing,
+        recommendation_id: item?.recommendation_id,
+        source_report_version_id: item?.source_report_version_id,
+      })
+    }
+  }
+  for (const item of Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []) {
+    const marker = String(item?.missing_marker || item?.marker || item?.test_name || '').trim()
+    if (!marker) continue
+    const key = canonicalPlanTestName(item)
+    if (!byMarker.has(key)) {
+      byMarker.set(key, {
+        marker,
+        canonical_marker: item?.canonical_marker,
+        domain: item?.domain,
+        priority: String(item?.priority || 'medium').toLowerCase(),
+        reason: item?.reason || item?.suggested_next_step,
+        timing: null,
+        recommendation_id: item?.recommendation_id,
+        source_report_version_id: item?.source_report_version_id,
+      })
+    }
+  }
+  return [...byMarker.values()].sort(
+    (a, b) => (TESTING_PRIORITY_RANK[a.priority] ?? 1) - (TESTING_PRIORITY_RANK[b.priority] ?? 1)
+  )
+}
+
+function formatBaselineValue(value, unit) {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '—'
+  const rounded = Math.abs(num) >= 100 ? Math.round(num) : Math.round(num * 100) / 100
+  return `${rounded}${unit ? ` ${unit}` : ''}`
+}
+
+// Surfaces personal_baseline (backend/app/services/personal_baseline.py):
+// a personal historical mean per marker, and — the actual differentiator —
+// a "silent_signal" flag for a marker the lab calls normal but that has
+// drifted meaningfully from the user's own typical range. Only rendered
+// once there's enough repeat history to say anything (personal_baseline
+// itself is unavailable until then).
+function PersonalBaselineSection({ personalBaseline, copy, isUk }) {
+  if (!personalBaseline?.available) return null
+  const markers = Array.isArray(personalBaseline.markers) ? personalBaseline.markers : []
+  if (!markers.length) return null
+  const silentSignals = markers.filter((m) => m?.silent_signal)
+  const others = markers.filter((m) => !m?.silent_signal)
+
+  const renderRow = (marker, index) => (
+    <div key={marker.canonical_name || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: marker.name }, isUk)}</span>
+        <span className="text-sm font-semibold text-slate-700">{formatBaselineValue(marker.current_value, marker.unit)}</span>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        {copy.baselineWas(formatBaselineValue(marker.personal_baseline_value, marker.unit))} · {copy.baselineHistoryPoints(marker.history_points)}
+      </p>
+    </div>
+  )
+
+  return (
+    <SectionCard icon={TrendingUp} title={copy.baselineTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.baselineIntro}</p>
+      {!!silentSignals.length && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+              {copy.baselineSilentSignalLabel}
+            </span>
+          </div>
+          <p className="mb-2 text-sm leading-6 text-slate-500">{copy.baselineSilentSignalIntro}</p>
+          <div className="space-y-2">{silentSignals.map(renderRow)}</div>
+        </div>
+      )}
+      {!!others.length && (
+        <div>
+          {!!silentSignals.length && <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.baselineOtherLabel}</p>}
+          <div className="space-y-2">{others.slice(0, 8).map(renderRow)}</div>
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
+export function TestingPlanSection({
+  nextBestTests,
+  retestPlan,
+  persistedRetestPlan = [],
+  evidenceGaps,
+  nextTestFunnel,
+  labPlanItems,
+  savingPlanTest,
+  onAddToLabPlan,
+  sourceReportVersionId,
+  copy,
+  isUk,
+  today = new Date(),
+}) {
+  const plan = buildTestingPlan(nextBestTests, retestPlan, evidenceGaps)
+  // P12 Next-Test Funnel: the only genuinely new signal vs the P4 plan
+  // above — which previously-suggested tests have since been completed.
+  // Shown as a banner on the SAME section rather than a separate card, to
+  // avoid duplicating the testing-plan surface P4 already built.
+  const completed = Array.isArray(nextTestFunnel?.completed_since_last_upload)
+    ? nextTestFunnel.completed_since_last_upload
+    : []
+  const visiblePlan = plan.slice(0, 10)
+  // P31e: same repeated-boilerplate pattern as EvidenceGapsSection above
+  // (e.g. "Repeat timing should be based on clinician review..." reused
+  // across several markers) -- collapse into one shared list instead of
+  // repeating per card.
+  const { distinct: distinctReasons, hasRepeats: reasonsRepeat } = collapseRepeatedNotes(visiblePlan.map((item) => item.reason))
+  return (
+    <SectionCard icon={RefreshCw} title={copy.testingPlanTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.testingPlanIntro}</p>
+      {!!completed.length && (
+        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-sm font-semibold text-emerald-800">{copy.testingPlanCompletedTitle}</p>
+          <p className="mt-1 text-sm leading-5 text-emerald-700">
+            {completed.map((item) => displayBiomarkerName({ name: item.marker }, isUk)).join(', ')}
+          </p>
+        </div>
+      )}
+      {visiblePlan.length ? (
+        <div className="space-y-2">
+          {visiblePlan.map((item, index) => {
+            const persistedRetest = persistedRetestPlan.find((obligation) => (
+              normalizeRetestMarker(obligation.marker) === normalizeRetestMarker(item.marker)
+            ))
+            const persistedState = persistedRetest ? retestState(persistedRetest, today) : null
+            const completedSinceLastReport = completed.some((completedItem) => (
+              normalizeRetestMarker(completedItem?.marker) === normalizeRetestMarker(item.marker)
+            ))
+            const stateLabel = {
+              pending_not_open: copy.retestNotDue,
+              due_now: copy.retestDueNow,
+              overdue: copy.retestOverdue,
+              pending_no_window: copy.retestPending,
+              fulfilled: copy.retestCompleted,
+            }[persistedState]
+            const windowStart = persistedRetest && formatRetestDate(persistedRetest.retest_window_start, isUk ? 'uk-UA' : 'en-US')
+            const windowEnd = persistedRetest && formatRetestDate(persistedRetest.retest_window_end, isUk ? 'uk-UA' : 'en-US')
+            const savedItem = labPlanItems.find((saved) => (
+              saved.source_report_version_id === sourceReportVersionId
+              && canonicalPlanTestName({
+                canonical_marker: saved.canonical_normalized_test_name || saved.normalized_test_name,
+                marker: item.marker,
+              }) === canonicalPlanTestName(item)
+            ))
+            return (
+            <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: item.marker }, isUk)}</span>
+                {persistedRetest && completedSinceLastReport && persistedState !== 'fulfilled' && (
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.retestNext}</p>
+                )}
+                {!!item.reason && !reasonsRepeat && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
+                {stateLabel && (
+                  <span className="mt-2 inline-flex max-w-full flex-wrap rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                    {stateLabel}
+                  </span>
+                )}
+                {!!windowStart && !!windowEnd && (
+                  <p className="mt-1 break-words text-xs text-slate-500">{copy.retestWindow(windowStart, windowEnd)}</p>
+                )}
+                {!!item.timing && persistedState !== 'fulfilled' && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    <span className="font-semibold">{copy.testingPlanTiming}:</span> {item.timing}
+                  </p>
+                )}
+                {persistedState === 'fulfilled' && (
+                  <p className="mt-1 text-xs text-slate-500">{copy.retestCompletedBy}</p>
+                )}
+                {persistedState === 'fulfilled' && persistedRetest.fulfilled_by_upload_id && (
+                  <a
+                    href={`/results/${persistedRetest.fulfilled_by_upload_id}`}
+                    className="mt-2 inline-flex max-w-full break-words text-xs font-semibold text-blue-700 underline"
+                  >
+                    {copy.viewLaterResult}
+                  </a>
+                )}
+                {sourceReportVersionId && persistedState !== 'fulfilled' && (
+                  <button
+                    type="button"
+                    className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={savingPlanTest === normalizePlanTestName(item.marker) || !!savedItem}
+                    onClick={() => onAddToLabPlan(item)}
+                  >
+                    {savingPlanTest === normalizePlanTestName(item.marker)
+                      ? copy.savingToLabPlan
+                      : savedItem
+                        ? labPlanItemLabel(savedItem.status, copy.inLabPlan)
+                        : copy.addToLabPlan}
+                  </button>
+                )}
+              </div>
+              <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${TESTING_PRIORITY_BADGE[item.priority] || TESTING_PRIORITY_BADGE.medium}`}>
+                {copy.testingPlanPriority[item.priority] || copy.testingPlanPriority.medium}
+              </span>
+            </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-sm leading-6 text-slate-600">{copy.testingPlanEmpty}</p>
+      )}
+      {reasonsRepeat && !!distinctReasons.length && (
+        <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
+          {distinctReasons.map((reason, index) => <li key={index}>{reason}</li>)}
+        </ul>
+      )}
+    </SectionCard>
+  )
+}
+
+const MAP_ACTION_BUCKET_STYLE = {
+  urgent: 'border-rose-200 bg-rose-50 text-rose-700',
+  doctor: 'border-amber-200 bg-amber-50 text-amber-800',
+  practitioner: 'border-sky-200 bg-sky-50 text-sky-700',
+  self: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+}
+
+// P18 Clinical Reasoning Map: a compact "how VITALOOP connected the dots"
+// card per top hypothesis (backend/app/services/hypothesis_engine.py,
+// calibrated by confidence_calibration.py), showing supporting evidence,
+// what limits confidence (contradictions + evidence gaps), what could
+// reduce uncertainty next, and who should act — a summary of P14-P17,
+// not a duplicate of the detailed Clinical Reasoning / Evidence Gaps
+// sections already below it on this page.
+function ClinicalReasoningMapCard({ card, copy }) {
+  const bucketLabel = copy.mapActionBucket?.[card.actionBucket]
+  const bucketBadge = MAP_ACTION_BUCKET_STYLE[card.actionBucket] || 'border-slate-200 bg-slate-100 text-slate-600'
+  const confidenceLabel = card.confidenceLabel ? copy.mapConfidenceLabel?.[card.confidenceLabel] || card.confidenceLabel : null
+  const scorePct = formatPercent(card.confidenceScore)
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-semibold text-slate-950">{card.title}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidenceLabel && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {copy.mapConfidence}: {confidenceLabel}{scorePct ? ` (${scorePct})` : ''}
+            </span>
+          )}
+          {bucketLabel && (
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${bucketBadge}`}>{bucketLabel}</span>
+          )}
+        </div>
+      </div>
+
+      {!!card.hypothesis && <p className="mt-2 text-sm leading-6 text-slate-600">{card.hypothesis}</p>}
+
+      {!!card.symptoms.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapContext}:</span> {card.symptoms.join(', ')}
+        </p>
+      )}
+      {!!card.supportingMarkers.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapWhatSupports}:</span> {card.supportingMarkers.join(', ')}
+        </p>
+      )}
+      {!!(card.contradictions.length || card.evidenceGaps.length) && (
+        <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">{copy.mapWhatLimits}</p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-amber-900">
+            {[...card.contradictions, ...card.evidenceGaps].slice(0, 5).map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!!card.nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapNextTests}:</span> {card.nextTests.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ClinicalReasoningMapSection({
+  clinicalHypotheses,
+  clinicalContradictions,
+  reasoningTraces,
+  evidenceGaps,
+  actionPlanByRole,
+  negativeEvidence,
+  copy,
+}) {
+  const map = useMemo(
+    () =>
+      buildClinicalReasoningMap({
+        clinicalHypotheses,
+        clinicalContradictions,
+        reasoningTraces,
+        evidenceGaps,
+        actionPlanByRole,
+        negativeEvidence,
+      }),
+    [clinicalHypotheses, clinicalContradictions, reasoningTraces, evidenceGaps, actionPlanByRole, negativeEvidence]
+  )
+
+  // Nothing to show at all — no hypotheses AND no negative-evidence domain
+  // summary either (e.g. an old report from before P14-P17 existed).
+  // Hide the whole section rather than render an empty shell.
+  if (!map.cards.length && !map.stableDomains.length && !map.underTestedDomains.length) return null
+
+  return (
+    <SectionCard icon={Network} title={copy.mapTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.mapIntro}</p>
+      {map.cards.length ? (
+        <div className="space-y-3">
+          {map.cards.map((card) => (
+            <ClinicalReasoningMapCard key={card.id} card={card} copy={copy} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+          <p>
+            {map.stableDomains.length || map.underTestedDomains.length
+              ? copy.mapEmptyWithDomains(map.stableDomains.length, map.underTestedDomains.length)
+              : copy.mapEmptyNoDomains}
+          </p>
+          {!!map.stableDomains.length && (
+            <p className="mt-2 text-xs text-slate-500">
+              <span className="font-semibold">{copy.mapStableDomains}:</span>{' '}
+              {map.stableDomains.map((d) => localizeDomainLabel(d.domain, copy)).join(', ')}
+            </p>
+          )}
+          {!!map.underTestedDomains.length && (
+            <p className="mt-1 text-xs text-slate-500">
+              <span className="font-semibold">{copy.mapUnderTestedDomains}:</span>{' '}
+              {map.underTestedDomains.map((d) => localizeDomainLabel(d.domain, copy)).join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
+// P4: raw per-pattern trace cards are rendered only inside the page-level
+// technical disclosure. The data remains available without competing with
+// the five user-facing result blocks.
+function ReasoningTraceSection({ traces, copy }) {
+  const list = Array.isArray(traces) ? traces.filter(Boolean) : []
+  if (!list.length) return null
+  return (
+    <section className="mb-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-700">{copy.reasoningTitle}</h3>
+      <p className="mb-4 mt-3 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+      <div className="space-y-3">
+        {list.slice(0, 6).map((trace, index) => (
+          <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function SymptomImpactNotice({ finalAnalysis, isUk, compact = false }) {
+  const analysis = finalAnalysis?.symptom_analysis || {}
+  const impact = finalAnalysis?.case_synthesis?.symptom_impact || analysis?.conclusion_change || {}
+  if (!impact?.changed) return null
+
+  const concepts = new Map((analysis.concepts || []).map((item) => [item.concept_id, item]))
+  const hypotheses = new Map(
+    (finalAnalysis?.clinical_hypotheses?.hypotheses || []).map((item) => [item.hypothesis_id, item.label])
+  )
+  const explanations = Array.isArray(impact.explanations) ? impact.explanations : []
+
+  return (
+    <div className={`${compact ? 'mt-4 p-3' : 'mb-6 p-5 shadow-sm'} rounded-2xl border border-blue-200 bg-blue-50 text-blue-950`}>
+      <div className="font-semibold">
+        {isUk ? 'Що змінилося через ваші відповіді' : 'What changed because of your answers'}
+      </div>
+      <p className="mt-1 text-sm leading-6">
+        {isUk
+          ? 'Перевірка симптомів змінила пріоритет або пояснення у цьому звіті. Це контекст для пріоритету, а не доказ причини.'
+          : 'Your symptom check changed the priority or explanation in this report. This affects priority and does not prove cause.'}
+      </p>
+      {!!explanations.length && (
+        <ul className="mt-3 space-y-2 text-sm leading-6">
+          {explanations.map((item, index) => {
+            const labels = (item.symptom_concept_ids || []).map((id) => {
+              const concept = concepts.get(id)
+              if (!concept) return id
+              const answer = concept.choice === 'absent'
+                ? (isUk ? 'не виявлено' : 'reported absent')
+                : concept.choice === 'unknown'
+                  ? (isUk ? 'не впевнені' : 'unsure')
+                  : (isUk ? 'наявний' : 'reported present')
+              return `${concept.label} (${answer})`
+            })
+            const hypothesis = hypotheses.get(item.hypothesis_id) || item.hypothesis_id
+            return (
+              <li key={`${item.hypothesis_id || 'impact'}-${index}`}>
+                <span className="font-semibold">{hypothesis}</span>
+                {labels.length ? ` — ${labels.join(', ')}` : ''}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
+  if (!finalAnalysis) return null
+  const healthStates = finalAnalysis.health_states || {}
+  const quality = finalAnalysis.quality_snapshot || {}
+  const trends = finalAnalysis.trend_analysis || {}
+  const metadata = finalAnalysis.metadata || {}
+  const states = Array.isArray(healthStates.top_priorities) && healthStates.top_priorities.length
+    ? healthStates.top_priorities
+    : Array.isArray(healthStates.states)
+      ? healthStates.states
+      : []
+  const trendRows = asTextList(trends.priority_changes || trends.changes || trends.summary || trends.signals).slice(0, 4)
+  const completeness = formatPercent(quality?.coverage?.completeness ?? quality?.coverage?.analysis_completeness ?? quality?.completeness)
+  const topDomains = asTextList(quality.top_health_domains).slice(0, 4).map((item) => localizeDomainLabel(item, copy))
+
+  if (!states.length && !Object.keys(quality).length && !Object.keys(trends).length) return null
+
+  return (
+    <SectionCard icon={HeartPulse} title={copy.domainsTitle} className="mb-6">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.v2Eyebrow}</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{copy.domainsBody}</p>
+      </div>
+      {!!states.length && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {states.slice(0, 6).map((state, index) => <HealthDomainCard key={state?.key || state?.domain || index} state={state} copy={copy} />)}
+        </div>
+      )}
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.analysisQuality}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[completeness ? `${copy.completeness}: ${completeness}` : null, quality.version, metadata.analysis_core_version].filter(Boolean).join(' · ') || copy.sourceVersion}
+          </p>
+          {!!topDomains.length && <p className="mt-2 text-xs leading-5 text-slate-500">{topDomains.join(', ')}</p>}
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.trends}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{trendRows.length ? trendRows.join(' · ') : copy.noTrendData}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceVersion}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[healthStates.version, healthStates.domain_registry_version, metadata.health_context_version].filter(Boolean).join(' · ') || 'V2'}
+          </p>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
+function TechnicalContractSummary({ evidenceDebt, confidenceCalibration, copy }) {
+  if (!evidenceDebt && !confidenceCalibration) return null
+  const debtDomains = Array.isArray(evidenceDebt?.domain_debt) ? evidenceDebt.domain_debt : []
+  const calibratedItems = Array.isArray(confidenceCalibration?.calibrated_items)
+    ? confidenceCalibration.calibrated_items
+    : []
+  return (
+    <div className="mb-6 grid gap-3 md:grid-cols-2">
+      {!!evidenceDebt && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="font-semibold text-slate-950">{copy.evidenceDebtTitle}</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            {copy.evidenceDebtOverall}: <span className="font-semibold">{evidenceDebt.overall_debt || '—'}</span>
+            {Number.isFinite(Number(evidenceDebt.overall_score)) ? ` · ${formatPercent(evidenceDebt.overall_score)}` : ''}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">{copy.evidenceDebtDomains}: {debtDomains.length}</p>
+          {!!debtDomains.length && (
+            <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
+              {debtDomains.slice(0, 6).map((item, index) => (
+                <li key={item.domain || index}>
+                  <span className="font-semibold">{item.domain || 'domain'}:</span>{' '}
+                  {item.debt_level || '—'}{Number.isFinite(Number(item.debt_score)) ? ` (${formatPercent(item.debt_score)})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {!!confidenceCalibration && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="font-semibold text-slate-950">{copy.confidenceCalibrationTitle}</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            {copy.confidenceCalibrationOverall}: <span className="font-semibold">{confidenceCalibration.overall_confidence || '—'}</span>
+            {Number.isFinite(Number(confidenceCalibration.overall_score)) ? ` · ${formatPercent(confidenceCalibration.overall_score)}` : ''}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">{copy.confidenceCalibrationItems}: {calibratedItems.length}</p>
+          {!!calibratedItems.length && (
+            <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
+              {calibratedItems.slice(0, 6).map((item, index) => (
+                <li key={item.target_id || index}>
+                  <span className="font-semibold">{localizeDomainLabel(item.domain, copy) || 'Item'}:</span>{' '}
+                  {item.calibrated_confidence || '—'}
+                  {Number.isFinite(Number(item.calibrated_score)) ? ` (${formatPercent(item.calibrated_score)})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TechnicalReasoningDisclosure({
+  finalAnalysis,
+  clinicalHypotheses,
+  clinicalContradictions,
+  reasoningTraces,
+  evidenceGaps,
+  actionPlanByRole,
+  negativeEvidence,
+  copy,
+}) {
+  return (
+    <details className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="p4-technical-disclosure">
+      <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-800 marker:hidden">
+        <span className="inline-flex items-center gap-2">
+          <Info className="h-4 w-4 text-slate-500" />
+          {copy.technicalDisclosureTitle}
+        </span>
+      </summary>
+      <div className="border-t border-slate-100 p-5">
+        <p className="mb-5 text-sm leading-6 text-slate-500">{copy.technicalDisclosureIntro}</p>
+        <TechnicalContractSummary
+          evidenceDebt={finalAnalysis?.evidence_debt}
+          confidenceCalibration={finalAnalysis?.confidence_calibration}
+          copy={copy}
+        />
+        <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
+        <ClinicalReasoningMapSection
+          clinicalHypotheses={clinicalHypotheses}
+          clinicalContradictions={clinicalContradictions}
+          reasoningTraces={reasoningTraces}
+          evidenceGaps={evidenceGaps}
+          actionPlanByRole={actionPlanByRole}
+          negativeEvidence={negativeEvidence}
+          copy={copy}
+        />
+        <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
+        <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
+      </div>
+    </details>
+  )
+}
+
+export default function Results() {
+  const { uploadId } = useParams()
+  const navigate = useNavigate()
+  const { data: entitlements } = useUserEntitlements()
+  const [biomarkers, setBiomarkers] = useState([])
+  const [protocol, setProtocol] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
+  const [knowledgeReport, setKnowledgeReport] = useState(null)
+  const [finalAnalysis, setFinalAnalysis] = useState(null)
+  const [explainability, setExplainability] = useState(null)
+  const [safetyResult, setSafetyResult] = useState(null)
+  const [reasoningTraces, setReasoningTraces] = useState([])
+  const [progressIntelligence, setProgressIntelligence] = useState(null)
+  const [evidenceGaps, setEvidenceGaps] = useState(null)
+  const [nextBestTests, setNextBestTests] = useState(null)
+  const [personalBaseline, setPersonalBaseline] = useState(null)
+  const [actionPlanByRole, setActionPlanByRole] = useState(null)
+  const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
+  const [nextTestFunnel, setNextTestFunnel] = useState(null)
+  const [reportVersionId, setReportVersionId] = useState(null)
+  const [persistedRetestPlan, setPersistedRetestPlan] = useState([])
+  const [retestInterventionsAvailable, setRetestInterventionsAvailable] = useState(false)
+  const [labPlanItems, setLabPlanItems] = useState([])
+  const [savingPlanTest, setSavingPlanTest] = useState(null)
+  const [clinicalHypotheses, setClinicalHypotheses] = useState(null)
+  const [clinicalContradictions, setClinicalContradictions] = useState(null)
+  const [negativeEvidence, setNegativeEvidence] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      setLoading(true)
+      setLoadError(false)
+      setRetestInterventionsAvailable(false)
+      setPersistedRetestPlan([])
+      try {
+        // Cabinet reconciliation: a single call to /results/{uploadId} is
+        // sufficient — no second /analyze/{uploadId} fetch. Verified against
+        // the current backend contract (report_history.py::assemble_frozen_response
+        // + both GET callers): explainability/safety_result are present at the
+        // TOP LEVEL of the response for a frozen historical report, and nested
+        // under final_analysis.explainability/final_analysis.safety_result for
+        // the live-rendered fallback path (run_lab_analysis_pipeline's return
+        // dict always carries both keys) — so this fallback chain covers both
+        // cases with one request instead of two.
+        const { data } = await api.get(`/results/${uploadId}`)
+        if (!active) return
+        setBiomarkers(data.biomarkers ?? [])
+        setProtocol(data.protocol ?? [])
+        setShoppingLinks(
+          Array.isArray(data.shopping_links)
+            ? data.shopping_links
+            : Array.isArray(data.final_analysis?.shopping_links)
+              ? data.final_analysis.shopping_links
+              : []
+        )
+        setKnowledgeReport(data.knowledge_report ?? null)
+        setFinalAnalysis(data.final_analysis
+          ? { ...data.final_analysis, upload: data.upload }
+          : null)
+        setExplainability(data.explainability ?? data.final_analysis?.explainability ?? null)
+        setSafetyResult(data.safety_result ?? data.final_analysis?.safety_result ?? null)
+        setReasoningTraces(
+          Array.isArray(data.clinical_reasoning_traces)
+            ? data.clinical_reasoning_traces
+            : Array.isArray(data.final_analysis?.clinical_reasoning_traces)
+              ? data.final_analysis.clinical_reasoning_traces
+              : []
+        )
+        setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
+        setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
+        setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
+        const currentReportVersionId = data.report_version?.id ?? data.final_analysis?.report_version?.id ?? null
+        setReportVersionId(currentReportVersionId)
+        try {
+          setLabPlanItems(await listLabPlanItems())
+        } catch (error) {
+          console.error('[LabPlan] Failed to load saved items', error)
+          setLabPlanItems([])
+        }
+        try {
+          const interventions = await listInterventions()
+          setPersistedRetestPlan(selectRetestObligations(interventions, currentReportVersionId))
+          setRetestInterventionsAvailable(true)
+        } catch (error) {
+          console.error('[Retest] Failed to load persisted obligations', error)
+          setPersistedRetestPlan([])
+        }
+        setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
+        setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
+        setDoctorEscalationPrecision(data.doctor_escalation_precision ?? data.final_analysis?.doctor_escalation_precision ?? null)
+        setNextTestFunnel(data.next_test_funnel ?? data.final_analysis?.next_test_funnel ?? null)
+        setClinicalHypotheses(data.clinical_hypotheses ?? data.final_analysis?.clinical_hypotheses ?? null)
+        setClinicalContradictions(data.clinical_contradictions ?? data.final_analysis?.clinical_contradictions ?? null)
+        setNegativeEvidence(data.negative_evidence ?? data.final_analysis?.negative_evidence ?? null)
+        gaResultsView(uploadId)
+      } catch (_e) {
+        if (!active) return
+        setLoadError(true)
+        setBiomarkers([])
+        setProtocol([])
+        setShoppingLinks([])
+        setKnowledgeReport(null)
+        setFinalAnalysis(null)
+        setExplainability(null)
+        setSafetyResult(null)
+        setReasoningTraces([])
+        setProgressIntelligence(null)
+        setEvidenceGaps(null)
+        setNextBestTests(null)
+        setReportVersionId(null)
+        setPersistedRetestPlan([])
+        setRetestInterventionsAvailable(false)
+        setLabPlanItems([])
+        setPersonalBaseline(null)
+        setActionPlanByRole(null)
+        setDoctorEscalationPrecision(null)
+        setNextTestFunnel(null)
+        setClinicalHypotheses(null)
+        setClinicalContradictions(null)
+        setNegativeEvidence(null)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      active = false
+    }
+  }, [uploadId, retryToken])
+
+  const normalizedBiomarkers = useMemo(() => biomarkers.map((b) => ({
+    ...b,
+    name_en: toEnglishBiomarkerName(b?.name),
+    status_normalized: normalizeBiomarkerStatus(b),
+  })), [biomarkers])
+
+  const rankedBiomarkers = useMemo(
+    () => [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized)),
+    [normalizedBiomarkers]
+  )
+
+  const priorityMarkers = rankedBiomarkers.filter((b) => !['OPTIMAL', 'UNKNOWN'].includes(b.status_normalized)).slice(0, 5)
+  const biomarkerCounts = summarizeBiomarkerStatuses(normalizedBiomarkers)
+  const { optimal: optimalCount, borderline: watchCount, deficient, elevated } = biomarkerCounts
+  const outOfRangeCount = deficient + elevated
+  const biomarkerSummaryHeadline = biomarkerCounts.total
+    ? copy.biomarkerSummary(
+      biomarkerCounts.total,
+      watchCount + outOfRangeCount,
+      optimalCount,
+      biomarkerCounts.unknown,
+    )
+    : copy.classificationUnavailable
+
+  const reportSummary = knowledgeReport?.summary || null
+  const reportFound = knowledgeReport?.what_was_found || null
+  const reportFoundSummary = typeof reportFound?.summary === 'string' && !isBiomarkerCountSummary(reportFound.summary)
+    ? reportFound.summary
+    : null
+  const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
+  const reportMeta = reportContext(finalAnalysis)
+  const reportMetaLabels = isUk
+    ? { source: 'Джерело', date: 'Дата звіту' }
+    : { source: 'Source', date: 'Report date' }
+  const reportDateLocale = isUk ? 'uk-UA' : 'en-US'
+  const formattedReportDate = formatReportDate(reportMeta.date, reportDateLocale, copy.unknownReportDate)
+  const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
+  const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
+  const decisionRetest = decisionRetestSummary(reportRetest, copy.retestFallback)
+  const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
+  const handleAddToLabPlan = async (item) => {
+    const testName = String(item?.marker || '').trim()
+    const key = normalizePlanTestName(testName)
+    if (!reportVersionId || !key || savingPlanTest) return
+    setSavingPlanTest(key)
+    try {
+      const payload = {
+        source_report_version_id: reportVersionId,
+        test_name: testName,
+      }
+      if (item?.recommendation_id) {
+        payload.source_recommendation_id = item.recommendation_id
+      }
+      const saved = await addLabPlanItem(payload)
+      setLabPlanItems((current) => [
+        saved,
+        ...current.filter((existing) => existing.id !== saved.id),
+      ])
+    } catch (error) {
+      console.error('[LabPlan] Failed to save item', error)
+    } finally {
+      setSavingPlanTest(null)
+    }
+  }
+  const resultOverview = buildResultOverview({
+    groundedNarrative: finalAnalysis?.grounded_ai_narrative,
+    caseSynthesis: finalAnalysis?.case_synthesis,
+    actionPlanByRole,
+    evidenceGaps,
+    safetyResult,
+    doctorEscalationPrecision,
+    reportAlerts: reportAlerts.map((alert) => ({
+      ...alert,
+      message: alert.message || copy.alertFallback(alert.marker),
+    })),
+    urgentFallback: copy.urgentFallback,
+    knowledgeReport,
+    protocol,
+    priorityMarkers,
+    biomarkerSummaryText: biomarkerSummaryHeadline,
+  })
+  const authoritativeActions = actionPlanItems(actionPlanByRole)
+  const presentationOverview = {
+    ...resultOverview,
+    actions: filterRepeatedActions(resultOverview.actions, authoritativeActions),
+  }
+  const explanations = Array.isArray(explainability?.recommendations)
+    ? explainability.recommendations
+    : Array.isArray(explainability?.marker_explanations)
+      ? explainability.marker_explanations
+      : []
+
+  async function exportResultsAsPDF() {
+    try {
+      const jsPDF = (await import('jspdf')).jsPDF
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+      await embedReportFonts(pdf)
+      const margin = 44
+      const width = pdf.internal.pageSize.getWidth() - margin * 2
+      let y = 48
+      const addTitle = (text, size = 18) => {
+        if (y > 720) { pdf.addPage(); y = 48 }
+        pdf.setFont('NotoSans', 'bold')
+        pdf.setFontSize(size)
+        pdf.setTextColor(15, 23, 42)
+        pdf.text(text, margin, y)
+        y += size + 12
+      }
+      const addText = (text, size = 10) => {
+        if (!text) return
+        pdf.setFont('NotoSans', 'normal')
+        pdf.setFontSize(size)
+        pdf.setTextColor(71, 85, 105)
+        const lines = pdf.splitTextToSize(formatPdfComparisonOperators(String(text)), width)
+        lines.forEach((line) => {
+          if (y > 760) { pdf.addPage(); y = 48 }
+          pdf.text(line, margin, y)
+          y += size + 5
+        })
+        y += 4
+      }
+      const addList = (items = []) => {
+        items.filter(Boolean).slice(0, 10).forEach((item) => {
+          const text = typeof item === 'string' ? item : [item.title, item.body || item.summary || item.reason].filter(Boolean).join(' - ')
+          addText(`• ${text}`, 10)
+        })
+      }
+
+      addTitle('VITALOOP Health Report', 20)
+      if (reportMeta.source) addText(`Source: ${reportMeta.source}`)
+      addText(`Report date: ${formattedReportDate}`)
+      addText(biomarkerSummaryHeadline, 12)
+      addTitle('1. Status summary', 14)
+      addText(biomarkerSummaryHeadline)
+      addTitle('2. Findings', 14)
+      addList(priorityMarkers.slice(0, 5).map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)} (${formatRange(b, copy)})`))
+      addTitle('3. Action Plan', 14)
+      addList(reportActions.length ? reportActions : protocol)
+      addTitle('4. Doctor Questions', 14)
+      addList(reportDiscussion)
+      addTitle('5. Biomarkers', 14)
+      addList(rankedBiomarkers.map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)}; reference ${formatRange(b, copy)}; status ${biomarkerStatusLabel(b.status_normalized, isUk)}`))
+      addTitle('6. Retest Plan', 14)
+      addList(reportRetest)
+      if (reportFoundSummary) {
+        addTitle('7. Report narrative (source text; not a status classification)', 11)
+        addText(reportFoundSummary)
+      }
+      addTitle('8. Disclaimer', 14)
+      addText(reportSummary?.disclaimer || copy.disclaimer, 9)
+      pdf.save('vitaloop-results.pdf')
+    } catch (err) {
+      console.error('Failed to export PDF', err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+        {copy.loading}
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <CabinetPageHeader title={copy.loadFailedTitle} />
+        <div className="max-w-4xl">
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {copy.loadFailedBody}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setRetryToken((value) => value + 1)}
+              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white"
+            >
+              {copy.retry}
+            </button>
+            <button
+              onClick={() => navigate('/lab-results')}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              {copy.back}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (normalizedBiomarkers.length === 0) {
+    return (
+      <div className="space-y-6">
+        <CabinetPageHeader title={copy.emptyTitle} subtitle={copy.emptySubtitle} />
+        <div className="max-w-4xl">
+          <button onClick={() => navigate('/lab-results')} className="mb-6 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
+            <ArrowLeft className="h-4 w-4" />
+            {copy.back}
+          </button>
+          <div className="rounded-2xl border border-slate-200 bg-white py-12 shadow-sm">
+            <EmptyStateIllustration type="results" size="lg" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title={copy.healthSummary}
+        subtitle={copy.healthSummarySubtitle}
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              {copy.back}
+            </button>
+            <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
+              <Download className="h-4 w-4" />
+              {copy.export}
+            </button>
+          </div>
+        )}
+      />
+
+      <div className="results-page-content">
+        <motion.header
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="cabinet-header-hero mb-6 overflow-hidden !p-0"
+        >
+          <div className="results-report-hero grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="results-report-copy p-6 sm:p-8">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                <HeartPulse className="h-3.5 w-3.5" />
+                {copy.healthSummary}
+              </div>
+              <h1 className="results-report-headline cabinet-title">
+                {biomarkerSummaryHeadline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
+              </h1>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceNarrative}</p>
+              <p className="results-report-narrative mt-4 text-base leading-7 text-slate-600">
+                {reportFoundSummary || copy.intro}
+              </p>
+              <DecisionHeader
+                title={copy.decision.title}
+                summary={biomarkerSummaryHeadline || copy.fallbackHeadline}
+                why={reportFoundSummary || copy.intro}
+                nextAction={copy.actionPlan}
+                retest={decisionRetest}
+                labels={copy.decision}
+              />
+              {(reportMeta.source || formattedReportDate) && (
+                <dl className="results-report-meta mt-4 grid min-w-0 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                  {reportMeta.source && (
+                    <div className="min-w-0">
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.source}</dt>
+                      <dd className="break-words font-medium text-slate-800">{reportMeta.source}</dd>
+                    </div>
+                  )}
+                  {formattedReportDate && (
+                    <div>
+                      <dt className="font-semibold text-slate-500">{reportMetaLabels.date}</dt>
+                      <dd className="font-medium text-slate-800">{formattedReportDate}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => navigate(`/protocol/${uploadId}`)}
+                  className="cabinet-btn cabinet-btn--primary"
+                >
+                  {copy.actionPlan}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => navigate('/check-ins')}
+                  className="cabinet-btn cabinet-btn--secondary"
+                >
+                  {copy.checkIn}
+                </button>
+              </div>
+            </div>
+            <div className="border-t border-slate-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 lg:border-l lg:border-t-0">
+              <div className="results-report-stats grid grid-cols-3 gap-3 lg:grid-cols-1">
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-slate-950">{normalizedBiomarkers.length}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.markersRead}</div>
+                </div>
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-amber-600">{watchCount}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.watchList}</div>
+                </div>
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-rose-600">{outOfRangeCount}</div>
+                  <div className="results-report-stat-label text-xs font-medium text-slate-500">{copy.outOfRange}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.header>
+
+        <UnifiedNarrativeSection
+          narrative={finalAnalysis?.unified_personal_narrative}
+          copy={copy}
+          authoritativeActions={authoritativeActions}
+        />
+
+        <ResultOverviewPanel
+          overview={presentationOverview}
+          finalAnalysis={finalAnalysis}
+          copy={copy}
+          isUk={isUk}
+        />
+
+        <DoctorEscalationSection doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
+
+        <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} isUk={isUk} />
+
+        <TechnicalReasoningDisclosure
+          finalAnalysis={finalAnalysis}
+          clinicalHypotheses={clinicalHypotheses}
+          clinicalContradictions={clinicalContradictions}
+          reasoningTraces={reasoningTraces}
+          evidenceGaps={evidenceGaps}
+          actionPlanByRole={actionPlanByRole}
+          negativeEvidence={negativeEvidence}
+          copy={copy}
+        />
+
+        <TestingPlanSection
+          nextBestTests={nextBestTests}
+          retestPlan={reportRetest}
+          persistedRetestPlan={retestInterventionsAvailable ? persistedRetestPlan : []}
+          evidenceGaps={evidenceGaps}
+          nextTestFunnel={nextTestFunnel}
+          labPlanItems={labPlanItems}
+          savingPlanTest={savingPlanTest}
+          onAddToLabPlan={handleAddToLabPlan}
+          sourceReportVersionId={reportVersionId}
+          copy={copy}
+          isUk={isUk}
+        />
+
+        <SystemMapSection healthStates={finalAnalysis?.health_states} personalBaseline={personalBaseline} copy={copy} />
+
+        <PersonalBaselineSection personalBaseline={personalBaseline} copy={copy} isUk={isUk} />
+
+        {progressIntelligence?.available && <ProgressIntelligenceSection progress={progressIntelligence} copy={copy} />}
+
+        {/* Full biomarker table moved up here (right after Top Findings / Why
+            This Matters) per explicit request — it used to sit near the
+            bottom of the page, after Next Steps/Today/This Month/Doctor
+            Questions and the shopping links, which buried the one place that
+            shows every marker (not just the top 3 priority ones) below a lot
+            of secondary content. */}
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
+              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount, biomarkerCounts.unknown)}</p>
+            </div>
+            <FeatureGate
+              feature="advanced_protocol"
+              onLocked={triggerSubscriptionRequiredPaywall}
+              fallback={
+                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                  {copy.unlockTrends}
+                </button>
+              }
+            >
+              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                {copy.viewTrends}
+              </button>
+            </FeatureGate>
+          </div>
+          <div className="results-biomarker-table rounded-2xl border border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rankedBiomarkers.map((b, idx) => {
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.UNKNOWN
+                  return (
+                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
+                      <td data-label={copy.biomarker} className="results-biomarker-name px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
+                      <td data-label={copy.value} className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
+                      <td data-label={copy.ref} className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
+                      <td data-label={copy.status} className="px-4 py-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* P31b: removed the legacy "Next steps / Today / This month /
+            Doctor questions" cards (driven by pre-P9 knowledgeReport.
+            action_plan/doctor_discussion) -- they duplicated
+            ActionPlanByRoleSection/DoctorEscalationSection above with
+            older, less calibrated copy. reportActions/reportDiscussion/
+            reportRetest are kept as variables: still used by the PDF
+            export above and (reportRetest) by TestingPlanSection below. */}
+
+        <div className="mt-6">
+          <CoachCard className="p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-950">{copy.evidence}</h2>
+              <CoachBadge tone={safetyResult?.status === 'blocked' ? 'critical' : safetyResult?.status === 'approved_with_warnings' ? 'warning' : 'success'}>
+                {safetyStatusLabel(safetyResult?.status, copy)}
+              </CoachBadge>
+            </div>
+            <p className="text-sm leading-6 text-slate-600">
+              {explanations.length ? copy.evidenceSummary : copy.whyDefault}
+            </p>
+          </CoachCard>
+        </div>
+        {/* P31b: removed the duplicate "Retest" CoachCard here -- it
+            repeated the same reportRetest data TestingPlanSection above
+            already renders as this page's one primary testing/retest
+            surface. */}
+
+        {!!shoppingLinks.length && (
+          <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.shoppingEyebrow}</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">{copy.shoppingTitle}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {copy.shoppingBody}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shoppingLinks.slice(0, 6).map((item, idx) => (
+                <div key={`${item.search_query || item.label}-${idx}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-semibold text-slate-950">{item.label || item.search_query}</h3>
+                      {item.reason && <p className="mt-1 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                    </div>
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                      >
+                        {copy.findIherb}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700">
+                <Stethoscope className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-slate-950">{copy.readyTitle}</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  {copy.readyBody}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(`/protocol/${uploadId}`)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              {copy.openPlan}
+              <FileText className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {!entitlements?.is_premium && (
+          <p className="mt-4 text-center text-sm text-slate-500">
+            {copy.premiumTeaser}{' '}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'results_progress_tracking' } }))}
+              className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+            >
+              {copy.premiumTeaserCta}
+            </button>
+          </p>
+        )}
+
+        <p className="mt-5 text-xs leading-5 text-slate-500">
+          {reportSummary?.disclaimer || copy.disclaimer}
+        </p>
+
+      </div>
+    </div>
+  )
+}

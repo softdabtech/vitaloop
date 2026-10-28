@@ -1,0 +1,98 @@
+import uuid
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.dependencies import get_current_user, require_freemium_analyze
+from app.main import app
+from app.routers.analysis import analyze as analyze_router
+from app.services import supabase_service as svc
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("stub_post_report_persistence")
+async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
+    user_id = str(uuid.uuid4())
+
+    async def fake_quota_check(_user_id, _entry_type):
+        return True, "ok", None
+
+    async def fake_pdf_analyze(_temp_path, symptoms=None):
+        assert symptoms == [], "legacy multipart symptoms must not influence extraction"
+        return {
+            "success": True,
+            "analysis_method": "claude_pdf",
+            "analysis_time": 0.1,
+            "summary": {},
+            "top_priority": [],
+            "retest_schedule": [],
+            "protocol": [],
+            "biomarkers": [
+                {
+                    "name": "Ferritin",
+                    "value": 22.0,
+                    "unit": "ng/mL",
+                    "ref_low": 30.0,
+                    "ref_high": 300.0,
+                    "status": "BORDERLINE",
+                    "category": "minerals",
+                }
+            ],
+        }
+
+    async def fake_save_lab_upload(**_kwargs):
+        return {"id": str(uuid.uuid4())}
+
+    async def fake_save_biomarkers(upload_id, user_id, biomarkers):
+        return [
+            {
+                "id": str(uuid.uuid4()),
+                "upload_id": upload_id,
+                "user_id": user_id,
+                **biomarkers[0],
+            }
+        ]
+
+    async def fake_save_timeline_event(*_args, **_kwargs):
+        return None
+
+    async def fake_get_user_profile(_user_id):
+        return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
+
+    monkeypatch.setattr(
+        analyze_router.biomarker_service,
+        "check_freemium_biomarker_quota",
+        fake_quota_check,
+    )
+    monkeypatch.setattr(analyze_router.pdf_analyzer, "analyze_lab_pdf", fake_pdf_analyze)
+    monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
+    # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
+    # (gated on the quality-gate decision), not directly from analyze.py.
+    monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
+
+    async def fake_save_report_version(**kwargs):
+        return {"id": kwargs.get("report_version_id") or "report-fake", "status": "completed"}
+
+    monkeypatch.setattr(svc, "save_report_version", fake_save_report_version)
+    monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
+    monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
+
+    fake_user = {"sub": user_id, "email": "legacy@test.local"}
+    app.dependency_overrides[get_current_user] = lambda: fake_user
+    app.dependency_overrides[require_freemium_analyze] = lambda: fake_user
+
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/analyze",
+                files={"file": ("report.pdf", b"%PDF-1.4 test", "application/pdf")},
+                data={"lab_name": "Quest", "symptoms": "fatigue"},
+            )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body.get("upload_id")
+        assert len(body.get("biomarkers", [])) == 1
+    finally:
+        app.dependency_overrides.clear()

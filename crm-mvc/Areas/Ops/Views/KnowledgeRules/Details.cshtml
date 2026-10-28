@@ -1,0 +1,110 @@
+@using System.Text.Json
+@model Vitaloop.Crm.Web.Models.Crm.KnowledgeRuleDetail
+@{
+  ViewData["Title"] = $"Review — {Model.Key}";
+  var jsonOpts = new JsonSerializerOptions { WriteIndented = true };
+  string ToJson(object? value) => value is null ? "null" : JsonSerializer.Serialize(value, jsonOpts);
+}
+<style>
+.krd-wrap { padding:24px; max-width:1000px; }
+.krd-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.krd-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; font-family:ui-monospace,monospace; }
+.krd-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.krd-card  { background:#fff; border:1px solid #e8ecf2; border-radius:12px; padding:20px; margin-bottom:16px; }
+.krd-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:0 0 6px; }
+.krd-value { font-size:14px; color:#0f172a; margin:0 0 16px; }
+.krd-json  { background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px; font-family:ui-monospace,monospace; font-size:12px; overflow-x:auto; white-space:pre; }
+.krd-grid  { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:16px; }
+.krd-alert { margin:0 0 16px; padding:10px 16px; border-radius:8px; font-size:13px; }
+.krd-alert-error { background:#fee2e2; color:#991b1b; }
+.krd-approve-form { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.krd-approve-form label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#64748b; flex:1; min-width:240px; }
+.krd-approve-form input { border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:13px; color:#0f172a; }
+.krd-approve-btn { padding:9px 18px; border-radius:8px; background:#1D9E75; color:#fff; border:none; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.krd-approve-btn:hover { background:#0F6E56; }
+.krd-approve-btn:disabled { background:#cbd5e1; cursor:not-allowed; }
+.krd-warn { background:#fef3c7; color:#92400e; padding:10px 16px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+</style>
+
+<div class="krd-wrap">
+  <div class="krd-head">
+    <div>
+      <h1 class="krd-title">@Model.Key</h1>
+      <p class="krd-sub">@Model.Name</p>
+    </div>
+    <a href="/ops/knowledge-rules" style="font-size:13px;color:#1D9E75;text-decoration:none;">← Knowledge Rules</a>
+  </div>
+
+  @if (TempData["ErrorMessage"] is string errorMsg)
+  {
+    <div class="krd-alert krd-alert-error">⚠️ @errorMsg</div>
+  }
+
+  <div class="krd-warn">
+    ⚕️ Approving this rule is a real clinical sign-off. Read the conditions and outputs below in full before approving — this rule will start interpreting real users' lab results as soon as it is active.
+  </div>
+
+  <div class="krd-card">
+    <div class="krd-grid">
+      <div><p class="krd-label">Governance status</p><p class="krd-value">@Model.GovernanceStatus</p></div>
+      <div><p class="krd-label">Confidence</p><p class="krd-value">@Model.Confidence.ToString("0.00")</p></div>
+      <div><p class="krd-label">Severity</p><p class="krd-value">@(Model.Severity ?? "—")</p></div>
+      <div><p class="krd-label">Requires doctor</p><p class="krd-value">@(Model.RequiresDoctor ? "Yes" : "No")</p></div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+      <p class="krd-label">Description</p>
+      <p class="krd-value">@Model.Description</p>
+    }
+
+    <p class="krd-label">Input entities</p>
+    <p class="krd-value">@(Model.InputEntities.Any() ? string.Join(", ", Model.InputEntities) : "—")</p>
+
+    <p class="krd-label">Explanation template</p>
+    <p class="krd-value">@Model.ExplanationTemplate</p>
+
+    <p class="krd-label">Source</p>
+    <p class="krd-value">
+      @Model.Source
+      @if (!string.IsNullOrEmpty(Model.SourceUrl))
+      {
+        <text> — </text><a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">@Model.SourceUrl</a>
+      }
+    </p>
+
+    <p class="krd-label">Conditions</p>
+    <div class="krd-json">@ToJson(Model.Conditions)</div>
+
+    <p class="krd-label" style="margin-top:16px">Outputs</p>
+    <div class="krd-json">@ToJson(Model.Outputs)</div>
+  </div>
+
+  @if (Model.GovernanceStatus == "reviewed")
+  {
+    <div class="krd-card">
+      <p class="krd-label" style="margin-bottom:12px">Approve this rule</p>
+      <form method="post" action="/ops/knowledge-rules/@Model.Id/approve" class="krd-approve-form">
+        @Html.AntiForgeryToken()
+        <label>
+          Change note (required)
+          <input type="text" name="changeNote" required placeholder="e.g. Reviewed thresholds against standard guidelines">
+        </label>
+        <button type="submit" class="krd-approve-btn">✅ Approve &amp; activate</button>
+      </form>
+    </div>
+  }
+  else
+  {
+    <div class="krd-card">
+      <p class="krd-value" style="margin:0;color:#64748b">This rule is <strong>@Model.GovernanceStatus</strong> — only rules with status <strong>reviewed</strong> can be approved here.</p>
+      @if (!string.IsNullOrEmpty(Model.MedicalReviewedBy))
+      {
+        <p class="krd-value" style="margin:8px 0 0;color:#64748b">
+          Reviewed by <span style="font-family:ui-monospace,monospace">@Model.MedicalReviewedBy</span>
+          @if (Model.MedicalReviewedAt.HasValue) { <text> on @Model.MedicalReviewedAt.Value.ToString("yyyy-MM-dd HH:mm")</text> }
+        </p>
+      }
+    </div>
+  }
+</div>

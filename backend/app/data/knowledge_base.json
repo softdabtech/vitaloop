@@ -1,0 +1,6 @@
+{
+  "_deprecated": true,
+  "_note": "This file is no longer used. Knowledge base rules and recommendations are stored in Supabase (tables: knowledge_rules, recommendations). See backend/scripts/seed_knowledge_v2.py for the canonical data source. As of 2026-06-27: 110 active rules, 91 recommendations across 14 biomarker categories.",
+  "version": "kb_v1_deprecated",
+  "migrated_at": "2026-06-27T00:00:00Z"
+}

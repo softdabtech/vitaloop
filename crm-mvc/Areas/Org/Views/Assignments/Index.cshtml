@@ -1,0 +1,199 @@
+@model AssignmentsPageViewModel
+@{
+    ViewData["Title"] = "Practitioner Assignments";
+    Layout = "_CrmLayout";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+<div class="container-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Practitioner Assignments</h1>
+            <p class="page-subtitle">Manage specialist → client relationships</p>
+        </div>
+        <a href="@Url.Action("Create")" class="btn btn-primary">
+            <span class="btn-icon">➕</span> New Assignment
+        </a>
+    </div>
+
+    @if (Model?.Assignments.Any() == true)
+    {
+        var rows = Model.Assignments.Select(assignment => new EditableTableRowViewModel
+        {
+            RowKey = assignment.Id.ToString("N"),
+            Cells = new List<EditableTableCellViewModel>
+            {
+                new() { Kind = EditableTableCellKind.Text, Text = !string.IsNullOrWhiteSpace(assignment.ClientName) ? assignment.ClientName : assignment.ClientId.ToString() },
+                new() { Kind = EditableTableCellKind.Text, Text = !string.IsNullOrWhiteSpace(assignment.PractitionerName) ? assignment.PractitionerName : assignment.PractitionerId.ToString() },
+                new()
+                {
+                    Kind = EditableTableCellKind.Select,
+                    Name = "status",
+                    CssClass = "inline-input",
+                    Options = new List<EditableTableOptionViewModel>
+                    {
+                        new() { Value = "active", Label = "active", Selected = string.Equals(assignment.Status, "active", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "paused", Label = "paused", Selected = string.Equals(assignment.Status, "paused", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "completed", Label = "completed", Selected = string.Equals(assignment.Status, "completed", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "cancelled", Label = "cancelled", Selected = string.Equals(assignment.Status, "cancelled", StringComparison.OrdinalIgnoreCase) },
+                    }
+                },
+                new() { Kind = EditableTableCellKind.InputText, Name = "notes", Value = assignment.Notes, Placeholder = "Notes", CssClass = "inline-input" },
+                new() { Kind = EditableTableCellKind.Text, Text = assignment.UpdatedAt.ToString("yyyy-MM-dd HH:mm") },
+            },
+            PrimaryAction = new EditableTableActionViewModel
+            {
+                ActionUrl = $"/org/assignments/{assignment.Id}/update",
+                SubmitLabel = "Save"
+            },
+            SecondaryActions = new List<EditableTableActionViewModel>
+            {
+                new()
+                {
+                    ActionUrl = $"/org/assignments/{assignment.Id}/reassign",
+                    SubmitLabel = "Reassign",
+                    Fields = new List<EditableTableFieldViewModel>
+                    {
+                        new()
+                        {
+                            Kind = EditableTableFieldKind.Select,
+                            Name = "newPractitionerId",
+                            CssClass = "inline-input",
+                            Options = Model.PractitionerOptions
+                                .Select(practitioner => new EditableTableOptionViewModel
+                                {
+                                    Value = practitioner.UserId.ToString(),
+                                    Label = practitioner.DisplayName,
+                                    Selected = practitioner.UserId == assignment.PractitionerId,
+                                })
+                                .ToList(),
+                        },
+                    },
+                },
+            }
+        }).ToList();
+
+        @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
+        {
+            Title = "Assignments",
+            Columns = new[] { "Client", "Practitioner", "Status", "Notes", "Updated" },
+            EmptyMessage = "No assignments found.",
+            Rows = rows,
+        })
+    }
+    else
+    {
+        <div class="empty-state">
+            <p class="empty-icon">🔗</p>
+            <h2>No Assignments</h2>
+            <p>Create your first practitioner-client assignment.</p>
+            <a href="@Url.Action("Create")" class="btn btn-primary btn-lg">Create Assignment</a>
+        </div>
+    }
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .table-container {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        overflow: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        border-bottom: 1px solid var(--color-border);
+        padding: 0.75rem;
+        vertical-align: top;
+    }
+
+    .table th {
+        background: var(--color-bg);
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        min-width: 280px;
+    }
+
+    .inline-form {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .inline-input {
+        min-width: 90px;
+        padding: 0.3rem 0.45rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>

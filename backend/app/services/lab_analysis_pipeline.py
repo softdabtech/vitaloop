@@ -1,0 +1,2379 @@
+from __future__ import annotations
+
+import re
+from copy import deepcopy
+from datetime import date, datetime, timezone
+from typing import Any, Dict, Iterable, List, Optional
+import logging
+from uuid import uuid4
+
+from app.config import settings
+from app.services.affiliate import build_iherb_url
+from app.services.ai.openai_service import is_llm_configured
+from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
+from app.services.analysis_quality_gate import build_analysis_input_quality_gate
+from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
+from app.services.clinical_data_integrity import validate_clinical_data_integrity
+from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
+from app.services.next_best_test_engine import attach_report_provenance, build_next_best_tests
+from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
+from app.services.hypothesis_engine import build_clinical_hypotheses
+from app.services.clinical_contradictions import build_clinical_contradictions
+from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
+from app.services.negative_evidence import build_negative_evidence
+from app.services.outcome_attribution import build_outcome_attribution
+from app.services.evidence_debt import build_evidence_debt
+from app.services.report_quality_audit import build_report_quality_audit
+from app.services.population_profiles import build_population_profile_overlays
+from app.services.population_profile_selection import select_population_profiles
+from app.services.doctor_escalation_precision import build_doctor_escalation_precision
+from app.services.case_synthesis import build_case_synthesis, build_unified_personal_narrative
+from app.services.grounded_ai_narrative import build_grounded_ai_narrative
+from app.services.semantic_acceptance import build_semantic_acceptance
+from app.services.symptom_analysis import (
+    apply_symptom_priority,
+    build_symptom_analysis,
+)
+from app.services.progress_intelligence import build_progress_intelligence
+from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
+from app.services.action_plan_by_role import build_action_plan_by_role
+from app.services.action_identity import assign_action_ids
+from app.services.next_test_funnel import build_next_test_funnel
+from app.services.cost_analytics import record_analysis_cost
+from app.services.evidence_gaps import build_evidence_gaps
+from app.services.explainability import build_recommendation_explanations
+from app.services.health_context import build_health_context
+from app.services.symptom_snapshot import (
+    load_latest_eligible_symptom_snapshot,
+    public_symptom_snapshot,
+    redact_report_version_symptom_snapshot,
+    should_load_symptom_snapshot,
+    symptoms_from_snapshot,
+)
+from app.services.symptom_metrics import record_lab_analysis_snapshot
+from app.services.health_state_engine import evaluate_health_states
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, resolve_domain_definitions
+from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.nutrition_algorithms import NUTRITION_ALGORITHMS_VERSION
+from app.services.knowledge.report import build_knowledge_report
+from app.services.lab_normalization.biomarker_mapping import (
+    infer_category,
+    is_metadata_field,
+    to_canonical_name,
+    to_known_canonical_name,
+)
+# Clinical engine — единая точка для normalize/prioritize/risk_flags
+from app.services.clinical_engine.normalizer import normalize_biomarkers as _engine_normalize_biomarkers
+from app.services.clinical_engine import prioritize_biomarkers as _engine_prioritize_biomarkers
+from app.services.clinical_engine import build_risk_flags as _engine_build_risk_flags
+from app.services.protocol_enrichment import enrich_protocol
+from app.services.protocol_action_adapter import adapt_protocol_actions_from_frozen_evidence
+from app.services.protocol_pipeline_evidence import FROZEN_EVIDENCE_KEY, build_pipeline_frozen_evidence
+from app.services.recovery_dispatcher import recover_pending_report_followups, recover_report_followups
+from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report, detect_patterns
+from app.services.safety import (
+    sanitize_knowledge_evaluation_for_safety,
+    sanitize_knowledge_report_for_safety,
+    sanitize_protocol_for_safety,
+    sanitize_safety_result_for_output,
+    validate_report,
+)
+from app.services.safety.safety_engine import blocked_content_notice
+from app.services.safety.safety_engine import SAFETY_ENGINE_VERSION
+from app.services.safety.symptom_report_contract import effective_report_safety
+from app.services.trend_engine import evaluate_biomarker_trends
+
+logger = logging.getLogger("uvicorn.error")
+
+LAB_ANALYSIS_PIPELINE_VERSION = "lab_analysis_pipeline_v2"
+
+_DOMAIN_LABELS_UK = {
+    "iron_status": "Статус заліза",
+    "metabolic_health": "Метаболічне здоровʼя",
+    "cardiovascular": "Серцево-судинний профіль",
+    "inflammation": "Запалення",
+    "thyroid": "Щитоподібна залоза",
+    "liver": "Печінка",
+    "kidney": "Нирки",
+    "micronutrients": "Мікронутрієнти",
+    "recovery_energy": "Відновлення й енергія",
+    "blood_count": "Загальний аналіз крові",
+    "general": "Загальний контекст",
+}
+
+
+def _localized_domain_label(domain: Any, fallback: Any, locale: str) -> str:
+    key = str(domain or "").strip()
+    if str(locale or "").lower().startswith("uk") and key in _DOMAIN_LABELS_UK:
+        return _DOMAIN_LABELS_UK[key]
+    return str(fallback or key or "Health domain")
+
+
+DISCLAIMER = (
+    "This analysis is educational decision support and is not a diagnosis. "
+    "Discuss abnormal, urgent, or concerning results with a qualified clinician."
+)
+
+_NAME_ALIASES = {
+    "ферритин": "ferritin",
+    "феритин": "ferritin",
+    "vit d": "vitamin d",
+    "25 oh vitamin d": "vitamin d",
+}
+
+_STATUS_PRIORITY = {
+    "DEFICIENT": 0,
+    "ELEVATED": 1,
+    "BORDERLINE": 2,
+    "UNKNOWN": 3,
+    "OPTIMAL": 4,
+}
+
+_PLACEHOLDER_SOURCE_HOSTS = ("example.org", "example.com")
+
+_NAME_CATEGORY_KEYWORDS = {
+    "blood_count": [
+        "reticulocyte",
+        "erythrocyte",
+        "hemoglobin",
+        "hematocrit",
+        "spherical cell",
+        "cell volume",
+        "mcv",
+        "mch",
+        "rdw",
+        "rbc",
+        "wbc",
+        "platelet",
+    ],
+    "minerals": ["ferritin", "iron", "transferrin", "magnesium", "zinc", "selenium"],
+    "vitamins": ["vitamin", "b12", "folate", "folic"],
+    "thyroid": ["tsh", "thyroid", "t3", "t4"],
+    "lipids": ["cholesterol", "ldl", "hdl", "triglycer"],
+    "metabolic": ["glucose", "hba1c", "insulin"],
+    "liver": ["alt", "ast", "ggt", "bilirubin"],
+    "kidney": ["creatinine", "urea", "egfr"],
+    "inflammation": ["crp", "esr", "homocysteine"],
+}
+
+
+def _is_placeholder_source_url(value: Any) -> bool:
+    url = str(value or "").strip().lower()
+    return any(host in url for host in _PLACEHOLDER_SOURCE_HOSTS)
+
+
+def _strip_placeholder_source_urls(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_placeholder_source_urls(item) for item in value]
+    if isinstance(value, dict):
+        cleaned: Dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "source_url" and _is_placeholder_source_url(item):
+                cleaned[key] = None
+            else:
+                cleaned[key] = _strip_placeholder_source_urls(item)
+        return cleaned
+    return value
+
+
+def _parse_reference_range(raw: Any) -> tuple[float | None, float | None]:
+    if raw in (None, ""):
+        return None, None
+    values = re.findall(r"(?<!\d)[-+]?\d+(?:[.,]\d+)?", str(raw))
+    if len(values) < 2:
+        return None, None
+    return float(values[0].replace(",", ".")), float(values[1].replace(",", "."))
+
+
+def _normalize_unit(raw_unit: str) -> str:
+    unit = str(raw_unit or "").strip()
+    normalized = unit.lower().replace("μ", "u").replace("µ", "u")
+    aliases = {
+        "ug/l": "ng/mL",
+        "mcg/l": "ng/mL",
+        "ng/ml": "ng/mL",
+        "ng/ml.": "ng/mL",
+        "mg/dl": "mg/dL",
+        "g/dl": "g/dL",
+        "u/l": "U/L",
+        "iu/l": "IU/L",
+        "miu/l": "uIU/mL",
+        "uiu/ml": "uIU/mL",
+        "%": "%",
+    }
+    return aliases.get(normalized, unit)
+
+
+def _normalize_value_unit(name: str, value: float, unit: str) -> tuple[float, str]:
+    canonical = to_canonical_name(name)
+    normalized_unit = _normalize_unit(unit)
+    numeric_value = float(value)
+
+    if canonical in {"vitamin_d_25_oh", "vitamin_d", "canonical_vitamin_d_25_oh", "canonical_vitamin_d"}:
+        raw_unit = str(unit or "").strip().lower()
+        if raw_unit in {"nmol/l", "nmol/l."}:
+            return numeric_value / 2.5, "ng/mL"
+
+    return numeric_value, normalized_unit
+
+
+def _convert_reference_range_for_unit(
+    canonical: str,
+    ref_low: float | None,
+    ref_high: float | None,
+    raw_unit: str,
+) -> tuple[float | None, float | None]:
+    raw = str(raw_unit or "").strip().lower()
+    if canonical in {"canonical_vitamin_d_25_oh", "canonical_vitamin_d"} and raw in {"nmol/l", "nmol/l."}:
+        return (
+            ref_low / 2.5 if ref_low is not None else None,
+            ref_high / 2.5 if ref_high is not None else None,
+        )
+    return ref_low, ref_high
+
+
+def _normalize_name(raw_name: str, name_aliases: Optional[Dict[str, str]] = None) -> tuple[str, str]:
+    display_name = re.sub(r"\s+", " ", str(raw_name or "").strip())
+    alias_key = display_name.lower()
+    aliases = {**_NAME_ALIASES, **{str(k).strip().lower(): str(v).strip() for k, v in (name_aliases or {}).items() if str(k).strip() and str(v).strip()}}
+    english_name = aliases.get(alias_key, display_name)
+    base_canonical = to_canonical_name(english_name)
+    canonical = base_canonical if base_canonical.startswith("canonical_") else f"canonical_{base_canonical}"
+    return display_name, canonical
+
+
+def _infer_category_from_name(display_name: str, canonical: str) -> str:
+    text = f"{display_name} {canonical}".lower()
+    for category, keywords in _NAME_CATEGORY_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            return category
+    inferred = infer_category(canonical)
+    return inferred if inferred and inferred != "other" else "other"
+
+
+def _reference_range_fallback(canonical: str, unit: str) -> tuple[float | None, float | None]:
+    """Reference bounds from the codebase's own reference table when the lab
+    report carried none.
+
+    Some labs print values without a range. Those markers previously reached
+    _status_for_value() with nothing to compare against and fell through to its
+    BORDERLINE default -- 96 marker instances across the 15 stored uploads
+    presented as "needs review", including CRP 1.52 mg/L and LDL 2.26 mmol/L,
+    which are unremarkable. BIOMARKER_DATABASE (LabCorp/Mayo ranges, already
+    used by manual entry and calculate_status) covers part of that set, so it is
+    consulted here rather than leaving the marker unassessed. Nothing is
+    invented: a marker or unit the table does not carry still returns (None,
+    None) and keeps the existing behaviour.
+    """
+    from app.services.biomarker_reference import resolve_status_bounds
+
+    bounds = resolve_status_bounds(str(canonical or "").removeprefix("canonical_"), str(unit or ""), None)
+    if not bounds:
+        return None, None
+    ref_min, ref_max, _optimal_min, _optimal_max = bounds
+    low = None if ref_min in (None, 0) else float(ref_min)
+    high = None if ref_max in (None, float("inf")) else float(ref_max)
+    return low, high
+
+
+def _status_for_value(value: float, ref_low: float | None, ref_high: float | None, raw_status: Any = None) -> str:
+    if ref_low is not None and value < ref_low:
+        return "DEFICIENT"
+    if ref_high is not None and value > ref_high:
+        return "ELEVATED"
+    if ref_low is not None or ref_high is not None:
+        return "OPTIMAL"
+
+    status = str(raw_status or "").strip().upper()
+    aliases = {
+        "NORMAL": "OPTIMAL",
+        "IN_RANGE": "OPTIMAL",
+        "IN RANGE": "OPTIMAL",
+        "LOW": "DEFICIENT",
+        "HIGH": "ELEVATED",
+        "CRITICAL": "ELEVATED",
+    }
+    return aliases.get(status, status if status in _STATUS_PRIORITY else "BORDERLINE")
+
+
+def normalize_biomarkers(
+    raw_biomarkers: Iterable[Dict[str, Any]],
+    *,
+    name_aliases: Optional[Dict[str, str]] = None,
+    sex: Optional[str] = None,
+    age: Optional[int] = None,
+    preserve_existing_evaluation: bool = False,
+) -> List[Dict[str, Any]]:
+    """Delegates to clinical_engine.normalizer.normalize_biomarkers().
+
+    Kept here for backward compatibility — routers and tests import this name.
+
+    Args:
+        raw_biomarkers: List of biomarker dicts with name, value, unit
+        name_aliases: Optional custom biomarker name mappings
+        sex: Optional user sex ('male', 'female') for sex-specific reference ranges
+        age: Optional user age (years) for age-specific assessment
+    """
+    return _engine_normalize_biomarkers(
+        raw_biomarkers,
+        name_aliases=name_aliases,
+        sex=sex,
+        age=age,
+        preserve_existing_evaluation=preserve_existing_evaluation,
+    )
+
+
+def _iso_or_none(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
+
+
+def _priority_for_status(status: str) -> str:
+    if status in {"DEFICIENT", "ELEVATED"}:
+        return "high"
+    if status == "BORDERLINE":
+        return "medium"
+    return "low"
+
+
+def _prioritize_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Delegates to clinical_engine.prioritize_biomarkers()."""
+    return _engine_prioritize_biomarkers(biomarkers)
+
+
+def _risk_flags(knowledge_report: Dict[str, Any], prioritized: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Delegates to clinical_engine.build_risk_flags()."""
+    return _engine_build_risk_flags(knowledge_report, prioritized)
+
+
+def _localized_knowledge_evaluation_for_response(
+    knowledge_evaluation: Dict[str, Any],
+    knowledge_report: Dict[str, Any],
+    locale: str,
+) -> Dict[str, Any]:
+    if not str(locale or "").lower().startswith("uk"):
+        return knowledge_evaluation
+
+    localized = dict(knowledge_evaluation or {})
+    report_rules = {
+        str(item.get("rule_key") or ""): item
+        for item in (knowledge_report.get("why_it_matters") or [])
+        if isinstance(item, dict)
+    }
+    localized_rules = []
+    for rule in localized.get("matched_rules") or []:
+        if not isinstance(rule, dict):
+            continue
+        updated = dict(rule)
+        report_rule = report_rules.get(str(updated.get("rule_key") or ""))
+        if report_rule:
+            updated["name"] = report_rule.get("title") or updated.get("name")
+            updated["description"] = report_rule.get("summary") or updated.get("description")
+            updated["summary"] = report_rule.get("summary") or updated.get("summary")
+            updated["explanation"] = report_rule.get("why_it_matters") or updated.get("explanation")
+        localized_rules.append(updated)
+    localized["matched_rules"] = localized_rules
+
+    report_actions = {
+        str(item.get("key") or ""): item
+        for item in (knowledge_report.get("action_plan") or [])
+        if isinstance(item, dict)
+    }
+    localized_recommendations = []
+    for rec in localized.get("generated_recommendations") or []:
+        if not isinstance(rec, dict):
+            continue
+        updated = dict(rec)
+        report_action = report_actions.get(str(updated.get("key") or ""))
+        if report_action:
+            updated["title"] = report_action.get("title") or updated.get("title")
+            updated["body"] = report_action.get("body") or updated.get("body")
+        localized_recommendations.append(updated)
+    localized["generated_recommendations"] = localized_recommendations
+    return localized
+
+
+def _protocol_from_actions(actions: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+    protocol = {
+        "nutrition": [],
+        "supplements": [],
+        "lifestyle": [],
+        "training_recovery": [],
+    }
+    for action in actions:
+        category = str(action.get("category") or "").lower()
+        target = "lifestyle"
+        if "supplement" in category or "vitamin" in category or "mineral" in category:
+            target = "supplements"
+        elif "nutrition" in category or "diet" in category:
+            target = "nutrition"
+        elif "training" in category or "recovery" in category or "sleep" in category:
+            target = "training_recovery"
+        protocol[target].append(action)
+
+    return protocol
+
+
+def _estimate_tokens(payload: Any) -> int:
+    raw = str(payload or "")
+    return max(1, len(raw) // 4) if raw else 0
+
+
+def _estimate_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
+    model = (settings.active_llm_model or "").lower()
+    if "gpt-4o-mini" in model:
+        input_per_million = 0.15
+        output_per_million = 0.60
+    elif "gpt-4o" in model:
+        input_per_million = 5.0
+        output_per_million = 15.0
+    else:
+        input_per_million = 1.0
+        output_per_million = 3.0
+    return round((prompt_tokens / 1_000_000) * input_per_million + (completion_tokens / 1_000_000) * output_per_million, 6)
+
+
+def _cost_metadata(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    symptoms: List[str],
+    ai_protocol: List[Dict[str, Any]],
+    used_llm: bool,
+) -> Dict[str, Any]:
+    prompt_tokens = _estimate_tokens({"biomarkers": biomarkers, "symptoms": symptoms})
+    completion_tokens = _estimate_tokens(ai_protocol)
+    return {
+        "ai_prompt_tokens": prompt_tokens,
+        "ai_completion_tokens": completion_tokens,
+        "ai_total_tokens": prompt_tokens + completion_tokens,
+        "estimated_cost_usd": _estimate_cost_usd(prompt_tokens, completion_tokens),
+        "estimated": True,
+        "llm_configured": used_llm,
+        "model": settings.active_llm_model,
+    }
+
+
+def _log_analysis_core_completion(result: Dict[str, Any]) -> None:
+    metadata = result.get("metadata") or {}
+    quality = result.get("quality_snapshot") or {}
+    coverage = quality.get("coverage") or {}
+    safety = quality.get("safety") or {}
+    ai = quality.get("ai") or {}
+    persisted_domains = ((result.get("health_states") or {}).get("domain_registry_version")) or ""
+    logger.info(
+        "analysis_core_completed analysis_id=%s source=%s biomarker_count=%s "
+        "registry_version=%s health_state_count=%s protocol_item_count=%s "
+        "trend_available=%s ai_source=%s ai_fallback=%s safety_status=%s "
+        "safety_events=%s doctor_discussion=%s",
+        result.get("analysis_id") or "",
+        (metadata.get("source") or {}).get("source") if isinstance(metadata.get("source"), dict) else "",
+        metadata.get("biomarker_count"),
+        persisted_domains,
+        coverage.get("health_state_count"),
+        coverage.get("protocol_item_count"),
+        coverage.get("trend_available"),
+        ai.get("analysis_source"),
+        ai.get("fallback_used"),
+        safety.get("status"),
+        safety.get("event_count"),
+        safety.get("doctor_discussion_required"),
+    )
+
+
+_CONFIRMATION_FILTERABLE_MARKER_ISSUES = {
+    "unknown_unit",
+    "unit_marker_incompatible",
+    "missing_numeric_value",
+    "physiologically_implausible_value",
+    "invalid_lab_reference_range",
+}
+
+
+def _marker_identity(item: Dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(item.get("canonical_name") or item.get("name") or "").strip().lower(),
+        str(item.get("unit") or "").strip().lower(),
+        str(item.get("value") or "").strip(),
+    )
+
+
+# Sources whose biomarkers were already persisted as canonical data by an
+# earlier, separate pass through this same gate (see _is_safe_subset_eligible
+# below) — re-reading/regenerating a report for an existing upload, not a
+# fresh, never-reviewed submission.
+_CANONICAL_REPROCESSING_SOURCES = {"results_read", "report_regeneration", "results_compatibility"}
+
+
+def _preserve_existing_evaluation_for_source(source_metadata: Dict[str, Any] | None) -> bool:
+    return str((source_metadata or {}).get("source") or "").strip().lower() in _CANONICAL_REPROCESSING_SOURCES
+
+
+def _is_candidate_confirmation(source_metadata: Dict[str, Any] | None) -> bool:
+    if not isinstance(source_metadata, dict):
+        return False
+    if source_metadata.get("source") != "candidate_confirmation":
+        return False
+    candidates = source_metadata.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        return False
+    statuses = {str(item.get("status") or "").strip().lower() for item in candidates if isinstance(item, dict)}
+    return bool(statuses) and statuses <= {"confirmed", "corrected"}
+
+
+def _is_safe_subset_eligible(source_metadata: Dict[str, Any] | None) -> bool:
+    """Whether it's safe to drop individually-conflicted markers and continue.
+
+    P1 fix (2026-09-12 clinical analyzer audit): originally this was true only
+    for source=="candidate_confirmation" with an all-confirmed/corrected
+    candidate batch. That left every OTHER call site
+    (results_read/report_regeneration/results_compatibility — regenerating a
+    report for an upload whose biomarkers were already persisted as canonical
+    data by a PRIOR confirm-candidates call) with no safe-subset path at all:
+    a single marker with, say, an unrecognized unit would force the entire
+    already-analyzed upload back into "needs_confirmation" on every read,
+    even though the marker had already passed this same gate once. Those
+    reprocessing sources reference biomarkers that only exist in canonical
+    storage because they cleared this gate before, so the same
+    exclude-the-conflicted-marker-and-continue logic is safe to apply there
+    unconditionally (no candidates array to check — there may not be one).
+    "candidate_confirmation" keeps its stricter, existing statuses check
+    because that is the live confirm flow, still deciding for the first time.
+    """
+    if not isinstance(source_metadata, dict):
+        return False
+    if _is_candidate_confirmation(source_metadata):
+        return True
+    return str(source_metadata.get("source") or "").strip().lower() in _CANONICAL_REPROCESSING_SOURCES
+
+
+def _resolve_canonical_reprocessing_gate(
+    gate: Dict[str, Any],
+    source_metadata: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Let already-canonical reports continue when the gate has no blocker.
+
+    Reprocessing can score below the automatic threshold solely because the
+    original extraction confidence is no longer present or because a persisted
+    marker has a non-blocking integrity warning (for example, a missing lab
+    reference range). These sources operate on canonical biomarkers that were
+    already accepted and stored. Requiring a second confirmation in that case
+    makes report regeneration impossible even though there is no unresolved
+    blocker.
+
+    Actual blockers remain authoritative. Fresh submissions and candidate
+    confirmation use the normal score threshold unchanged.
+    """
+    source = str((source_metadata or {}).get("source") or "").strip().lower()
+    if source not in _CANONICAL_REPROCESSING_SOURCES or gate.get("blockers"):
+        return gate
+    if float((gate.get("components") or {}).get("marker_presence") or 0) <= 0:
+        return gate
+
+    resolved = deepcopy(gate)
+    resolved["decision"] = "auto_continue"
+    resolved["requires_confirmation"] = False
+    reasons = list(resolved.get("reasons") or [])
+    if "canonical_biomarkers_already_confirmed" not in reasons:
+        reasons.append("canonical_biomarkers_already_confirmed")
+    resolved["reasons"] = reasons
+    resolved["reprocessing_resolution"] = {
+        "applied": True,
+        "reason": "persisted_canonical_input_without_blockers",
+    }
+    return resolved
+
+
+def _continue_confirmed_safe_subset(
+    *,
+    normalized_biomarkers: List[Dict[str, Any]],
+    clinical_integrity: Dict[str, Any],
+    source_metadata: Dict[str, Any] | None,
+    user_profile: Dict[str, Any] | None,
+) -> tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any] | None]:
+    """Continue confirmed/already-canonical batches with the usable subset only.
+
+    Before confirmation, any unresolved marker-level integrity conflict still
+    blocks the upload. After explicit confirmation (or when re-reading data
+    that was already confirmed in an earlier pass — see
+    _is_safe_subset_eligible), one conflicted marker should not keep all other
+    confirmed markers out of canonical persistence/interpretation forever;
+    the conflicted marker is excluded instead of being trusted downstream.
+    """
+
+    if not normalized_biomarkers or not _is_safe_subset_eligible(source_metadata):
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    conflicted = {
+        _marker_identity(item): item
+        for item in (clinical_integrity.get("markers") or [])
+        if isinstance(item, dict)
+        and set(item.get("issues") or []).intersection(_CONFIRMATION_FILTERABLE_MARKER_ISSUES)
+    }
+    if not conflicted:
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    kept = [item for item in normalized_biomarkers if _marker_identity(item) not in conflicted]
+    if not kept:
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    excluded = [
+        {
+            "name": item.get("name"),
+            "canonical_name": item.get("canonical_name"),
+            "unit": item.get("unit"),
+            "issues": item.get("issues") or [],
+            "evaluation_status": item.get("evaluation_status"),
+        }
+        for item in conflicted.values()
+    ]
+    updated_source_metadata = {
+        **(source_metadata or {}),
+        "confirmation_safe_subset": {
+            "applied": True,
+            "excluded_marker_count": len(excluded),
+            "excluded_markers": excluded[:12],
+            "reason": "confirmed_batch_marker_integrity_conflict",
+        },
+    }
+    return kept, validate_clinical_data_integrity(biomarkers=kept, profile=user_profile), updated_source_metadata
+
+
+async def _load_historical_biomarkers(user_id: Optional[str]) -> List[Dict[str, Any]]:
+    if not user_id:
+        return []
+    try:
+        from app.services import supabase_service as supabase
+
+        return await supabase.get_recent_biomarker_history(user_id, limit=250)
+    except Exception as exc:
+        logger.warning("trend_history_unavailable user_id=%s error=%s", user_id, exc)
+        return []
+
+
+async def _load_previous_clinical_reasoning_traces(
+    user_id: Optional[str], exclude_upload_id: Optional[str]
+) -> tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
+    """The pattern-level counterpart to _load_historical_biomarkers above —
+    fetches the user's previous report_versions row (a different upload)
+    so build_progress_intelligence() can diff this run's
+    clinical_reasoning_traces against last time's. Same fail-open posture:
+    any lookup problem yields "no previous data" rather than failing the
+    whole analysis.
+    """
+    if not user_id:
+        return [], None, None
+    try:
+        from app.services import supabase_service as supabase
+
+        previous_row = await supabase.get_previous_report_version_for_user(
+            user_id, exclude_upload_id=exclude_upload_id
+        )
+        if not previous_row:
+            return [], None, None
+        previous_snapshot = previous_row.get("input_snapshot") or {}
+        previous_traces = previous_snapshot.get("clinical_reasoning_traces") or []
+        return (
+            previous_traces if isinstance(previous_traces, list) else [],
+            previous_row.get("upload_id"),
+            previous_row.get("created_at"),
+        )
+    except Exception as exc:
+        logger.warning("progress_intelligence_history_unavailable user_id=%s error=%s", user_id, exc)
+        return [], None, None
+
+
+async def _load_previous_next_best_tests(
+    user_id: Optional[str], exclude_upload_id: Optional[str]
+) -> Dict[str, Any]:
+    """The next-best-tests counterpart to _load_previous_clinical_reasoning_traces
+    above (P12 Next-Test Funnel) — fetches the user's previous upload's
+    next_best_tests so build_next_test_funnel() can show which
+    previously-suggested tests have since been completed. A second,
+    separate get_previous_report_version_for_user() call rather than
+    threading a 4th return value through the already-tested 3-tuple
+    contract of _load_previous_clinical_reasoning_traces — the extra
+    Supabase round-trip is a deliberately small price for not touching
+    that function's tested signature. Same fail-open posture.
+    """
+    if not user_id:
+        return {}
+    try:
+        from app.services import supabase_service as supabase
+
+        previous_row = await supabase.get_previous_report_version_for_user(
+            user_id, exclude_upload_id=exclude_upload_id
+        )
+        if not previous_row:
+            return {}
+        previous_snapshot = previous_row.get("input_snapshot") or {}
+        previous_next_best_tests = previous_snapshot.get("next_best_tests") or {}
+        return previous_next_best_tests if isinstance(previous_next_best_tests, dict) else {}
+    except Exception as exc:
+        logger.warning("next_test_funnel_history_unavailable user_id=%s error=%s", user_id, exc)
+        return {}
+
+
+def _protocol_sections_from_ai_and_rules(
+    *,
+    rule_actions: List[Dict[str, Any]],
+    ai_protocol: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    protocol = _protocol_from_actions(rule_actions)
+    for item in ai_protocol:
+        if not isinstance(item, dict):
+            continue
+        category = str(item.get("category") or item.get("timing") or "").lower()
+        target = "supplements" if item.get("supplement") else "lifestyle"
+        if "diet" in category or "nutrition" in category:
+            target = "nutrition"
+        elif "sleep" in category or "recovery" in category or "training" in category:
+            target = "training_recovery"
+        protocol[target].append({**item, "source": item.get("source") or "ai_protocol"})
+    return protocol
+
+
+def _has_biomarker_family(biomarkers: List[Dict[str, Any]], keywords: Iterable[str]) -> bool:
+    lowered_keywords = [keyword.lower() for keyword in keywords]
+    for biomarker in biomarkers:
+        haystack = " ".join(
+            str(biomarker.get(key) or "")
+            for key in ("name", "canonical_name", "category")
+        ).lower()
+        if any(keyword in haystack for keyword in lowered_keywords):
+            return True
+    return False
+
+
+def _fill_protocol_section_fallbacks(
+    protocol: Dict[str, List[Dict[str, Any]]],
+    *,
+    biomarkers: List[Dict[str, Any]],
+    prioritized: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    if not prioritized:
+        return protocol
+
+    flagged_names = ", ".join(str(item.get("name") or "flagged marker") for item in prioritized[:3])
+    iron_related = _has_biomarker_family(biomarkers, ("ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"))
+
+    if not protocol.get("nutrition"):
+        body = (
+            "Use a food-first iron support pattern while confirming the cause: include protein at meals, "
+            "iron-rich foods, vitamin C with iron-containing meals, and avoid taking tea/coffee or calcium "
+            "right with the highest-iron meal. Do not start high-dose iron without clinician guidance."
+            if iron_related
+            else "Stabilize nutrition basics while this pattern is reviewed: regular protein-containing meals, vegetables, hydration, and enough total energy intake."
+        )
+        protocol["nutrition"] = [
+            {
+                "key": "nutrition_foundation_for_flagged_markers",
+                "title": "Support nutrition basics while reviewing flagged markers",
+                "body": body,
+                "category": "nutrition",
+                "priority": "medium",
+                "evidence_level": "clinical_context",
+                "requires_doctor": False,
+                "source": "vitaloop_analysis_core",
+            }
+        ]
+
+    if not protocol.get("training_recovery"):
+        protocol["training_recovery"] = [
+            {
+                "key": "training_recovery_context_for_flagged_markers",
+                "title": "Adjust training and recovery until follow-up is clear",
+                "body": f"Because {flagged_names} needs review, keep training moderate if you feel fatigued, dizzy, short of breath, or unusually weak. Prioritize sleep and recovery, and seek clinician guidance before intensifying training.",
+                "category": "training_recovery",
+                "priority": "medium",
+                "evidence_level": "clinical_context",
+                "requires_doctor": iron_related,
+                "source": "vitaloop_analysis_core",
+            }
+        ]
+
+    return protocol
+
+
+def _shopping_links(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    prioritized: List[Dict[str, Any]],
+    ai_protocol: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    links: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(label: str, query: str, reason: str, priority: str = "medium", category: str = "supplement") -> None:
+        normalized_query = " ".join(str(query or "").lower().split())
+        if not normalized_query or normalized_query in seen:
+            return
+        seen.add(normalized_query)
+        links.append(
+            {
+                "label": label,
+                "search_query": query,
+                "reason": reason,
+                "priority": priority,
+                "category": category,
+                "url": build_iherb_url(query),
+                "disclaimer": "Educational shopping aid only. Confirm supplements, dosing, and interactions with a qualified clinician before use.",
+            }
+        )
+
+    for item in ai_protocol:
+        if not isinstance(item, dict):
+            continue
+        query = str(item.get("iherb_search") or item.get("supplement") or "").strip()
+        if not query:
+            continue
+        label = str(item.get("supplement") or item.get("title") or query).strip()
+        reason = str(item.get("rationale") or item.get("reason") or "Relevant to this protocol context.").strip()
+        add(label, query, reason, str(item.get("priority") or "medium").lower(), "supplement")
+
+    iron_related = _has_biomarker_family(biomarkers, ("ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"))
+    has_low_ferritin = any("ferritin" in str(item.get("canonical_name") or item.get("name") or "").lower() for item in prioritized)
+
+    if iron_related or has_low_ferritin:
+        add(
+            "Iron bisglycinate",
+            "iron bisglycinate",
+            "Relevant to low ferritin or iron-status context; confirm need and dose with a clinician.",
+            "high",
+        )
+        add(
+            "Vitamin C",
+            "vitamin c",
+            "Can support iron absorption when paired with iron-containing meals or clinician-approved iron supplementation.",
+            "medium",
+        )
+        add(
+            "B12 and folate support",
+            "vitamin b12 folate",
+            "Useful search context when reviewing iron, blood-count, or fatigue patterns with confirmatory labs.",
+            "medium",
+        )
+
+    if _has_biomarker_family(biomarkers, ("vitamin d", "25 oh vitamin d")):
+        add(
+            "Vitamin D3",
+            "vitamin d3",
+            "Relevant when vitamin D is flagged; confirm dose, follow-up interval, and contraindications.",
+            "medium",
+        )
+
+    if _has_biomarker_family(biomarkers, ("magnesium",)):
+        add(
+            "Magnesium glycinate",
+            "magnesium glycinate",
+            "Relevant when magnesium status or recovery context is flagged; check kidney disease and medication interactions.",
+            "medium",
+        )
+
+    return links[:8]
+
+
+async def _resolve_ambiguous_report_insert(supabase, user_id: str, report_version_id: str | None):
+    """Owner-scoped lookup by the server-generated id after an insert error.
+    Returns the persisted row only on an exact id match; None when unresolved."""
+    try:
+        row = await supabase.get_report_version_for_user(user_id, report_version_id)
+    except Exception:
+        return None
+    if isinstance(row, dict) and row.get("id") == report_version_id:
+        return row
+    return None
+
+
+async def run_lab_analysis_pipeline(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    symptoms: Optional[List[str]] = None,
+    questionnaire: Optional[Dict[str, Any]] = None,
+    symptom_context: Optional[Dict[str, Any]] = None,
+    symptom_snapshot: Optional[Dict[str, Any]] = None,
+    user_profile: Optional[Dict[str, Any]] = None,
+    user_id: Optional[str] = None,
+    analysis_id: Optional[str] = None,
+    operation_key: Optional[str] = None,
+    source_metadata: Optional[Dict[str, Any]] = None,
+    persist_knowledge: bool = False,
+    persist_report_version: bool = False,
+    persist_biomarkers: bool = False,
+    locale: str = "en",
+    biomarker_name_aliases: Optional[Dict[str, str]] = None,
+    generate_ai_protocol: bool = True,
+    generate_ai_narrative: bool = True,
+) -> Dict[str, Any]:
+    report_version_id = (
+        str(uuid4())
+        if persist_report_version and user_id and analysis_id
+        else None
+    )
+    # For a biomarker-replacing run the database operation key, not the
+    # process-local response cache, is the durable idempotency authority.
+    atomic_operation_key = operation_key or (str(uuid4()) if persist_report_version and user_id and analysis_id else None)
+    # Capture the newest completed interview at analysis-generation time. The
+    # detached value below is persisted into this report version and is never
+    # reloaded when the frozen report is read later.
+    canonical_symptom_flow = should_load_symptom_snapshot(source_metadata)
+    if symptom_snapshot is None and user_id and canonical_symptom_flow:
+        try:
+            symptom_snapshot = await load_latest_eligible_symptom_snapshot(user_id)
+        except RuntimeError as exc:
+            # Pure unit/offline callers historically run the pipeline without
+            # any Supabase configuration. Only that configuration absence is
+            # optional; failures from a configured database still propagate so
+            # an available clinical snapshot cannot be silently dropped.
+            if "Supabase is not configured" not in str(exc):
+                raise
+            symptom_snapshot = None
+    symptom_snapshot = deepcopy(symptom_snapshot) if isinstance(symptom_snapshot, dict) else None
+    # B2C has one symptom authority: the immutable snapshot produced by the
+    # structured Symptom Check. Request fields and the retired questionnaire
+    # context must never be blended into clinical reasoning beside it. B2B and
+    # offline callers retain their explicit symptom inputs.
+    effective_questionnaire = None if canonical_symptom_flow else questionnaire
+    effective_symptom_context = None if canonical_symptom_flow else symptom_context
+
+    # Extract sex and age from user_profile for sex/age-specific reference ranges
+    user_sex = None
+    user_age = None
+    if user_profile:
+        user_sex = str(user_profile.get("sex") or "").strip().lower() or None
+        user_age = user_profile.get("age")
+        if user_age is not None:
+            try:
+                user_age = int(user_age)
+            except (TypeError, ValueError):
+                user_age = None
+
+    normalized_biomarkers = normalize_biomarkers(
+        biomarkers,
+        name_aliases=biomarker_name_aliases,
+        sex=user_sex,
+        age=user_age,
+        preserve_existing_evaluation=_preserve_existing_evaluation_for_source(source_metadata),
+    )
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=normalized_biomarkers,
+        profile=user_profile,
+    )
+    normalized_biomarkers, clinical_integrity, source_metadata = _continue_confirmed_safe_subset(
+        normalized_biomarkers=normalized_biomarkers,
+        clinical_integrity=clinical_integrity,
+        source_metadata=source_metadata,
+        user_profile=user_profile,
+    )
+    normalized_symptoms: List[str] = []
+    seen_symptoms: set[str] = set()
+    symptom_inputs = (
+        symptoms_from_snapshot(symptom_snapshot)
+        if canonical_symptom_flow or symptom_snapshot
+        else list(symptoms or [])
+    )
+    for item in symptom_inputs:
+        normalized = str(item).strip().lower()
+        if normalized and normalized not in seen_symptoms:
+            seen_symptoms.add(normalized)
+            normalized_symptoms.append(normalized)
+    health_context = build_health_context(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        questionnaire=effective_questionnaire,
+        symptom_context=effective_symptom_context,
+        symptom_snapshot=symptom_snapshot,
+        user_profile=user_profile,
+        source_metadata=source_metadata,
+        locale=locale,
+    )
+    analysis_input_quality_gate = build_analysis_input_quality_gate(
+        biomarkers=normalized_biomarkers,
+        candidates=(source_metadata or {}).get("candidates") if isinstance(source_metadata, dict) else None,
+        clinical_integrity=clinical_integrity,
+        health_context=health_context,
+        source_metadata=source_metadata,
+    )
+    analysis_input_quality_gate = _resolve_canonical_reprocessing_gate(
+        analysis_input_quality_gate,
+        source_metadata,
+    )
+
+    # Stage 2B: canonical-data persistence boundary. Extraction candidates are
+    # persisted unconditionally by the caller before this function ever runs
+    # (unchanged — raw capture is low-risk). Canonical biomarkers, and everything
+    # downstream of them (report, protocol, report_version, trend/health-state
+    # evaluation), must NOT be produced/persisted until the gate allows automatic
+    # continuation. When a user confirms/corrects low-confidence candidates,
+    # analysis_quality_gate.py's own _candidate_scores() already boosts
+    # confirmed/corrected candidate confidence to >=0.85 — so re-running this same
+    # gate against the updated candidates is the mechanism that naturally resolves
+    # to auto_continue once real confirmation has happened, with no separate
+    # override flag and no artificial retry limit (see
+    # docs/audit/VITALOOP_STAGE2_IMPLEMENTATION_PLAN.md, Stage 2B).
+    if analysis_input_quality_gate["decision"] != "auto_continue":
+        return {
+            "analysis_id": analysis_id or "",
+            "status": "needs_confirmation",
+            "analysis_status": "needs_confirmation",
+            "normalized_biomarkers": normalized_biomarkers,
+            "clinical_data_integrity": clinical_integrity,
+            "health_context": health_context,
+            "symptom_snapshot": public_symptom_snapshot(symptom_snapshot),
+            "analysis_input_quality_gate": analysis_input_quality_gate,
+            "metadata": {
+                "source": source_metadata or {},
+                "questionnaire_present": bool(effective_questionnaire),
+                "symptom_snapshot_present": bool(symptom_snapshot),
+                "symptom_source_type": (symptom_snapshot or {}).get("source_type"),
+                "profile_present": bool(user_profile),
+                "biomarker_count": len(normalized_biomarkers),
+                "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
+            },
+        }
+
+    saved_biomarkers: List[Dict[str, Any]] | None = None
+    if persist_biomarkers and user_id and analysis_id and not persist_report_version:
+        from app.services import supabase_service as supabase
+
+        saved_biomarkers = await supabase.save_biomarkers(
+            upload_id=analysis_id,
+            user_id=user_id,
+            biomarkers=normalized_biomarkers,
+        )
+        if report_version_id is None:
+            await supabase.mark_lab_upload_done(analysis_id, user_id)
+
+    knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        user_id=user_id,
+        upload_id=analysis_id,
+        user_profile=user_profile,
+        health_context=health_context,
+        persist=persist_knowledge,
+    )
+    knowledge_evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
+    # Frozen once from this exact evaluation, before URL stripping, safety
+    # sanitization and localization. Persisted only inside the report_versions
+    # explainability JSONB; not used by generation or flat protocols yet.
+    frozen_protocol_evidence = build_pipeline_frozen_evidence(
+        report_version_id=report_version_id,
+        normalized_biomarkers=normalized_biomarkers,
+        symptom_snapshot=symptom_snapshot,
+        knowledge_evaluation=knowledge_evaluation,
+    )
+    knowledge_report = build_knowledge_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_evaluation=knowledge_evaluation,
+        locale=locale,
+        user_profile=user_profile,
+    )
+    knowledge_report = _strip_placeholder_source_urls(knowledge_report)
+    knowledge_report = {
+        **knowledge_report,
+        "retest_plan": [
+            {
+                **item,
+                **(
+                    {"canonical_marker": to_known_canonical_name(item.get("marker") or "")}
+                    if isinstance(item, dict) and to_known_canonical_name(item.get("marker") or "")
+                    else {}
+                ),
+            }
+            for item in knowledge_report.get("retest_plan") or []
+            if isinstance(item, dict)
+        ],
+    }
+    knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
+    prioritized = _prioritize_biomarkers(normalized_biomarkers)
+    historical_biomarkers = await _load_historical_biomarkers(user_id)
+    trend_analysis = evaluate_biomarker_trends(
+        current_biomarkers=normalized_biomarkers,
+        historical_biomarkers=historical_biomarkers,
+        current_upload_id=analysis_id,
+    )
+    # Personal Baseline (P6): the third axis alongside reference-range
+    # status and trend_analysis's "better/worse than last time" — is this
+    # normal for THIS user, not just for the lab. Reuses the same
+    # historical_biomarkers fetch as trend_analysis above; no second
+    # history query.
+    personal_baseline = build_personal_baseline(
+        current_biomarkers=normalized_biomarkers,
+        historical_biomarkers=historical_biomarkers,
+        current_upload_id=analysis_id,
+    )
+    # P19 Personal Baseline 2.0: velocity/direction extension, nested under
+    # personal_baseline["velocity"] — build_personal_baseline()'s own
+    # contract above is untouched (still version/available/markers/summary)
+    # so no existing caller (frozen replay, P18's reasoning map adapter,
+    # etc.) needs to change. See personal_baseline.py's P19 section
+    # docstring for the full formula.
+    personal_baseline = {
+        **personal_baseline,
+        "velocity": build_personal_baseline_velocity(
+            current_biomarkers=normalized_biomarkers,
+            historical_biomarkers=historical_biomarkers,
+            current_upload_id=analysis_id,
+        ),
+    }
+    domain_definitions = await resolve_domain_definitions()
+    health_states = evaluate_health_states(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        health_context=health_context,
+        knowledge_report=knowledge_report,
+        domain_definitions=domain_definitions,
+    )
+    rule_recommendations = knowledge_report.get("action_plan") or []
+    # Build clinical context for LLM — the deterministic engine's output
+    risk_flags = _risk_flags(knowledge_report, prioritized)
+    from app.services.clinical_engine.marker_coverage import enrich_coverage
+    _raw_mc = knowledge_evaluation.get("marker_coverage", {})
+    _enriched_mc = enrich_coverage(_raw_mc, normalized_biomarkers)
+    clinical_context = {
+        "engine_version": "clinical_engine_v1",
+        "biomarker_count": len(normalized_biomarkers),
+        "abnormal_count": sum(1 for b in normalized_biomarkers if b.get("status") in ("DEFICIENT", "ELEVATED", "BORDERLINE")),
+        "unknown_count": sum(1 for b in normalized_biomarkers if b.get("status") == "UNKNOWN"),
+        "matched_rules": [
+            {"rule_key": r.get("rule_key"), "name": r.get("name"), "severity": r.get("severity"),
+             "summary": r.get("summary"), "requires_doctor": r.get("requires_doctor")}
+            for r in knowledge_evaluation.get("matched_rules", [])
+        ],
+        "safety_alerts": [
+            {"marker": a.get("marker"), "message": a.get("message")}
+            for a in knowledge_evaluation.get("safety_alerts", [])
+        ],
+        "risk_flags": [
+            {"type": f.get("type"), "severity": f.get("severity"), "title": f.get("title"), "biomarker": f.get("biomarker")}
+            for f in risk_flags[:12]
+        ],
+        "prioritized_abnormal": [
+            {"name": b["name"], "canonical_name": b["canonical_name"], "value": b["value"],
+             "unit": b["unit"], "status": b["status"], "priority": b.get("priority"),
+             "reference_range": b.get("reference_range")}
+            for b in prioritized[:12]
+        ],
+        "knowledge_headline": (knowledge_report.get("summary") or {}).get("headline"),
+        "knowledge_risk_level": (knowledge_report.get("summary") or {}).get("risk_level"),
+        "requires_doctor": bool(knowledge_evaluation.get("requires_doctor")),
+        "confidence": knowledge_evaluation.get("confidence", 0.0),
+        "marker_coverage_summary": {
+            "evaluated": len(_enriched_mc.get("evaluated", [])),
+            "fired": len(_enriched_mc.get("fired", [])),
+            "no_matching_rule": len(_enriched_mc.get("no_matching_rule", [])),
+            "unit_blocked": len(_enriched_mc.get("unit_blocked", [])),
+            "unknown_status": len(_enriched_mc.get("unknown_status", [])),
+        },
+        "symptom_context": (health_context.get("inputs") or {}).get("symptom_snapshot") or {},
+        # Coverage-aware LLM prompt contract, part 1 (2026-09-12 audit item
+        # #4 of "not implemented yet"): the summary above only ever told the
+        # LLM HOW MANY markers had no rule/were unit-blocked, never WHICH
+        # ones — so the model had no way to know it must not silently infer
+        # an interpretation for, say, LDL just because the marker was
+        # present in the panel. Naming them explicitly lets the prompt tell
+        # the model which markers are unsupported/unsafe to interpret
+        # without a rule backing it up.
+        "no_matching_rule_markers": sorted(_enriched_mc.get("no_matching_rule") or [])[:30],
+        "unit_blocked_markers": [
+            {
+                "marker": item.get("marker"),
+                "reported_unit": item.get("reported_unit"),
+                "expected_unit": item.get("expected_unit"),
+            }
+            for item in (knowledge_evaluation.get("unevaluated_markers") or [])[:20]
+            if isinstance(item, dict)
+        ],
+    }
+    # Coverage-aware LLM prompt contract, part 2 (2026-09-12 audit item #4):
+    # part 1 above only covered marker_coverage detail. The pattern engine
+    # and evidence_gaps are both pure functions of biomarkers/profile/
+    # symptoms/health_states/clinical_integrity/marker_coverage — all
+    # already available at this point — so they can run once, HERE, before
+    # the LLM call, instead of only after it (their real, final computation
+    # for the response still happens later via build_interpreted_report/
+    # build_evidence_gaps, which call the same deterministic detect_patterns()
+    # logic against the same inputs — so the LLM sees exactly what the final
+    # response will contain, not an approximation, at the cost of computing
+    # the (cheap, pure, no I/O) pattern detection twice rather than adding a
+    # cache-or-pass-through parameter for a single extra call. The full
+    # per-atom rule evidence tree is deliberately
+    # left out of the prompt — it's raw evaluator internals (thresholds,
+    # unit-conversion bookkeeping) with no bearing on the patient-facing text
+    # the LLM writes; matched_rules above already gives it the rule-level
+    # summary that matters.
+    _early_patterns = detect_patterns(normalized_biomarkers, profile=user_profile, symptoms=normalized_symptoms, locale=locale)
+    _early_evidence_gaps = build_evidence_gaps(
+        biomarkers=normalized_biomarkers,
+        health_states=health_states,
+        interpreted_report={"patterns": _early_patterns},
+        clinical_integrity=clinical_integrity,
+        marker_coverage=_enriched_mc,
+    )
+    clinical_context["detected_patterns"] = [
+        {
+            "key": p.get("key"),
+            "domain": p.get("domain"),
+            "title": p.get("title"),
+            "priority": p.get("priority"),
+            "confidence": p.get("confidence"),
+            "summary": p.get("summary"),
+            "symptom_signal": p.get("symptom_signal") or [],
+        }
+        for p in _early_patterns
+    ]
+    clinical_context["evidence_gaps_summary"] = _early_evidence_gaps.get("summary") or {}
+    clinical_context["evidence_gaps_preview"] = [
+        {"domain": g.get("domain"), "missing_marker": g.get("missing_marker"), "priority": g.get("priority"), "reason": g.get("reason")}
+        for g in (_early_evidence_gaps.get("gaps") or [])[:15]
+    ]
+
+    ai_protocol = []
+    ai_orchestration = {
+        "version": "ai_orchestration_v1",
+        "status": "skipped",
+        "items": [],
+        "metadata": {"reason": "generate_ai_protocol_disabled"},
+    }
+    if generate_ai_protocol:
+        ai_orchestration = await generate_ai_protocol_orchestrated(
+            biomarkers=normalized_biomarkers,
+            symptoms=normalized_symptoms,
+            user_profile=user_profile,
+            user_id=user_id,
+            upload_id=analysis_id,
+            locale=locale,
+            health_context=health_context,
+            knowledge_report=knowledge_report,
+            health_states=health_states,
+            trend_analysis=trend_analysis,
+            clinical_context=clinical_context,
+        )
+        ai_protocol = ai_orchestration.get("items") or []
+    # Every candidate is adapted from the complete original action before any
+    # safety sanitization or presentation enrichment can remove unsafe fields.
+    # The adapter gets only the evidence built above from this evaluation; no
+    # request/AI report context can grant grounding. It deliberately does not
+    # add fallback actions to empty sections.
+    protocol = _protocol_sections_from_ai_and_rules(rule_actions=rule_recommendations, ai_protocol=ai_protocol)
+    for section, actions in protocol.items():
+        protocol[section] = assign_action_ids(actions, f"protocol-{section}")
+
+    adapted_actions = adapt_protocol_actions_from_frozen_evidence(
+        protocol=protocol,
+        frozen_evidence=frozen_protocol_evidence,
+        report_version_id=report_version_id,
+    )
+    protocol = adapted_actions["protocol"]
+    # Protocol sections and the flat projection must carry the same grounding
+    # decision. Retained AI items remain identifiable only through their
+    # allowlisted presentation source; unsupported items are absent everywhere.
+    recommendations = [
+        item
+        for actions in protocol.values()
+        for item in actions
+        if isinstance(item, dict)
+    ]
+    rule_recommendations = [
+        item for item in recommendations if item.get("source") != "ai_protocol"
+    ]
+    ai_protocol = [
+        item for item in recommendations if item.get("source") == "ai_protocol"
+    ]
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
+
+    # Capture the safety verdict from the complete adapted protocol *before*
+    # redaction. Otherwise a diagnosis-like action could be hidden successfully
+    # yet erase the blocked status and user-facing clinician-review notice.
+    pre_redaction_safety_result = validate_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        protocol=protocol,
+        profile=user_profile,
+        locale=locale,
+    )
+    safety_result = pre_redaction_safety_result
+    # The response and all persistence projections receive only the sanitized
+    # presentation. The already-recorded verdict retains the reason for it.
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
+    recommendations = [
+        item
+        for actions in protocol.values()
+        for item in actions
+        if isinstance(item, dict)
+    ]
+    rule_recommendations = [
+        item for item in recommendations if item.get("source") != "ai_protocol"
+    ]
+    ai_protocol = [
+        item for item in recommendations if item.get("source") == "ai_protocol"
+    ]
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
+    retest_suggestions = knowledge_report.get("retest_plan") or []
+    protocol = enrich_protocol(
+        protocol,
+        biomarkers=normalized_biomarkers,
+        prioritized=prioritized,
+        safety_result=safety_result,
+        health_states=health_states,
+        trend_analysis=trend_analysis,
+        retest_suggestions=retest_suggestions,
+        domain_definitions=domain_definitions,
+        locale=locale,
+    )
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
+    safety_result = validate_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        protocol=protocol,
+        profile=user_profile,
+        locale=locale,
+    )
+    if pre_redaction_safety_result.get("status") == "blocked":
+        # Redaction must never downgrade a prior safety block. Preserve only
+        # structured safety output; sanitize_safety_result_for_output below
+        # removes the original diagnosis-like presentation from it.
+        safety_result = {
+            **safety_result,
+            "status": "blocked",
+            "blocked_items": pre_redaction_safety_result.get("blocked_items") or [],
+            "safety_events": pre_redaction_safety_result.get("safety_events") or [],
+            "doctor_discussion_required": True,
+        }
+    safety_result = sanitize_safety_result_for_output(safety_result, locale=locale) or safety_result
+    symptom_assessment = (symptom_snapshot or {}).get("assessment") or {}
+    if symptom_assessment.get("urgent_warning") == "present":
+        symptom_evidence = (symptom_snapshot or {}).get("evidence") or {}
+        symptom_items = [
+            item
+            for choice in ("present", "unknown", "absent")
+            for item in (symptom_evidence.get(choice) or [])
+            if isinstance(item, dict)
+        ]
+        primary_symptom = next(
+            (item for item in symptom_items if item.get("is_primary")),
+            symptom_items[0] if symptom_items else {},
+        )
+        symptom_label = str(primary_symptom.get("display_name_en") or "Symptom check").strip()
+        urgent_message = (
+            f'The completed symptom check for "{symptom_label}" contains an urgent warning sign and requires prompt medical assessment.'
+            if not str(locale).lower().startswith("uk") else
+            f'Завершена перевірка симптому «{symptom_label}» містить термінову небезпечну ознаку та потребує негайної медичної оцінки.'
+        )
+        symptom_safety_event = {
+            "key": "symptom_check_urgent_warning",
+            "severity": "critical",
+            "message": urgent_message,
+            "item": {
+                "name": symptom_label,
+                "status": "urgent_warning_present",
+                "source": "symptom_check",
+            },
+        }
+        safety_events = [
+            item
+            for item in (safety_result.get("safety_events") or [])
+            if isinstance(item, dict)
+        ]
+        if not any(item.get("key") == symptom_safety_event["key"] for item in safety_events):
+            safety_events.append(symptom_safety_event)
+        safety_result = {
+            **safety_result,
+            "status": "approved_with_warnings",
+            "risk_level": "high",
+            "urgent_review_required": True,
+            "doctor_discussion_required": True,
+            "prominent_user_warning": urgent_message,
+            "safety_events": safety_events,
+        }
+    safety_result = effective_report_safety(safety_result, symptom_snapshot)
+    # Action identity is attached only after all safety sanitization and
+    # validation. Safety receives the same recommendation shape as before;
+    # IDs are added to the immutable public/persisted report snapshot below.
+    knowledge_report = sanitize_knowledge_report_for_safety(knowledge_report, locale=locale)
+    rule_recommendations = assign_action_ids(knowledge_report.get("action_plan") or [], "action-plan")
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    ai_protocol = assign_action_ids(ai_protocol, "ai-protocol")
+    for section, actions in protocol.items():
+        protocol[section] = assign_action_ids(actions, f"protocol-{section}")
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
+    # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
+    # internal rule keys — surfaced consistently alongside safety_result in every
+    # live response path (see analyze.py's response dicts).
+    safety_notice = blocked_content_notice(locale) if safety_result.get("status") == "blocked" else None
+    # Stage 2C (report-level gap): validate_report() above already detected
+    # diagnosis-like wording using the RAW knowledge_report (preserving accurate
+    # blocked-status detection) — now sanitize knowledge_report itself before it
+    # is used any further (interpreted_report build, API response,
+    # report_versions persistence), so the exact flagged text cannot survive in
+    # any live output while safety_result still correctly reports "blocked".
+    # Same gap, one more location: knowledge_evaluation (the upstream rule-match
+    # object) is served independently of knowledge_report in every response and
+    # in B2B's raw pipeline-result spread — the report-level fix alone does not
+    # reach it. See sanitize_knowledge_evaluation_for_safety()'s docstring for
+    # the exact traced field list.
+    knowledge_evaluation = sanitize_knowledge_evaluation_for_safety(knowledge_evaluation, locale=locale)
+    shopping_links = _shopping_links(
+        biomarkers=normalized_biomarkers,
+        prioritized=prioritized,
+        ai_protocol=ai_protocol,
+    )
+    explainability = build_recommendation_explanations(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        profile=user_profile,
+        knowledge_evaluation=knowledge_evaluation,
+        recommendations=recommendations,
+        safety_result=safety_result,
+    )
+    interpreted_report = build_interpreted_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        health_states=health_states,
+        explainability=explainability,
+        safety_result=safety_result,
+        health_context=health_context,
+        profile=user_profile,
+        symptoms=normalized_symptoms,
+        locale=locale,
+    )
+    evidence_gaps = build_evidence_gaps(
+        biomarkers=normalized_biomarkers,
+        health_states=health_states,
+        interpreted_report=interpreted_report,
+        clinical_integrity=clinical_integrity,
+        marker_coverage=_enriched_mc,
+    )
+    # Clinical priority planner + clinical_story (2026-09-12 audit, "not
+    # implemented yet" items #2 and #6): pure composition over the pieces
+    # already computed above — no new clinical logic, just a stable,
+    # UI-ready "what should I look at first" shape instead of every caller
+    # re-deriving it from five separate objects.
+    clinical_priority_planner = build_clinical_priority_planner(
+        patterns=interpreted_report.get("patterns"),
+        health_states=health_states,
+        safety_result=safety_result,
+        evidence_gaps=evidence_gaps,
+    )
+    # Next-best-test engine (2026-09-12 audit, "not implemented yet" item
+    # #3): reuses evidence_gaps + each pattern's own retest_plan rather than
+    # inventing a second, separate notion of what's missing.
+    next_best_tests = build_next_best_tests(
+        evidence_gaps=evidence_gaps,
+        patterns=interpreted_report.get("patterns"),
+    )
+    if report_version_id:
+        next_best_tests = attach_report_provenance(next_best_tests, report_version_id)
+    clinical_story = build_clinical_story(
+        interpreted_report=interpreted_report,
+        safety_result=safety_result,
+        priority_planner=clinical_priority_planner,
+        evidence_gaps=evidence_gaps,
+        retest_suggestions=retest_suggestions,
+    )
+    clinical_story["next_best_tests"] = next_best_tests.get("recommended_tests") or []
+    # Clinical Reasoning Trace (P2 endpoint wiring, following P1.0-P1.8's
+    # pattern-corpus expansion): one trace per detected pattern, linking
+    # evidence_gaps/next_best_tests by domain and normalizing
+    # pattern-priority + safety_result into a single safety_level/
+    # doctor_flag — pure assembly over data already computed above, see
+    # clinical_reasoning_trace.py's module docstring.
+    clinical_reasoning_traces = build_clinical_reasoning_traces(
+        interpreted_report.get("patterns"),
+        evidence_gaps=evidence_gaps,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+    )
+    # Clinical Hypothesis Engine (P14, backend-only v1): ranks the same
+    # detected patterns by adjusted confidence into likely/possible/
+    # unlikely_but_flagged, using evidence_gaps + next_best_tests for the
+    # same domain — pure deterministic composition over data already
+    # computed above, no new clinical detection. See
+    # hypothesis_engine.py's module docstring.
+    clinical_hypotheses = build_clinical_hypotheses(
+        interpreted_report.get("patterns"),
+        evidence_gaps=evidence_gaps,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+    )
+    symptom_analysis = build_symptom_analysis(
+        symptom_snapshot=symptom_snapshot,
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        biomarkers=normalized_biomarkers,
+    )
+    # Clinical Contradiction Detector (P15, backend-only v1): deterministic
+    # marker-vs-marker / marker-vs-symptom rules (ferritin+CRP masking,
+    # TSH+FT4 subclinical signal, glucose+insulin, LDL+ApoB, etc.) — reads
+    # biomarkers/symptoms directly and cross-references patterns/hypotheses
+    # by domain for `related_patterns`/`related_hypotheses`, but does not
+    # feed back into hypothesis confidence yet (TODO P16 Confidence
+    # Calibration Engine wires this in). supplement_context is not tracked
+    # by this pipeline yet (that's P20 Intervention Memory), so that one
+    # rule simply never fires here today — see clinical_contradictions.py.
+    clinical_contradictions = build_clinical_contradictions(
+        normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        patterns=interpreted_report.get("patterns"),
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        supplement_context=None,
+    )
+    # Progress Intelligence (P5): diff this run's traces against the user's
+    # previous upload, same "fetch history, diff, degrade gracefully to
+    # unavailable" shape trend_engine.py already established for
+    # marker-level trends above — this is the pattern-level counterpart.
+    (
+        _previous_traces,
+        _previous_upload_id,
+        _previous_measured_at,
+    ) = await _load_previous_clinical_reasoning_traces(user_id, analysis_id)
+    progress_intelligence = build_progress_intelligence(
+        current_traces=clinical_reasoning_traces,
+        previous_traces=_previous_traces,
+        previous_upload_id=_previous_upload_id,
+        previous_measured_at=_previous_measured_at,
+    )
+    # Intervention Memory (P20, backend-first v1): what the user reported
+    # doing between the previous upload and this one — supplements,
+    # nutrition, training, sleep, stress, illness, medication, alcohol,
+    # weight change. Context only, never causation (that's P21). Reuses
+    # the same _previous_measured_at this run already fetched for
+    # progress_intelligence above as the window's lower bound; fails open
+    # to an empty event list (and build_intervention_memory's own
+    # conservative-window fallback) if the user has none or the stage-30
+    # migration/table isn't available yet.
+    intervention_memory = None
+    if user_id:
+        try:
+            from app.services import supabase_service as _svc
+            from app.services.intervention_memory import build_intervention_memory
+
+            _intervention_events = await _svc.get_intervention_events(user_id)
+            intervention_memory = build_intervention_memory(
+                _intervention_events, window_from=_previous_measured_at
+            )
+        except Exception:
+            intervention_memory = None
+    if intervention_memory is None:
+        from app.services.intervention_memory import build_intervention_memory as _build_empty
+
+        intervention_memory = _build_empty([], window_from=_previous_measured_at)
+    # Confidence Calibration Engine (P16, backend-only v1): the intended
+    # consumer of P15's clinical_contradictions flagged in that stage's
+    # TODO — calibrates each P14 hypothesis's confidence using
+    # contradictions, evidence_gaps, symptom alignment,
+    # progress_intelligence, and personal_baseline, none of which P14 or
+    # P15 see on their own. Pure calibration, not a new reasoning engine:
+    # never re-detects a pattern, never changes medical wording. See
+    # confidence_calibration.py's module docstring for the full formula.
+    confidence_calibration = build_confidence_calibration(
+        clinical_hypotheses.get("hypotheses"),
+        contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+        patterns=interpreted_report.get("patterns"),
+        symptoms=normalized_symptoms,
+        symptom_analysis=symptom_analysis,
+        progress_intelligence=progress_intelligence,
+        personal_baseline=personal_baseline,
+    )
+    # Merge calibrated_confidence/calibrated_score/calibration_reason_codes
+    # onto each hypothesis, preserving every original P14 field — this is
+    # the single, pipeline-wide clinical_hypotheses value from here on
+    # (used in the response, version_provenance already refers to the
+    # dict-level version below, and input_snapshot persists this merged
+    # form so a frozen replay never needs to re-run calibration).
+    clinical_hypotheses = {
+        **clinical_hypotheses,
+        "hypotheses": apply_calibration_to_hypotheses(
+            clinical_hypotheses.get("hypotheses"), confidence_calibration
+        ),
+    }
+    symptom_ranked_hypotheses, symptom_analysis = apply_symptom_priority(
+        clinical_hypotheses.get("hypotheses"),
+        symptom_analysis,
+    )
+    clinical_hypotheses = {
+        **clinical_hypotheses,
+        "hypotheses": symptom_ranked_hypotheses,
+        "summary": {
+            **(clinical_hypotheses.get("summary") or {}),
+            "top_hypothesis_id": (
+                symptom_ranked_hypotheses[0].get("hypothesis_id")
+                if symptom_ranked_hypotheses else None
+            ),
+            "symptom_priority_applied": bool(
+                (symptom_analysis.get("conclusion_change") or {}).get("changed")
+            ),
+        },
+    }
+    # Negative Evidence Layer (P17, backend-only v1): runs after P14/P15/P16
+    # so it can see which domains already have a strong signal reported
+    # elsewhere (active pattern/hypothesis/safety flag) and exclude those —
+    # this layer only surfaces domains that were actively checked and did
+    # NOT produce a strong signal, never "no disease"/"ruled out". See
+    # negative_evidence.py's module docstring for the full domain logic.
+    negative_evidence = build_negative_evidence(
+        normalized_biomarkers,
+        patterns=interpreted_report.get("patterns"),
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+    )
+    # Outcome Attribution Engine (P21, backend-first v1): cautiously
+    # connects a P19 velocity signal (a marker's meaningful change) to a
+    # P20 intervention event that plausibly precedes it and shares its
+    # domain — never causation, always "possible_contributor". Runs after
+    # P19 (personal_baseline.velocity), P20 (intervention_memory), P15
+    # (clinical_contradictions), and P16/negative_evidence's doctor-flag
+    # exclusion posture are all available. Fails open to an empty
+    # attributions list if intervention_memory has no events (e.g.
+    # stage-30's migration not yet applied on this environment) — see
+    # outcome_attribution.py's module docstring.
+    outcome_attribution = build_outcome_attribution(
+        velocity_signals=(personal_baseline.get("velocity") or {}).get("signals"),
+        intervention_memory=intervention_memory,
+        clinical_contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+        clinical_hypotheses=clinical_hypotheses.get("hypotheses"),
+    )
+    # Action Plan by Role (P9): routes already-classified signals
+    # (doctor_flag/safety_level from clinical_reasoning_traces, the
+    # finalized protocol's self-guided actions, next_best_tests,
+    # evidence_gaps) into self/practitioner/doctor/urgent buckets — no new
+    # clinical judgment, pure composition over what this run already
+    # computed above.
+    action_plan_by_role = build_action_plan_by_role(
+        clinical_reasoning_traces=clinical_reasoning_traces,
+        protocol=protocol,
+        next_best_tests=next_best_tests,
+        evidence_gaps=evidence_gaps,
+    )
+    # Next-Test Funnel (P12): groups next_best_tests into a domain panel and
+    # tracks which previously-suggested tests have since been fulfilled —
+    # reuses the same previous-upload lookup pattern as progress_intelligence
+    # above, scoped to next_best_tests specifically.
+    _previous_next_best_tests = await _load_previous_next_best_tests(user_id, analysis_id)
+    next_test_funnel = build_next_test_funnel(
+        next_best_tests=next_best_tests,
+        previous_next_best_tests=_previous_next_best_tests,
+        current_biomarkers=normalized_biomarkers,
+    )
+    # Evidence Debt Score (P22, backend-first v1): aggregates P3/P12/
+    # P14-P17/P19-P21's own outputs into one explainable completeness/
+    # uncertainty summary — how completely the system can reason about
+    # this upload's data, NOT a health score. Runs last among the
+    # reasoning-core stages since it needs every one of them. See
+    # evidence_debt.py's module docstring.
+    evidence_debt = build_evidence_debt(
+        evidence_gaps=evidence_gaps,
+        clinical_contradictions=clinical_contradictions.get("contradictions"),
+        clinical_hypotheses=clinical_hypotheses.get("hypotheses"),
+        negative_evidence=negative_evidence,
+        velocity_signals=(personal_baseline.get("velocity") or {}).get("signals"),
+        intervention_memory=intervention_memory,
+        outcome_attribution=outcome_attribution,
+        next_test_funnel=next_test_funnel,
+    )
+    # Population Profile Selection (P24.3, backend-first v1): decides WHICH
+    # profile(s) below should run for this report -- longevity_metabolic_
+    # optimization stays the always-on default; athlete_recovery activates
+    # only via an explicit source_metadata["population_profile_ids"]
+    # override or a strong structured intervention_memory signal (a
+    # "training" event, or a sleep/stress/illness event whose own text
+    # names athletic context). Never reads lab markers to decide this. See
+    # population_profile_selection.py's module docstring.
+    population_profile_selection = select_population_profiles(
+        intervention_memory=intervention_memory,
+        source_metadata=source_metadata,
+    )
+    # Population Profiles (P24, backend-first v1): an overlay layer over
+    # every reasoning-core stage above -- re-reads their already-computed,
+    # already-calibrated output through the selected population profile(s)'
+    # focus domains, and adjusts emphasis/next-test priority/practitioner
+    # prompts only. No new detection logic, no change to
+    # clinical_hypotheses/evidence_debt/etc. themselves. See
+    # population_profiles.py's module docstring.
+    population_profile_overlays = build_population_profile_overlays(
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        confidence_calibration=confidence_calibration,
+        velocity_signals=(personal_baseline.get("velocity") or {}).get("signals"),
+        intervention_memory=intervention_memory,
+        outcome_attribution=outcome_attribution,
+        evidence_debt=evidence_debt,
+        next_test_funnel=next_test_funnel,
+        action_plan_by_role=action_plan_by_role,
+        profile_ids=population_profile_selection.get("active_profile_ids"),
+    )
+    output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
+        knowledge_evaluation,
+        knowledge_report,
+        locale,
+    )
+    cost_metadata = _cost_metadata(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        ai_protocol=ai_protocol,
+        used_llm=is_llm_configured(),
+    )
+    quality_snapshot = build_analysis_quality_snapshot(
+        health_context=health_context,
+        health_states=health_states,
+        trend_analysis=trend_analysis,
+        ai_orchestration=ai_orchestration,
+        protocol=protocol,
+        safety_result=safety_result,
+        cost_metadata=cost_metadata,
+    )
+    health_summary = {
+        **(knowledge_report.get("summary") or {}),
+        "risk_level": safety_result.get("risk_level") or (knowledge_report.get("summary") or {}).get("risk_level"),
+        "requires_doctor": bool(safety_result.get("doctor_discussion_required") or (knowledge_report.get("summary") or {}).get("requires_doctor")),
+        "urgent_review_required": bool(safety_result.get("urgent_review_required")),
+        "prominent_user_warning": safety_result.get("prominent_user_warning"),
+        "what_was_found": knowledge_report.get("what_was_found") or {},
+        "trend_overview": {
+            "version": trend_analysis.get("version"),
+            "available": trend_analysis.get("available"),
+            "priority_changes": [
+                {
+                    "name": item.get("name"),
+                    "direction": item.get("direction"),
+                    "percent_change": item.get("percent_change"),
+                    "interpretation": item.get("interpretation"),
+                }
+                for item in (trend_analysis.get("priority_changes") or [])[:5]
+            ],
+        },
+        "health_state_overview": {
+            "version": health_states.get("version"),
+            "top_domains": [
+                {
+                    "domain": item.get("domain"),
+                    "label": _localized_domain_label(item.get("domain"), item.get("label"), locale),
+                    "score": item.get("score"),
+                    "risk_level": item.get("risk_level"),
+                    "confidence": item.get("confidence"),
+                }
+                for item in (health_states.get("top_priorities") or [])[:5]
+            ],
+        },
+    }
+    version_provenance = {
+        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+        "kb_version": knowledge_report.get("version") or knowledge_evaluation.get("version"),
+        "domain_registry_version": (
+            (domain_definitions[0] or {}).get("registry_version")
+            if domain_definitions
+            else DOMAIN_REGISTRY_VERSION
+        ),
+        "nutrition_rules_version": (
+            ((knowledge_evaluation.get("nutrition_context") or {}).get("version"))
+            or NUTRITION_ALGORITHMS_VERSION
+        ),
+        "safety_engine_version": SAFETY_ENGINE_VERSION,
+        "prompt_version": (ai_orchestration.get("metadata") or {}).get("prompt_version"),
+        "model": (
+            (ai_orchestration.get("metadata") or {}).get("model")
+            or (ai_orchestration.get("metadata") or {}).get("llm_model")
+            or getattr(settings, "active_llm_model", None)
+        ),
+        "locale": locale,
+        "report_interpretation_version": REPORT_INTERPRETATION_VERSION,
+        "analysis_input_quality_gate_version": analysis_input_quality_gate.get("version"),
+        "clinical_data_integrity_version": clinical_integrity.get("version"),
+        "evidence_gaps_version": evidence_gaps.get("version"),
+        "hypothesis_engine_version": clinical_hypotheses.get("version"),
+        "clinical_contradictions_version": clinical_contradictions.get("version"),
+        "confidence_calibration_version": confidence_calibration.get("version"),
+        "negative_evidence_version": negative_evidence.get("version"),
+        "personal_baseline_velocity_version": (personal_baseline.get("velocity") or {}).get("version"),
+        "intervention_memory_version": intervention_memory.get("version"),
+        "outcome_attribution_version": outcome_attribution.get("version"),
+        "evidence_debt_version": evidence_debt.get("version"),
+        "population_profile_overlays_version": population_profile_overlays.get("version"),
+        "population_profile_selection_version": population_profile_selection.get("version"),
+        "symptom_snapshot_version": (symptom_snapshot or {}).get("version"),
+        "symptom_analysis_version": symptom_analysis.get("version"),
+    }
+
+    # P1 Case Synthesis: one deterministic, evidence-linked contract over the
+    # reasoning outputs already produced above. It adds no diagnosis or new
+    # threshold logic; every user-facing statement references a concrete
+    # biomarker, symptom, or profile field.
+    case_synthesis = build_case_synthesis(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        user_profile=user_profile,
+        interpreted_report=interpreted_report,
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        evidence_gaps=evidence_gaps,
+        action_plan_by_role=action_plan_by_role,
+        retest_suggestions=retest_suggestions,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+        symptom_analysis=symptom_analysis,
+        locale=locale,
+    )
+    version_provenance["case_synthesis_version"] = case_synthesis.get("version")
+
+    # P3 Grounded AI Narrative: the model sees only the closed, verified
+    # statement/evidence registry derived from Case Synthesis and can only
+    # select statement IDs. It never receives raw lab text, free-form symptom
+    # answers, or a profile payload, and cannot author new clinical facts.
+    grounded_ai_narrative = await build_grounded_ai_narrative(
+        case_synthesis=case_synthesis,
+        user_id=user_id,
+        upload_id=analysis_id,
+        use_llm=generate_ai_narrative,
+    )
+    version_provenance["grounded_ai_narrative_version"] = grounded_ai_narrative.get("version")
+
+    # P5 semantic Definition of Done: validates whether this report actually
+    # answers the user's questions, not merely whether its JSON is well formed.
+    # This is an observational quality contract; it never adds clinical facts
+    # or rewrites the frozen P1/P3 output.
+    semantic_acceptance = build_semantic_acceptance(
+        case_synthesis=case_synthesis,
+        grounded_ai_narrative=grounded_ai_narrative,
+        symptom_analysis=symptom_analysis,
+        action_plan_by_role=action_plan_by_role,
+        safety_result=safety_result,
+    )
+    version_provenance["semantic_acceptance_version"] = semantic_acceptance.get("version")
+
+    # Report Quality Audit (P23, backend-first v1): a technical/product
+    # audit of THIS report's generation — what ran, domain coverage,
+    # safety/cost signals, reproducibility — never a health score or
+    # clinical conclusion. Built last, after version_provenance, since it
+    # reports on version_provenance itself. See
+    # report_quality_audit.py's module docstring.
+    report_quality_audit = build_report_quality_audit(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        source_metadata=source_metadata,
+        patterns=interpreted_report.get("patterns"),
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        confidence_calibration=confidence_calibration,
+        negative_evidence=negative_evidence,
+        progress_intelligence=progress_intelligence,
+        personal_baseline=personal_baseline,
+        intervention_memory=intervention_memory,
+        outcome_attribution=outcome_attribution,
+        evidence_debt=evidence_debt,
+        action_plan_by_role=action_plan_by_role,
+        next_test_funnel=next_test_funnel,
+        evidence_gaps=evidence_gaps,
+        safety_result=safety_result,
+        version_provenance=version_provenance,
+        cost_metadata=cost_metadata,
+        snapshot_will_persist=bool(persist_report_version and user_id and analysis_id),
+    )
+    version_provenance["report_quality_audit_version"] = report_quality_audit.get("version")
+
+    # Doctor Escalation Precision 2.0 (P25, backend-first v1): translates
+    # the already-existing doctor/urgent signals (clinical_reasoning_traces'
+    # safety_level/doctor_flag, safety_result) into structured, per-domain
+    # escalation objects with fixed reason codes -- no new marker
+    # thresholds, no new detection, and a population profile can only add
+    # context (related_profiles), never change the level. See
+    # doctor_escalation_precision.py's module docstring.
+    doctor_escalation_precision = build_doctor_escalation_precision(
+        action_plan_by_role=action_plan_by_role,
+        safety_result=safety_result,
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        evidence_gaps=evidence_gaps,
+        negative_evidence=negative_evidence,
+        evidence_debt=evidence_debt,
+        population_profile_selection=population_profile_selection,
+        population_profile_overlays=population_profile_overlays,
+        report_quality_audit=report_quality_audit,
+        clinical_reasoning_traces=clinical_reasoning_traces,
+        detected_patterns=interpreted_report.get("patterns"),
+    )
+    version_provenance["doctor_escalation_precision_version"] = doctor_escalation_precision.get("version")
+
+    unified_personal_narrative = build_unified_personal_narrative(
+        case_synthesis=case_synthesis,
+        safety_result=safety_result,
+        doctor_escalation_precision=doctor_escalation_precision,
+        symptom_snapshot=symptom_snapshot,
+        health_context=health_context,
+        trend_analysis=trend_analysis,
+        progress_intelligence=progress_intelligence,
+        evidence_gaps=evidence_gaps,
+        confidence_calibration=confidence_calibration,
+        next_best_tests=next_best_tests,
+        action_plan_by_role=action_plan_by_role,
+        version_provenance=version_provenance,
+        report_id=analysis_id,
+    )
+    version_provenance["unified_personal_narrative_version"] = unified_personal_narrative.get("version")
+
+    result = {
+        "analysis_id": analysis_id or "",
+        "status": "completed",
+        "analysis_status": "completed",
+        "health_summary": health_summary,
+        "trend_analysis": trend_analysis,
+        "health_states": health_states,
+        "prioritized_biomarkers": prioritized,
+        "risks_flags": _risk_flags(knowledge_report, prioritized),
+        "recommendations": recommendations,
+        "protocol": protocol,
+        "ai_protocol": ai_protocol,
+        "ai_orchestration": ai_orchestration,
+        "shopping_links": shopping_links,
+        "retest_suggestions": retest_suggestions,
+        "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
+        "knowledge_evaluation": output_knowledge_evaluation,
+        "knowledge_report": knowledge_report,
+        "interpreted_report": interpreted_report,
+        "analysis_input_quality_gate": analysis_input_quality_gate,
+        "clinical_data_integrity": clinical_integrity,
+        "evidence_gaps": evidence_gaps,
+        "clinical_priority_planner": clinical_priority_planner,
+        "next_best_tests": next_best_tests,
+        "clinical_story": clinical_story,
+        "clinical_reasoning_traces": clinical_reasoning_traces,
+        "clinical_hypotheses": clinical_hypotheses,
+        "clinical_contradictions": clinical_contradictions,
+        "confidence_calibration": confidence_calibration,
+        "negative_evidence": negative_evidence,
+        "intervention_memory": intervention_memory,
+        "outcome_attribution": outcome_attribution,
+        "evidence_debt": evidence_debt,
+        "report_quality_audit": report_quality_audit,
+        "population_profile_overlays": population_profile_overlays,
+        "population_profile_selection": population_profile_selection,
+        "doctor_escalation_precision": doctor_escalation_precision,
+        "symptom_analysis": symptom_analysis,
+        "case_synthesis": case_synthesis,
+        "unified_personal_narrative": unified_personal_narrative,
+        "grounded_ai_narrative": grounded_ai_narrative,
+        "semantic_acceptance": semantic_acceptance,
+        "progress_intelligence": progress_intelligence,
+        "personal_baseline": personal_baseline,
+        "action_plan_by_role": action_plan_by_role,
+        "next_test_funnel": next_test_funnel,
+        "safety_result": safety_result,
+        "safety_notice": safety_notice,
+        "explainability": explainability,
+        "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
+        "normalized_biomarkers": normalized_biomarkers,
+        "saved_biomarkers": saved_biomarkers,
+        "cost_metadata": cost_metadata,
+        "quality_snapshot": quality_snapshot,
+        "health_context": health_context,
+        "symptom_snapshot": public_symptom_snapshot(symptom_snapshot),
+        "metadata": {
+            "source": source_metadata or {},
+            "questionnaire_present": bool(effective_questionnaire),
+            "symptom_snapshot_present": bool(symptom_snapshot),
+            "symptom_source_type": (symptom_snapshot or {}).get("source_type"),
+            "profile_present": bool(user_profile),
+            "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
+            "health_context_version": health_context.get("version"),
+            "health_context_readiness": health_context.get("readiness") or {},
+            "ai_orchestration_version": ai_orchestration.get("version"),
+            "ai_analysis_source": (ai_orchestration.get("metadata") or {}).get("analysis_source"),
+            "quality_snapshot_version": quality_snapshot.get("version"),
+            "biomarker_count": len(normalized_biomarkers),
+            "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
+            "version_provenance": version_provenance,
+        },
+    }
+
+    if persist_report_version and user_id and analysis_id:
+        report_version_saved = False
+        persistence_state = "insert_unconfirmed"
+        atomic_replay = False
+        try:
+            from app.services import supabase_service as supabase
+
+            insert_kwargs = dict(
+                user_id=user_id,
+                upload_id=analysis_id,
+                report_version_id=report_version_id,
+                version="report_v1",
+                locale=locale,
+                input_snapshot={
+                    "biomarkers": normalized_biomarkers,
+                    # The upload-scoped `protocols` row is only a projection.
+                    # Freeze its exact flat representation with this historical
+                    # report so recovery never runs AI/KB generation again.
+                    "protocol_projection": deepcopy(recommendations),
+                    "symptoms": normalized_symptoms,
+                    "symptom_snapshot": deepcopy(symptom_snapshot),
+                    "profile_context_fields": result["metadata"]["profile_context_fields"],
+                    "source": source_metadata or {},
+                    # Persist the exact public analysis metadata so frozen
+                    # responses do not lose source/version/readiness fields
+                    # that Results consumes. Older rows are handled by the
+                    # read-side compatibility builder in report_history.py.
+                    "metadata": deepcopy(result["metadata"]),
+                    "health_context": health_context,
+                    "analysis_input_quality_gate": analysis_input_quality_gate,
+                    "clinical_data_integrity": clinical_integrity,
+                    "health_states": health_states,
+                    "trend_analysis": trend_analysis,
+                    "evidence_gaps": evidence_gaps,
+                    # Follow-up on 2026-09-12 audit items #2/#3/#6: persisted
+                    # verbatim the same way evidence_gaps already is above —
+                    # describes the analysis AT GENERATION TIME, not
+                    # recomputed on a later frozen read (see
+                    # report_history.py::assemble_frozen_response, which now
+                    # reads these back out of input_snapshot the same way it
+                    # already does for evidence_gaps).
+                    "clinical_priority_planner": clinical_priority_planner,
+                    "next_best_tests": next_best_tests,
+                    "clinical_story": clinical_story,
+                    "clinical_reasoning_traces": clinical_reasoning_traces,
+                    "clinical_hypotheses": clinical_hypotheses,
+                    "clinical_contradictions": clinical_contradictions,
+                    "confidence_calibration": confidence_calibration,
+                    "negative_evidence": negative_evidence,
+                    "intervention_memory": intervention_memory,
+                    "outcome_attribution": outcome_attribution,
+                    "evidence_debt": evidence_debt,
+                    "report_quality_audit": report_quality_audit,
+                    "population_profile_overlays": population_profile_overlays,
+                    "population_profile_selection": population_profile_selection,
+                    "doctor_escalation_precision": doctor_escalation_precision,
+                    "symptom_analysis": symptom_analysis,
+                    "case_synthesis": case_synthesis,
+                    "unified_personal_narrative": unified_personal_narrative,
+                    "grounded_ai_narrative": grounded_ai_narrative,
+                    "semantic_acceptance": semantic_acceptance,
+                    "progress_intelligence": progress_intelligence,
+                    "personal_baseline": personal_baseline,
+                    "action_plan_by_role": action_plan_by_role,
+                    "next_test_funnel": next_test_funnel,
+                    "version_provenance": version_provenance,
+                    "ai_orchestration": ai_orchestration,
+                    "quality_snapshot": quality_snapshot,
+                    "cost_metadata": cost_metadata,
+                    "knowledge_domain_definitions": {
+                        "count": len(domain_definitions),
+                        "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
+                        "domains": [item.get("key") for item in domain_definitions],
+                    },
+                },
+                knowledge_report=knowledge_report,
+                protocol=protocol,
+                safety_result=safety_result,
+                explainability={
+                    **(explainability or {}),
+                    "evidence_gaps": evidence_gaps,
+                    "version_provenance": version_provenance,
+                    # Stage 2G: knowledge_evaluation has no dedicated report_versions
+                    # column; nested here (the existing catch-all envelope) so a
+                    # frozen GET can serve it without recomputing — see
+                    # app/services/report_history.py::frozen_knowledge_evaluation().
+                    "knowledge_evaluation": output_knowledge_evaluation,
+                    # Separate frozen payload built before any presentation
+                    # transformation; never derived from knowledge_evaluation.
+                    **(
+                        {FROZEN_EVIDENCE_KEY: frozen_protocol_evidence["payload"]}
+                        if frozen_protocol_evidence.get("status") in ("BUILT", "NON_AUTHORIZING")
+                        else {}
+                    ),
+                },
+                interpreted_report=interpreted_report,
+                status="completed" if safety_result.get("status") != "blocked" else "blocked",
+            )
+            if persist_biomarkers:
+                # The single SQL transaction owns replacement of the persisted
+                # projection, frozen report insertion, and upload completion.
+                # Never fall back to the old multi-request REST write sequence.
+                atomic_report = {
+                    "version": insert_kwargs["version"],
+                    "locale": insert_kwargs["locale"],
+                    "input_snapshot": insert_kwargs["input_snapshot"],
+                    "knowledge_report": {
+                        **(insert_kwargs["knowledge_report"] or {}),
+                        **(
+                            {"interpreted_report": insert_kwargs["interpreted_report"]}
+                            if insert_kwargs.get("interpreted_report") else {}
+                        ),
+                    },
+                    "protocol": insert_kwargs["protocol"] or {},
+                    "safety_result": insert_kwargs["safety_result"] or {},
+                    "explainability": insert_kwargs["explainability"] or {},
+                    "status": insert_kwargs["status"],
+                }
+                try:
+                    finalized = await supabase.finalize_lab_analysis(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        operation_key=atomic_operation_key,
+                        report_version_id=report_version_id,
+                        locale=locale,
+                        pipeline_version=LAB_ANALYSIS_PIPELINE_VERSION,
+                        biomarkers=normalized_biomarkers,
+                        report=atomic_report,
+                    )
+                except supabase.AtomicFinalizationError as exc:
+                    persistence_state = exc.code
+                    raise
+                report_version = {
+                    "id": finalized["report_version_id"],
+                    "status": insert_kwargs["status"],
+                    "version": insert_kwargs["version"],
+                }
+                atomic_replay = finalized["replay"]
+                saved_biomarkers = finalized["biomarkers"]
+                result["saved_biomarkers"] = saved_biomarkers
+                result["finalization_replay"] = atomic_replay
+            else:
+                try:
+                    report_version = await supabase.save_report_version(**insert_kwargs)
+                except Exception:
+                    # Ambiguous outcome: the insert may have committed. Resolve by the
+                    # server-generated id before concluding anything; never re-insert.
+                    report_version = await _resolve_ambiguous_report_insert(supabase, user_id, report_version_id)
+                    if report_version is None:
+                        raise
+            returned_id = report_version.get("id") if isinstance(report_version, dict) else None
+            # A replay deliberately returns the identity of the first committed
+            # report, not the fresh provisional UUID generated for this attempt.
+            if not isinstance(returned_id, str) or (not atomic_replay and returned_id != report_version_id):
+                persistence_state = "mismatch"
+                raise RuntimeError("report_version_id_mismatch")
+            report_version_saved = True
+            if atomic_replay:
+                # A replay is an acknowledgement of the earlier transaction, not
+                # permission to present a second run's clinical output as saved.
+                # Rehydrate only the owner-scoped frozen report and its persisted
+                # biomarker projection; fail closed if either side is incomplete.
+                try:
+                    replay = await supabase.load_authoritative_finalization_replay(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        report_version_id=returned_id,
+                    )
+                except supabase.AtomicFinalizationError as exc:
+                    persistence_state = exc.code
+                    raise
+                persisted = replay["report_version"]
+                report_version = {
+                    "id": persisted["id"],
+                    "status": persisted["status"],
+                    "version": persisted["version"],
+                }
+                saved_biomarkers = replay["biomarkers"]
+                result.update({
+                    "saved_biomarkers": saved_biomarkers,
+                    "normalized_biomarkers": saved_biomarkers,
+                    "knowledge_report": persisted["knowledge_report"],
+                    "interpreted_report": (persisted["knowledge_report"] or {}).get("interpreted_report"),
+                    "protocol": persisted["protocol"],
+                    "safety_result": persisted["safety_result"],
+                    "explainability": {
+                        key: value for key, value in persisted["explainability"].items()
+                        if key != FROZEN_EVIDENCE_KEY
+                    },
+                    "analysis_status": "completed",
+                    "finalization_replay": True,
+                    "downstream_status": replay["downstream_status"],
+                    # These values were produced above for this request. They have
+                    # no persisted authority on a replay and must not escape.
+                    "health_summary": {}, "trend_analysis": {}, "health_states": {},
+                    "prioritized_biomarkers": [], "risks_flags": [], "recommendations": [],
+                    "ai_protocol": {}, "ai_orchestration": {}, "shopping_links": [],
+                    "retest_suggestions": [], "doctor_summary": "",
+                    "knowledge_evaluation": {}, "analysis_input_quality_gate": {},
+                    "clinical_data_integrity": {}, "evidence_gaps": {},
+                    "clinical_priority_planner": {}, "next_best_tests": {}, "clinical_story": {},
+                    "clinical_reasoning_traces": {}, "clinical_hypotheses": {},
+                    "clinical_contradictions": {}, "confidence_calibration": {},
+                    "negative_evidence": {}, "intervention_memory": {},
+                    "outcome_attribution": {}, "evidence_debt": {}, "report_quality_audit": {},
+                    "population_profile_overlays": {}, "population_profile_selection": {},
+                    "doctor_escalation_precision": {}, "symptom_analysis": {},
+                    "case_synthesis": {}, "unified_personal_narrative": {},
+                    "grounded_ai_narrative": {}, "semantic_acceptance": {},
+                    "progress_intelligence": {}, "personal_baseline": {},
+                    "action_plan_by_role": {}, "next_test_funnel": {},
+                    "quality_snapshot": {}, "health_context": {}, "symptom_snapshot": {},
+                    "metadata": {"replay": True, "report_version_id": persisted["id"]},
+                })
+            else:
+                if not persist_biomarkers:
+                    # The legacy non-atomic/report-only path has no recovery
+                    # ledger. Preserve its existing writers until it is retired.
+                    result["downstream_status"] = "pending"
+                else:
+                    # The durable ledger was created in the finalization transaction.
+                    # Invoke only its fixed, owner-scoped dispatcher: no request data
+                    # selects a handler or supplies an effect payload. Failed effects
+                    # stay retryable in the ledger and do not invalidate the report.
+                    try:
+                        outcomes = await recover_report_followups(
+                            authenticated_user_id=user_id,
+                            report_version_id=returned_id,
+                        )
+                        result["downstream_status"] = (
+                            "completed"
+                            if outcomes and set(outcomes.values()) == {"completed"}
+                            else "retryable"
+                        )
+                        artifact_status = outcomes.get("intelligence_artifacts") if isinstance(outcomes, dict) else None
+                        if artifact_status not in (None, "completed"):
+                            # The report is durable, but its observability payload remains
+                            # pending in the recovery ledger. Emit only stable identifiers;
+                            # never expose the handler exception or clinical payload.
+                            result["analysis_intelligence_artifacts"] = {"persisted": False, "error": "persistence_failed"}
+                            try:
+                                from app.services.ops_alerts import send_ops_alert
+
+                                await send_ops_alert(
+                                    code="ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED",
+                                    title="Analysis intelligence artifact persistence failed",
+                                    severity="error",
+                                    source="backend.analysis",
+                                    details={"upload_id": analysis_id, "report_version_id": returned_id},
+                                )
+                            except Exception:
+                                pass
+                    except Exception:
+                        # Preserve the confirmed immutable report and its pending
+                        # work. Never fall back to the legacy independent writers.
+                        result["downstream_status"] = "retryable"
+                    result["downstream_dispatch_invoked"] = True
+                    # A bounded, owner-scoped sweep makes prior interrupted
+                    # finalizations retryable on the next trusted analysis
+                    # request. It cannot select handlers or regenerate report
+                    # content, and it never changes this report's status.
+                    try:
+                        await recover_pending_report_followups(
+                            authenticated_user_id=user_id,
+                            max_reports=4,
+                            exclude_report_version_id=returned_id,
+                        )
+                    except Exception as exc:
+                        logger.error("pending_recovery_trigger_failed exception_type=%s", type(exc).__name__)
+            if saved_biomarkers is not None and not persist_biomarkers:
+                await supabase.mark_lab_upload_done(analysis_id, user_id)
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.persist_retest_obligations(
+                    user_id=user_id,
+                    report_version=report_version,
+                    retest_plan=knowledge_report.get("retest_plan") or [],
+                )
+            reliable_test_date = supabase.resolve_reliable_retest_date(source_metadata)
+            fulfilled_retest_obligations = []
+            if not atomic_replay and not result.get("downstream_dispatch_invoked") and reliable_test_date is not None:
+                fulfilled_retest_obligations = await supabase.reconcile_retest_fulfillment(
+                    user_id=user_id,
+                    report_version=report_version,
+                    biomarkers=normalized_biomarkers,
+                    test_date=reliable_test_date,
+                    date_source=(source_metadata or {}).get("date_source"),
+                    date_confidence=(source_metadata or {}).get("date_confidence"),
+                )
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.reconcile_lab_plan_fulfillment(
+                    user_id=user_id,
+                    report_version=report_version,
+                    biomarkers=normalized_biomarkers,
+                    fulfilled_retest_obligations=fulfilled_retest_obligations,
+                )
+                record_lab_analysis_snapshot(
+                    source=str((source_metadata or {}).get("source") or "unknown"),
+                    snapshot=symptom_snapshot,
+                )
+            result["report_version"] = redact_report_version_symptom_snapshot(report_version)
+            if not atomic_replay and not result.get("downstream_dispatch_invoked"):
+                await supabase.save_safety_events(
+                    user_id=user_id,
+                    upload_id=analysis_id,
+                    report_version_id=report_version.get("id"),
+                    safety_events=safety_result.get("safety_events") or [],
+                )
+                try:
+                    result["analysis_intelligence_artifacts"] = await supabase.save_analysis_intelligence_artifacts(
+                        user_id=user_id,
+                        upload_id=analysis_id,
+                        report_version_id=report_version.get("id"),
+                        analysis_input_quality_gate=analysis_input_quality_gate,
+                        clinical_data_integrity=clinical_integrity,
+                        evidence_gaps=evidence_gaps,
+                        health_states=health_states,
+                    )
+                except Exception:
+                    result["analysis_intelligence_artifacts"] = {"persisted": False, "error": "persistence_failed"}
+        except Exception:
+            if report_version_saved and atomic_replay:
+                # The original transaction may still exist, but its owner-scoped
+                # authoritative report could not be verified. Never fall back to
+                # this request's newly generated clinical presentation.
+                result["report_version"] = None
+                result["analysis_status"] = "failed"
+                result["error"] = "replay_authoritative_load_failed"
+                result["error_code"] = persistence_state if persistence_state.startswith("replay_") or persistence_state.startswith("followup_") else "replay_authoritative_load_failed"
+                result["protocol"] = {}
+                result["recommendations"] = []
+                result["saved_biomarkers"] = []
+                result["normalized_biomarkers"] = []
+                result["finalization_replay"] = True
+            elif report_version_saved:
+                # The insert was confirmed (exact id match). Keep its identity and
+                # the completed status; flag the failed follow-up work instead of
+                # erasing the report or retrying the insert.
+                result["report_version"] = {"id": report_version_id, "status": report_version.get("status"), "version": report_version.get("version")}
+                result["analysis_status"] = "partial"
+                result["post_persistence_status"] = "partial"
+                result["error_code"] = "report_post_persistence_failed"
+            else:
+                # Not confirmed: either the insert raised (outcome ambiguous) or the
+                # returned id did not match. Never present as a saved report, and
+                # never let callers persist flat personalized recommendations.
+                result["report_version"] = None
+                result["analysis_status"] = "failed"
+                result["error"] = "report_persistence_failed"
+                result["error_code"] = (
+                    persistence_state
+                    if persistence_state in {"stale_operation", "idempotency_conflict", "upload_not_finalizable", "invalid_finalization_response", "finalization_storage_error"}
+                    else ("report_persistence_failed" if persistence_state == "mismatch" else "report_persistence_unconfirmed")
+                )
+                result["protocol"] = {}
+                result["recommendations"] = []
+            try:
+                from app.services.ops_alerts import send_ops_alert
+
+                await send_ops_alert(
+                    code="REPORT_VERSION_PERSISTENCE_FAILED",
+                    title="Report version persistence failed",
+                    severity="error",
+                    source="backend.analysis",
+                    details={
+                        "user_id": user_id,
+                        "upload_id": analysis_id,
+                        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+                    },
+                )
+            except Exception:
+                pass
+
+    source_value = result["metadata"].get("source") or {}
+    record_analysis_cost(
+        source=source_value.get("source") if isinstance(source_value, dict) else source_value,
+        cost_metadata=cost_metadata,
+        analysis_id=analysis_id,
+        locale=locale,
+    )
+    _log_analysis_core_completion(result)
+    return result

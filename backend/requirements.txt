@@ -1,0 +1,47 @@
+# FastAPI core
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Supabase
+supabase==2.4.2
+
+# PDF text extraction for OpenAI PDF analysis path
+pypdf==4.2.0
+markitdown[pdf]==0.1.6
+
+# PDF to image conversion for Vision API
+pdf2image==1.17.0
+pillow==12.2.0
+
+# File type detection
+python-magic==0.4.27
+
+# Excel/table parsing
+openpyxl==3.1.5
+
+# Data validation
+pydantic==2.11.3
+pydantic-settings==2.8.1
+
+# HTTP client
+httpx==0.27.0
+redis==5.0.7
+
+# Auth
+PyJWT[crypto]==2.8.0
+cryptography==42.0.8
+pywebpush==2.0.3
+
+# Payments
+
+# Utilities
+python-dotenv==1.0.1
+tenacity==8.3.0
+
+# Tests
+pytest==8.2.2
+pytest-asyncio==0.23.7
+
+# Background tasks
+apscheduler==3.10.4

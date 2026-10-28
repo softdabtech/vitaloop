@@ -1,0 +1,376 @@
+import { useState, useEffect, useCallback } from 'react'
+import { isUkrainianLocale } from '../lib/locale.js'
+
+const STORAGE_KEY = 'vitaloop-cookie-consent'
+const CONSENT_VERSION = '1'
+
+const T = {
+  en: {
+    bannerTitle: 'We use cookies',
+    bannerText:
+      'Essential cookies keep VITALOOP running. Optional analytics and marketing cookies help us improve the product and measure campaigns.',
+    acceptAll: 'Accept All',
+    rejectOptional: 'Reject Non-Essential',
+    manageSettings: 'Manage Settings',
+    privacyLink: 'Privacy Policy',
+    cookiePolicyLink: 'Cookie Policy',
+
+    settingsTitle: 'Cookie Preferences',
+    settingsSubtitle: 'Choose which cookies you allow us to use. You can update this at any time.',
+    savePrefs: 'Save Preferences',
+    acceptAllBtn: 'Accept All',
+
+    essential: 'Essential',
+    essentialDesc:
+      'Required for authentication, security and core functionality. Cannot be disabled.',
+    analytics: 'Analytics',
+    analyticsDesc:
+      'Help us understand how visitors use the site (Google Analytics, ContentSquare). No personal data is sold.',
+    marketing: 'Marketing',
+    marketingDesc:
+      'Used to measure the effectiveness of ads and retargeting campaigns (Meta Pixel). Your data is used only for conversion reporting.',
+    functional: 'Functional',
+    functionalDesc:
+      'Remember your preferences such as language, region and display settings across sessions.',
+
+    always: 'Always on',
+    on: 'On',
+    off: 'Off',
+    back: '← Back',
+  },
+  uk: {
+    bannerTitle: 'Ми використовуємо cookie',
+    bannerText:
+      'Необхідні cookie підтримують роботу VITALOOP. Додаткові аналітичні та маркетингові cookie допомагають покращувати продукт і вимірювати кампанії.',
+    acceptAll: 'Прийняти всі',
+    rejectOptional: 'Відхилити необов\'язкові',
+    manageSettings: 'Налаштування',
+    privacyLink: 'Політика конфіденційності',
+    cookiePolicyLink: 'Політика Cookie',
+
+    settingsTitle: 'Налаштування Cookie',
+    settingsSubtitle:
+      'Оберіть, які файли cookie ви дозволяєте використовувати. Ви можете змінити це будь-коли.',
+    savePrefs: 'Зберегти налаштування',
+    acceptAllBtn: 'Прийняти всі',
+
+    essential: 'Необхідні',
+    essentialDesc:
+      'Потрібні для авторизації, безпеки та основних функцій сервісу. Неможливо вимкнути.',
+    analytics: 'Аналітика',
+    analyticsDesc:
+      'Допомагають розуміти, як відвідувачі використовують сайт (Google Analytics, ContentSquare). Персональні дані не продаються.',
+    marketing: 'Маркетинг',
+    marketingDesc:
+      'Вимірюють ефективність реклами та ретаргетингу (Meta Pixel). Дані використовуються лише для звіту про конверсії.',
+    functional: 'Функціональні',
+    functionalDesc:
+      "Запам'ятовують ваші вподобання: мову, регіон та параметри відображення між сесіями.",
+
+    always: 'Завжди увімк.',
+    on: 'Увімк.',
+    off: 'Вимк.',
+    back: '← Назад',
+  },
+}
+
+function loadStored() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed?.version !== CONSENT_VERSION) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveConsent(prefs) {
+  const record = { ...prefs, version: CONSENT_VERSION, timestamp: new Date().toISOString() }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
+  } catch {
+    // Storage can be unavailable in hardened/private browser contexts.
+  }
+  // Notify analytics loader
+  if (typeof window.loadVitaloopAnalytics === 'function') {
+    window.loadVitaloopAnalytics(record)
+  }
+  return record
+}
+
+// Toggle switch
+function Toggle({ checked, onChange, disabled }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        border: 'none',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        background: disabled ? 'var(--vtl-status-unavailable)' : checked ? 'var(--vtl-color-brand-700)' : 'var(--vtl-color-border-strong)',
+        transition: 'background 0.2s',
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      <span style={{
+        position: 'absolute',
+        top: 3,
+        left: checked ? 23 : 3,
+        width: 18,
+        height: 18,
+        borderRadius: '50%',
+        background: 'var(--vtl-color-surface)',
+        boxShadow: 'var(--vtl-shadow-card)',
+        transition: 'left 0.18s',
+      }} />
+    </button>
+  )
+}
+
+// Settings panel (full preferences)
+function SettingsPanel({ t, prefs, setPrefs, onSave, onAcceptAll, onBack }) {
+  const cats = [
+    { key: 'essential', label: t.essential, desc: t.essentialDesc, locked: true },
+    { key: 'analytics', label: t.analytics, desc: t.analyticsDesc },
+    { key: 'marketing', label: t.marketing, desc: t.marketingDesc },
+    { key: 'functional', label: t.functional, desc: t.functionalDesc },
+  ]
+
+  return (
+    <div style={panelStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <button onClick={onBack} style={backBtnStyle}>{t.back}</button>
+      </div>
+      <h2 style={titleStyle}>{t.settingsTitle}</h2>
+      <p style={subtitleStyle}>{t.settingsSubtitle}</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '18px 0' }}>
+        {cats.map(({ key, label, desc, locked }) => (
+          <div key={key} style={rowStyle}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--vtl-color-ink)' }}>{label}</span>
+                {locked && (
+                  <span style={chipStyle}>{t.always}</span>
+                )}
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--vtl-color-text-muted)', lineHeight: 1.5 }}>{desc}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {!locked && (
+                <span style={{ fontSize: 12, color: prefs[key] ? 'var(--vtl-color-brand-700)' : 'var(--vtl-status-unavailable)', fontWeight: 600 }}>
+                  {prefs[key] ? t.on : t.off}
+                </span>
+              )}
+              <Toggle
+                checked={locked ? true : prefs[key]}
+                onChange={(v) => setPrefs(p => ({ ...p, [key]: v }))}
+                disabled={locked}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button onClick={onSave} style={primaryBtnStyle}>{t.savePrefs}</button>
+        <button onClick={onAcceptAll} style={secondaryBtnStyle}>{t.acceptAllBtn}</button>
+      </div>
+    </div>
+  )
+}
+
+export default function CookieConsent() {
+  // Vanilla JS in index.html handles consent before React loads.
+  // Hooks still run in a stable order when the vanilla banner is active.
+  const handledByVanilla = typeof window !== 'undefined' && window.__vlCookieHandledByVanilla
+  const [visible, setVisible] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [prefs, setPrefs] = useState({ analytics: true, marketing: true, functional: true })
+  const isUk = isUkrainianLocale()
+  const t = isUk ? T.uk : T.en
+
+  useEffect(() => {
+    if (handledByVanilla) return undefined
+    const stored = loadStored()
+    if (!stored || !stored.decided) {
+      // Small delay so the page renders first
+      const timer = setTimeout(() => setVisible(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [handledByVanilla])
+
+  const acceptAll = useCallback(() => {
+    saveConsent({ decided: true, essential: true, analytics: true, marketing: true, functional: true })
+    setVisible(false)
+    setShowSettings(false)
+  }, [])
+
+  const rejectOptional = useCallback(() => {
+    saveConsent({ decided: true, essential: true, analytics: false, marketing: false, functional: false })
+    setVisible(false)
+    setShowSettings(false)
+  }, [])
+
+  const savePreferences = useCallback(() => {
+    saveConsent({ decided: true, essential: true, ...prefs })
+    setVisible(false)
+    setShowSettings(false)
+  }, [prefs])
+
+  if (handledByVanilla || !visible) return null
+
+  const privacyHref = isUk ? '/privacy-policy/' : '/privacy-policy/'
+  const cookieSection = `${privacyHref}#cookies`
+
+  if (showSettings) {
+    return (
+      <div style={backdropStyle}>
+        <SettingsPanel
+          t={t}
+          prefs={prefs}
+          setPrefs={setPrefs}
+          onSave={savePreferences}
+          onAcceptAll={acceptAll}
+          onBack={() => setShowSettings(false)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div style={bannerWrapStyle} role="dialog" aria-modal="true" aria-label={t.bannerTitle}>
+      <div style={bannerInnerStyle}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: 'var(--vtl-color-ink)', letterSpacing: '-0.01em' }}>
+              {t.bannerTitle}
+            </h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--vtl-color-ink-secondary)', lineHeight: 1.45, maxWidth: 420 }}>
+              {t.bannerText}{' '}
+              <a href={privacyHref} style={linkStyle} target="_blank" rel="noreferrer">{t.privacyLink}</a>
+              {' · '}
+              <a href={cookieSection} style={linkStyle} target="_blank" rel="noreferrer">{t.cookiePolicyLink}</a>
+            </p>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div style={btnGroupStyle}>
+          <button onClick={acceptAll} style={primaryBtnStyle}>{t.acceptAll}</button>
+          <button onClick={rejectOptional} style={outlineBtnStyle}>{t.rejectOptional}</button>
+          <button onClick={() => setShowSettings(true)} style={ghostBtnStyle}>{t.manageSettings}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Style constants ──────────────────────────────────────────────────────────
+
+const backdropStyle = {
+  position: 'fixed', inset: 0, zIndex: 10000,
+  display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+  background: 'var(--vtl-color-overlay)', backdropFilter: 'blur(4px)',
+  padding: '0 16px 24px',
+}
+
+const bannerWrapStyle = {
+  position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10000,
+  padding: '0 12px 12px',
+  display: 'flex', justifyContent: 'flex-end',
+  pointerEvents: 'none',
+}
+
+const bannerInnerStyle = {
+  pointerEvents: 'auto',
+  background: 'var(--vtl-color-surface)',
+  border: '1px solid var(--vtl-color-border)',
+  borderRadius: 'var(--vtl-radius-card)',
+  boxShadow: 'var(--vtl-shadow-raised)',
+  padding: '14px 16px',
+  width: 'min(100%, 560px)',
+  maxWidth: 'calc(100vw - 24px)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+}
+
+const panelStyle = {
+  background: 'var(--vtl-color-surface)',
+  border: '1px solid var(--vtl-color-border)',
+  borderRadius: 'var(--vtl-radius-panel)',
+  boxShadow: 'var(--vtl-shadow-raised)',
+  padding: '24px',
+  width: '100%',
+  maxWidth: 520,
+  maxHeight: '90vh',
+  overflowY: 'auto',
+}
+
+const titleStyle = { margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--vtl-color-ink)', letterSpacing: '-0.01em' }
+const subtitleStyle = { margin: '6px 0 0', fontSize: 13, color: 'var(--vtl-color-text-muted)', lineHeight: 1.5 }
+
+const rowStyle = {
+  display: 'flex', alignItems: 'flex-start', gap: 16,
+  padding: '14px 16px', borderRadius: 'var(--vtl-radius-field)',
+  background: 'var(--vtl-color-canvas)', border: '1px solid var(--vtl-color-border)',
+}
+
+const chipStyle = {
+  fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+  color: 'var(--vtl-color-brand-800)', background: 'var(--vtl-color-brand-50)', border: '1px solid var(--vtl-color-border-strong)',
+  borderRadius: 'var(--vtl-radius-pill)', padding: '2px 8px',
+}
+
+const btnGroupStyle = {
+  display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
+}
+
+const primaryBtnStyle = {
+  minHeight: 44, padding: '8px 16px', borderRadius: 'var(--vtl-radius-pill)', border: 'none', cursor: 'pointer',
+  background: 'var(--vtl-action-primary-bg)',
+  color: 'var(--vtl-action-primary-fg)', fontWeight: 700, fontSize: 12.5,
+  boxShadow: 'var(--vtl-shadow-primary)',
+  transition: 'opacity 0.15s',
+  whiteSpace: 'nowrap',
+}
+
+const secondaryBtnStyle = {
+  ...primaryBtnStyle,
+  background: 'var(--vtl-action-primary-bg)',
+}
+
+const outlineBtnStyle = {
+  minHeight: 44, padding: '8px 16px', borderRadius: 'var(--vtl-radius-pill)', cursor: 'pointer',
+  background: 'var(--vtl-action-secondary-bg)',
+  border: '1px solid var(--vtl-action-secondary-border)',
+  color: 'var(--vtl-action-secondary-fg)', fontWeight: 700, fontSize: 12.5,
+  transition: 'border-color 0.15s',
+  whiteSpace: 'nowrap',
+}
+
+const ghostBtnStyle = {
+  minHeight: 40, padding: '8px 10px', borderRadius: 'var(--vtl-radius-pill)', border: 'none', cursor: 'pointer',
+  background: 'transparent', color: 'var(--vtl-color-text-muted)', fontWeight: 600, fontSize: 12.5,
+  textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
+}
+
+const backBtnStyle = {
+  padding: '6px 12px', borderRadius: 'var(--vtl-radius-field)', border: '1px solid var(--vtl-color-border)',
+  background: 'transparent', cursor: 'pointer',
+  color: 'var(--vtl-color-text-muted)', fontSize: 13, fontWeight: 600,
+}
+
+const linkStyle = { color: 'var(--vtl-color-brand-700)', textDecoration: 'underline', textUnderlineOffset: 2 }

@@ -1,0 +1,23 @@
+# Secrets must never be baked into the image -- they're injected at
+# runtime via docker-compose's env_file. Without this file, Dockerfile's
+# `COPY . .` copies .env (WayForPay, Supabase, OpenAI, Stripe, SendGrid/
+# Resend keys, everything) straight into every image layer, readable by
+# anyone with docker exec/inspect access and retained forever in old
+# layers even after the secrets are rotated.
+.env
+.env.*
+!.env.example
+!.env.staging.local.example
+
+.git
+.gitignore
+.DS_Store
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+logs/
+*.log

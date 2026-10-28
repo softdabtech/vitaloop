@@ -1,0 +1,196 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
+from contextlib import asynccontextmanager
+from app.errors import http_exception_handler, validation_exception_handler
+from app.config import settings
+from app.middleware.request_context import RequestContextMiddleware
+from app.middleware.logging import StructuredLoggingMiddleware
+from app.middleware.ops_alerts import OpsAlertMiddleware
+from app.middleware.security import (
+    InMemoryRateLimiterBackend,
+    PathRateLimitMiddleware,
+    RateLimitRule,
+    RedisRateLimiterBackend,
+    SecurityHeadersMiddleware,
+)
+from app.middleware.brute_force_middleware import BruteForceProtectionMiddleware
+from app.utils.build_info import APP_VERSION
+import logging
+from app.utils import checkin_reminder
+
+from app.services.ai.openai_service import is_llm_configured
+
+logger = logging.getLogger("uvicorn.error")
+
+from app.routers import health, llm_consult, emergency_fixes, assessment, monitoring, symptom_check
+from app.routers.identity import auth, profile, onboarding, settings as settings_router
+from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
+from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
+from app.routers.notifications import notifications, complaints
+from app.routers.crm import crm, crm_clients, crm_ops
+from app.routers.admin import admin
+from app.routers.admin import data_integrity
+from app.routers.partners import (
+    partners_embedded_router,
+    partners_events_router,
+    partners_gateway_router,
+    partners_insights_router,
+    partners_results_router,
+)
+from app.routers.b2b import analyze_labs as b2b_analyze_labs
+from app.routers import knowledge
+from app.routers import interventions
+from app.routers import lab_plan
+from app.routers.billing import creem as creem_router
+from app.routers.billing import wayforpay as wayforpay_router
+
+
+def _check_runtime_readiness() -> None:
+    checks = {
+        "supabase_url": bool((settings.supabase_url or "").strip()),
+        "supabase_service_role_key": bool((settings.supabase_service_role_key or "").strip()),
+        "llm_provider_key": is_llm_configured(),
+        "resend_api_key": bool((settings.resend_api_key or "").strip()),
+    }
+    missing = [name for name, ok in checks.items() if not ok]
+    if missing:
+        logger.warning("runtime_readiness_missing count=%s keys=%s", len(missing), ",".join(missing))
+    else:
+        logger.info("runtime_readiness_ok")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _check_runtime_readiness()
+    # Schedule retention cleanup job
+    from app.services.analysis_queue_service import schedule_retention_cleanup, shutdown_scheduler
+    try:
+        schedule_retention_cleanup()
+        logger.info("Retention cleanup job scheduled on startup")
+    except Exception as e:
+        logger.error(f"Failed to schedule retention cleanup job: {e}")
+    try:
+        yield
+    finally:
+        shutdown_scheduler()
+
+
+app = FastAPI(
+    title="VITALOOP API",
+    version=APP_VERSION,
+    description="Biohacking-as-a-Service backend",
+    lifespan=lifespan,
+)
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+app.add_middleware(RequestContextMiddleware)
+
+# Rate-limited email alerts for critical production route failures.
+app.add_middleware(OpsAlertMiddleware)
+
+# Add structured logging middleware
+app.add_middleware(StructuredLoggingMiddleware)
+
+if settings.security_enable_headers:
+    app.add_middleware(SecurityHeadersMiddleware)
+
+# Add brute force protection for auth endpoints
+app.add_middleware(BruteForceProtectionMiddleware)
+
+rate_limit_backend_name = (settings.rate_limit_backend or "inmemory").strip().lower()
+if rate_limit_backend_name == "redis":
+    rate_limit_backend = RedisRateLimiterBackend(
+        redis_url=settings.rate_limit_redis_url,
+        key_prefix=settings.rate_limit_redis_prefix,
+    )
+else:
+    rate_limit_backend = InMemoryRateLimiterBackend()
+
+app.add_middleware(
+    PathRateLimitMiddleware,
+    rules=[
+        RateLimitRule(prefix="/auth", max_requests=settings.auth_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/analyze", max_requests=settings.analyze_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/protocol", max_requests=settings.protocol_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/symptom-check", max_requests=settings.symptom_check_rate_limit_per_minute, window_seconds=60),
+    ],
+    backend=rate_limit_backend,
+    trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
+    forwarded_for_header=settings.rate_limit_forwarded_for_header,
+)
+
+origins = settings.origins_list
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Authorization",
+        "Content-Type",
+        "apikey",
+        "x-client-info",
+        "X-Idempotency-Key",
+        "X-Request-ID",
+        "X-CSRF-Token",
+        "X-Partner-Api-Key",
+        "X-Embedded-Token",
+        "X-Partner-Context",
+        "x-supabase-api-version",
+        "X-Vitaloop-Locale",
+    ],
+    expose_headers=["X-Request-ID"],
+)
+
+app.include_router(health.router, tags=["health"])
+app.include_router(monitoring.router, tags=["monitoring"])
+if settings.emergency_fixes_enabled:
+    app.include_router(emergency_fixes.router, tags=["emergency-fixes"])
+app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
+app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
+app.include_router(progress.router, prefix="/progress", tags=["progress"])
+app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
+app.include_router(assessment.router, prefix="/assessment", tags=["assessment"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(data_integrity.router, prefix="/admin", tags=["admin"])
+app.include_router(crm_clients.router, tags=["crm"])
+app.include_router(crm_ops.router, tags=["crm"])
+app.include_router(assignments.router, tags=["crm-assignments"])
+app.include_router(crm.router, prefix="/admin", tags=["crm"])
+app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+app.include_router(complaints.router, prefix="/complaints", tags=["complaints"])
+app.include_router(checkins.router, prefix="/checkins", tags=["checkins"])
+app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
+app.include_router(insights.router, prefix="/insights", tags=["insights"])
+app.include_router(red_flags.router, prefix="/red-flags", tags=["red-flags"])
+app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(onboarding.router)
+app.include_router(symptom_check.router)
+app.include_router(questionnaire.router, prefix="/questionnaire", tags=["questionnaire"])
+# Backward-compatible aliases used by older clients/tests.
+app.include_router(auth.router, prefix="/users", tags=["users"])
+app.include_router(questionnaire.router, prefix="/questionnaires", tags=["questionnaire"])
+app.include_router(dashboard.router)
+app.include_router(compatibility.router)
+app.include_router(uploads.router, tags=["uploads"])
+app.include_router(llm_consult.router, prefix="/llm", tags=["llm"])
+app.include_router(partners_gateway_router)
+app.include_router(partners_results_router)
+app.include_router(partners_embedded_router)
+app.include_router(partners_events_router)
+app.include_router(partners_insights_router)
+app.include_router(b2b_analyze_labs.router)
+app.include_router(knowledge.router)
+app.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
+app.include_router(lab_plan.router, prefix="/lab-plan", tags=["lab-plan"])
+app.include_router(creem_router.router)
+app.include_router(wayforpay_router.router)

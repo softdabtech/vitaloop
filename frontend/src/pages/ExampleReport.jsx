@@ -1,0 +1,248 @@
+import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  FlaskConical,
+  ShieldCheck,
+  TrendingUp,
+} from 'lucide-react'
+import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
+import { navigateToApp } from '../lib/appUrl.js'
+
+const CABINET_SCREENS = [
+  ['01-dashboard.png', 'VITALOOP dashboard screen'],
+  ['02-results-trends.png', 'VITALOOP lab results and trends screen'],
+  ['03-report.png', 'VITALOOP health summary screen'],
+  ['04-lab-plan.png', 'VITALOOP lab plan screen'],
+  ['05-upload.png', 'VITALOOP upload results screen'],
+  ['06-checkins.png', 'VITALOOP check-in history screen'],
+]
+
+const REPORT_HIGHLIGHTS = [
+  { label: 'Biomarkers parsed', value: '85+', detail: 'names, values, units, and ranges' },
+  { label: 'Workflow', value: '5 steps', detail: 'symptoms -> labs -> protocol -> check-in' },
+  { label: 'Output', value: 'Structured', detail: 'priorities, context, and next actions' },
+]
+
+const BIOMARKERS = [
+  { name: 'Ferritin', value: '12 ng/mL', status: 'Review', tone: 'amber', note: 'Possible low iron storage pattern when paired with fatigue.' },
+  { name: 'Vitamin D', value: '24 ng/mL', status: 'Low', tone: 'amber', note: 'Common optimization target to discuss with a clinician.' },
+  { name: 'HbA1c', value: '5.8%', status: 'Watch', tone: 'rose', note: 'May indicate a metabolic trend that needs follow-up.' },
+  { name: 'HDL', value: '58 mg/dL', status: 'In range', tone: 'emerald', note: 'Useful context for the broader lipid picture.' },
+]
+
+const WORKFLOW = [
+  {
+    icon: FileText,
+    title: 'Upload a report',
+    body: 'VITALOOP reads the PDF, extracts biomarkers, and preserves the source context.',
+  },
+  {
+    icon: FlaskConical,
+    title: 'Normalize the data',
+    body: 'Values, units, and reference ranges are structured so markers can be compared safely.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Prioritize what matters',
+    body: 'The system groups findings into review priorities instead of leaving you with a raw table.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Track the loop',
+    body: 'Weekly feedback and future lab uploads help refine the plan over time.',
+  },
+]
+
+const toneClass = {
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  rose: 'border-rose-200 bg-rose-50 text-rose-800',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+}
+
+export default function ExampleReport() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900">
+      <Seo
+        title="Clinical Reasoning Example Report | VITALOOP"
+        description="Preview an AI blood test analysis with normalized biomarkers, plain-English explanations, priority findings, discussion points, and progress tracking."
+        path="/example-report"
+      />
+
+      <PageHeader />
+
+      <main>
+        <section className="mx-auto grid max-w-[1240px] gap-10 px-4 pb-16 pt-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:pt-12">
+          <div>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              Example report
+            </motion.p>
+            <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-4xl font-black tracking-[-0.035em] text-slate-950 sm:text-5xl md:text-6xl">
+              From lab data to a working health dashboard.
+            </motion.h1>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+              This page shows the real VITALOOP workflow: upload results, review structured biomarkers, understand priorities, and keep progress moving through weekly check-ins.
+            </motion.p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigateToApp('/login?signup=true')}
+                className="vtl-public-button vtl-public-button--primary vtl-public-button--large px-8"
+              >
+                Start with your results
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/how-it-works')}
+                className="vtl-public-button vtl-public-button--secondary vtl-public-button--large px-8"
+              >
+                See how it works
+              </button>
+            </div>
+
+          </div>
+
+          <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="relative">
+            <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.22),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.12),transparent_34%)]" />
+            <img
+              src="/images/vitaloop-mobile-example-report-hero.png?v=20261020"
+              alt="VITALOOP mobile dashboard and lab results screens"
+              width="1195"
+              height="1316"
+              fetchPriority="high"
+              decoding="async"
+              className="relative mx-auto h-auto w-full max-w-[590px] drop-shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+            />
+          </motion.div>
+        </section>
+
+        <section className="mx-auto max-w-[1240px] px-4 pb-16 sm:px-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {REPORT_HIGHLIGHTS.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-2xl font-black text-slate-950">{item.value}</div>
+                <div className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{item.label}</div>
+                <div className="mt-2 text-sm leading-5 text-slate-500">{item.detail}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-slate-200 bg-slate-50 py-16">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Cabinet screens</p>
+              <h2 className="mt-3 text-4xl font-black tracking-[-0.03em] text-slate-950">What users actually see after upload</h2>
+              <p className="mt-4 text-lg leading-8 text-slate-600">
+                No decorative avatar. The product is a structured workspace for lab interpretation, symptom context, progress, and practitioner review.
+              </p>
+            </div>
+
+            <div className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {CABINET_SCREENS.map(([image, alt], index) => (
+                <motion.figure
+                  key={image}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ delay: index * 0.04 }}
+                  className="w-[220px] shrink-0 snap-start sm:w-[260px] lg:w-[285px]"
+                >
+                  <img src={`/images/example-report-cabinet/${image}`} alt={alt} className="h-auto w-full" loading="lazy" />
+                </motion.figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-[1240px] gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:items-start">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Structured interpretation</p>
+            <h2 className="mt-3 text-4xl font-black tracking-[-0.03em] text-slate-950">A report becomes priorities, not just numbers.</h2>
+            <p className="mt-4 text-lg leading-8 text-slate-600">
+              VITALOOP keeps results readable: each marker is normalized, statused, and connected to the broader workflow. The output is educational decision support, not a diagnosis.
+            </p>
+            <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
+              <ShieldCheck className="h-5 w-5 shrink-0" />
+              Medical review is recommended for abnormal or concerning values.
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {BIOMARKERS.map((marker) => (
+              <article key={marker.name} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-950">{marker.name}</h3>
+                    <p className="mt-1 text-2xl font-black text-slate-900">{marker.value}</p>
+                  </div>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-bold ${toneClass[marker.tone]}`}>
+                    {marker.status}
+                  </span>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-600">{marker.note}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-slate-950 py-16 text-white">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
+            <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Workflow</p>
+                <h2 className="mt-3 text-4xl font-black tracking-[-0.03em]">The useful part is the loop.</h2>
+                <p className="mt-4 text-lg leading-8 text-slate-300">
+                  The report is only the starting point. VITALOOP connects it to symptom context, weekly execution, and future retesting.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {WORKFLOW.map(({ icon: Icon, title, body }) => (
+                  <article key={title} className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-lg font-bold">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+          <div className="rounded-[28px] bg-[linear-gradient(135deg,#0f766e,#10b981)] px-6 py-12 text-center text-white shadow-2xl shadow-emerald-900/15 sm:px-10">
+            <h2 className="text-4xl font-black tracking-[-0.03em]">Try the workflow with your own lab report.</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-emerald-50">
+              Start free, upload one report, and see how VITALOOP turns raw lab values into a clearer health workspace.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => navigateToApp('/login?signup=true')}
+                className="vtl-public-button vtl-public-button--primary"
+              >
+                Get started free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/for-nutritionists')}
+                className="vtl-public-button vtl-public-button--secondary"
+              >
+                For teams and practitioners
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}

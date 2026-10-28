@@ -1,0 +1,11 @@
+@model FilterBarViewModel
+
+<section class="vo-card vo-filter-bar">
+  <input type="search" class="vo-input" placeholder="@Model.SearchPlaceholder" />
+  <div class="vo-filter-actions">
+    @foreach (var filter in Model.Filters)
+    {
+      <button type="button" class="vo-btn vo-btn-secondary">@filter</button>
+    }
+  </div>
+</section>

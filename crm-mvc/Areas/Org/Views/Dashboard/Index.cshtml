@@ -1,0 +1,34 @@
+@model AdminDashboardViewModel
+@{
+  ViewData["Title"] = "Organization Console";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Organization Console", Subtitle = "Organization and member management overview", Eyebrow = "Org" })
+
+<nav class="vo-quick-actions" aria-label="Quick actions">
+  <a class="vo-quick-action" href="/org/members">
+    <span class="vo-quick-action-icon">👥</span> Members
+  </a>
+  <a class="vo-quick-action" href="/org/members/invite">
+    <span class="vo-quick-action-icon">✉️</span> Invitations
+  </a>
+  <a class="vo-quick-action" href="/org/assignments">
+    <span class="vo-quick-action-icon">🔗</span> Assignments
+  </a>
+  <a class="vo-quick-action" href="/org/organizations">
+    <span class="vo-quick-action-icon">🏢</span> Organizations
+  </a>
+  <a class="vo-quick-action" href="/organizations/settings?org_id=@Model.ActiveOrganizationId">
+    <span class="vo-quick-action-icon">⚙️</span> Org Settings
+  </a>
+  <a class="vo-quick-action" href="/billing">
+    <span class="vo-quick-action-icon">💳</span> Billing
+  </a>
+</nav>
+
+<section class="vo-grid three-up">
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Members", Value = Model.TotalMembers.ToString(), Trend = "From active organization", Tone = "teal" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Pending Invites", Value = Model.PendingInvites.ToString(), Trend = "Awaiting acceptance", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Assignments", Value = Model.ActiveAssignments.ToString(), Trend = "Practitioner-client pairs", Tone = "default" })
+</section>

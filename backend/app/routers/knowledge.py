@@ -1,0 +1,222 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.dependencies import get_current_user
+from app.dependencies_crm import UserContext, require_super_admin
+from app.schemas.knowledge import (
+    KnowledgeEvaluateInput,
+    KnowledgeEvaluateResponse,
+    KnowledgeRecommendationDetail,
+    KnowledgeRecommendationListItem,
+    KnowledgeRuleApproveRequest,
+    KnowledgeRuleAuditEntry,
+    KnowledgeRuleCreateDraftCopyRequest,
+    KnowledgeRuleCreateRequest,
+    KnowledgeRuleDeprecateRequest,
+    KnowledgeRuleDetail,
+    KnowledgeRuleListItem,
+    KnowledgeRulePatchRequest,
+    KnowledgeRuleSubmitReviewRequest,
+)
+from app.services.knowledge import (
+    approve_rule,
+    create_draft_copy,
+    create_rule,
+    deprecate_rule,
+    get_recommendation,
+    evaluate_health_input,
+    get_rule,
+    get_rule_audit,
+    list_recommendations,
+    list_rules,
+    submit_rule_review,
+    update_rule,
+)
+from app.services.knowledge.governance_coverage import build_governance_coverage
+from app.services.knowledge.rule_packs import build_rule_packs
+from app.services.knowledge.rule_pack_quality import build_rule_pack_quality
+
+router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+
+
+@router.post("/evaluate", response_model=KnowledgeEvaluateResponse)
+async def evaluate_knowledge(
+    payload: KnowledgeEvaluateInput,
+    current_user: dict = Depends(get_current_user),
+) -> KnowledgeEvaluateResponse:
+    user_id = str(current_user.get("sub") or "")
+    result = await evaluate_health_input(payload.model_dump(mode="json"), user_id=user_id, persist=True)
+    return KnowledgeEvaluateResponse.model_validate(result)
+
+
+@router.get("/rules", response_model=list[KnowledgeRuleListItem])
+async def list_knowledge_rules(
+    governance_status: Optional[str] = Query(default=None),
+    active: Optional[bool] = Query(default=None),
+    key: Optional[str] = Query(default=None),
+    source: Optional[str] = Query(default=None),
+    requires_doctor: Optional[bool] = Query(default=None),
+    _: UserContext = Depends(require_super_admin),
+) -> list[KnowledgeRuleListItem]:
+    rows = await list_rules(
+        governance_status=governance_status,
+        active=active,
+        key=key,
+        source=source,
+        requires_doctor=requires_doctor,
+    )
+    return [KnowledgeRuleListItem.model_validate(row) for row in rows]
+
+
+@router.get("/rules/governance-coverage")
+async def get_governance_coverage(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P10 Governance Expansion: which pattern-engine domains (see
+    domain_registry.py — the same registry health_state_engine.py matches
+    biomarkers against) have active/draft/reviewed knowledge_rules backing
+    them, and which have none at all. Pure composition over list_rules();
+    no new rule data, just a domain-coverage view of what already exists.
+    """
+    rows = await list_rules()
+    return build_governance_coverage(rows)
+
+
+@router.get("/rules/packs")
+async def get_rule_packs(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P11 v1 (Expert Rule Packs): groups existing knowledge_rules by their
+    `source` field into named packs with provenance (reviewers, versions,
+    domain coverage, governance-status breakdown). Visibility/attribution
+    only — see rule_packs.py's module docstring for why per-org enable/
+    disable isn't in this version.
+    """
+    rows = await list_rules()
+    return build_rule_packs(rows)
+
+
+@router.get("/rules/pack-quality")
+async def get_rule_pack_quality(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P26 (Rule Pack Quality Scoring): a deterministic, read-only
+    governance-health score per pack from rule_packs.py's existing
+    grouping -- active/reviewed/draft/deprecated mix, medical-reviewer
+    coverage, domain-coverage breadth, review/update freshness, and a
+    fixed-weight 0-100 score with a documented formula (see
+    rule_pack_quality.py's module docstring). Not a clinical accuracy
+    measure, not persisted anywhere, and unrelated to frozen clinical
+    reports -- ops/governance visibility only, same posture as
+    governance-coverage and llm-cost-audit elsewhere in this codebase.
+
+    Registered before /rules/{rule_id} for the same reason /rules/packs
+    and /rules/governance-coverage are: this is a single path segment
+    (/rules/pack-quality), the same shape as /rules/{rule_id}, so FastAPI/
+    Starlette's declaration-order route matching would otherwise treat
+    "pack-quality" as a rule id and swallow this request into the wrong
+    handler -- see test_rule_pack_quality_route_registered_before_rule_id_route.
+    """
+    rows = await list_rules()
+    return build_rule_pack_quality(rows)
+
+
+@router.get("/rules/{rule_id}", response_model=KnowledgeRuleDetail)
+async def get_knowledge_rule(
+    rule_id: str,
+    _: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    row = await get_rule(rule_id)
+    return KnowledgeRuleDetail.model_validate(row)
+
+
+@router.post("/rules", response_model=KnowledgeRuleDetail)
+async def create_knowledge_rule(
+    payload: KnowledgeRuleCreateRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    if payload.governance_status != "draft":
+        raise HTTPException(status_code=400, detail="New knowledge rule must be draft")
+
+    created = await create_rule(payload.model_dump(mode="json"), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(created)
+
+
+@router.patch("/rules/{rule_id}", response_model=KnowledgeRuleDetail)
+async def patch_knowledge_rule(
+    rule_id: str,
+    payload: KnowledgeRulePatchRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    updated = await update_rule(rule_id, payload.model_dump(mode="json", exclude_none=True), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(updated)
+
+
+@router.post("/rules/{rule_id}/submit-review", response_model=KnowledgeRuleDetail)
+async def submit_knowledge_rule_review(
+    rule_id: str,
+    payload: KnowledgeRuleSubmitReviewRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    updated = await submit_rule_review(rule_id, payload.model_dump(mode="json"), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(updated)
+
+
+@router.post("/rules/{rule_id}/approve", response_model=KnowledgeRuleDetail)
+async def approve_knowledge_rule(
+    rule_id: str,
+    payload: KnowledgeRuleApproveRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    updated = await approve_rule(rule_id, payload.model_dump(mode="json", exclude_none=True), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(updated)
+
+
+@router.post("/rules/{rule_id}/deprecate", response_model=KnowledgeRuleDetail)
+async def deprecate_knowledge_rule(
+    rule_id: str,
+    payload: KnowledgeRuleDeprecateRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    updated = await deprecate_rule(rule_id, payload.model_dump(mode="json"), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(updated)
+
+
+@router.post("/rules/{rule_id}/create-draft-copy", response_model=KnowledgeRuleDetail)
+async def create_knowledge_rule_draft_copy(
+    rule_id: str,
+    payload: KnowledgeRuleCreateDraftCopyRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    created = await create_draft_copy(rule_id, payload.model_dump(mode="json"), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(created)
+
+
+@router.get("/rules/{rule_id}/audit", response_model=list[KnowledgeRuleAuditEntry])
+async def get_knowledge_rule_audit(
+    rule_id: str,
+    limit: int = Query(default=200, ge=1, le=500),
+    _: UserContext = Depends(require_super_admin),
+) -> list[KnowledgeRuleAuditEntry]:
+    rows = await get_rule_audit(rule_id, limit=limit)
+    return [KnowledgeRuleAuditEntry.model_validate(row) for row in rows]
+
+
+@router.get("/recommendations", response_model=list[KnowledgeRecommendationListItem])
+async def list_knowledge_recommendations(
+    _: UserContext = Depends(require_super_admin),
+) -> list[KnowledgeRecommendationListItem]:
+    rows = await list_recommendations()
+    return [KnowledgeRecommendationListItem.model_validate(row) for row in rows]
+
+
+@router.get("/recommendations/{recommendation_id}", response_model=KnowledgeRecommendationDetail)
+async def get_knowledge_recommendation(
+    recommendation_id: str,
+    _: UserContext = Depends(require_super_admin),
+) -> KnowledgeRecommendationDetail:
+    row = await get_recommendation(recommendation_id)
+    return KnowledgeRecommendationDetail.model_validate(row)

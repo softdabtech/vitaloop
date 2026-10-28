@@ -1,0 +1,133 @@
+{
+  "version": "symptom_safety_cases_v1",
+  "contract_cases": [
+    {
+      "id": "provider_ambulance_interrupt",
+      "internal_level": "routine",
+      "provider_triage_level": "emergency_ambulance",
+      "provider_root_cause": "emergency_evidence_present",
+      "provider_serious": [],
+      "expected_level": "emergency",
+      "expected_interrupt": true
+    },
+    {
+      "id": "provider_emergency_interrupt",
+      "internal_level": "routine",
+      "provider_triage_level": "emergency",
+      "provider_root_cause": "emergency_condition_possible",
+      "provider_serious": [],
+      "expected_level": "emergency",
+      "expected_interrupt": true
+    },
+    {
+      "id": "provider_consultation_24",
+      "internal_level": "routine",
+      "provider_triage_level": "consultation_24",
+      "provider_root_cause": "serious_evidence_present",
+      "provider_serious": [],
+      "expected_level": "urgent_24h",
+      "expected_interrupt": false
+    },
+    {
+      "id": "provider_consultation",
+      "internal_level": "routine",
+      "provider_triage_level": "consultation",
+      "provider_root_cause": "consultation_condition_likely",
+      "provider_serious": [],
+      "expected_level": "clinician_review",
+      "expected_interrupt": false
+    },
+    {
+      "id": "provider_self_care",
+      "internal_level": "routine",
+      "provider_triage_level": "self_care",
+      "provider_root_cause": "self_care_sufficient",
+      "provider_serious": [],
+      "expected_level": "routine",
+      "expected_interrupt": false
+    },
+    {
+      "id": "serious_observation_overrides_consultation",
+      "internal_level": "routine",
+      "provider_triage_level": "consultation",
+      "provider_root_cause": "emergency_evidence_present",
+      "provider_serious": [
+        {"id": "s_fixture_emergency", "seriousness": "emergency"}
+      ],
+      "expected_level": "emergency",
+      "expected_interrupt": true
+    },
+    {
+      "id": "internal_emergency_cannot_be_lowered",
+      "internal_level": "critical_now",
+      "provider_triage_level": "self_care",
+      "provider_root_cause": "self_care_sufficient",
+      "provider_serious": [],
+      "expected_level": "emergency",
+      "expected_interrupt": true
+    },
+    {
+      "id": "diagnosis_unknown_is_not_safe",
+      "internal_level": "routine",
+      "provider_triage_level": "self_care",
+      "provider_root_cause": "diagnosis_unknown",
+      "provider_serious": [],
+      "expected_level": "insufficient_data",
+      "expected_interrupt": false
+    },
+    {
+      "id": "provider_missing_is_not_safe",
+      "internal_level": "routine",
+      "provider_triage_level": null,
+      "provider_root_cause": null,
+      "provider_serious": [],
+      "expected_level": "insufficient_data",
+      "expected_interrupt": false
+    }
+  ],
+  "clinical_review_cases": [
+    {
+      "id": "digestive_black_stool",
+      "root_concern_id": "digestion_stool",
+      "present_ids": ["black_tarry_stool"],
+      "status": "draft",
+      "required_decision": "Choose emergency versus urgent_24h and approve exact question wording."
+    },
+    {
+      "id": "palpitations_with_syncope",
+      "root_concern_id": "palpitations_breathlessness_exercise",
+      "present_ids": ["palpitations", "syncope_or_near_syncope"],
+      "status": "draft",
+      "required_decision": "Approve combination urgency and timing qualifiers."
+    },
+    {
+      "id": "heavy_menstrual_bleeding",
+      "root_concern_id": "menstrual_bleeding_reproductive",
+      "present_ids": ["heavy_menstrual_bleeding"],
+      "status": "draft",
+      "required_decision": "Define controlled severity modifiers and urgency."
+    },
+    {
+      "id": "severe_breathing_difficulty",
+      "root_concern_id": "palpitations_breathlessness_exercise",
+      "present_ids": ["breathing_difficulty_severe_now"],
+      "status": "draft",
+      "required_decision": "Approve emergency interruption wording and exclusions."
+    },
+    {
+      "id": "good_wellbeing_no_concern",
+      "root_concern_id": "no_current_concern",
+      "present_ids": ["no_current_concern"],
+      "status": "draft",
+      "required_decision": "Confirm positive baseline does not create false negative evidence."
+    },
+    {
+      "id": "insufficient_unknown_answers",
+      "root_concern_id": "fatigue_low_energy",
+      "present_ids": [],
+      "unknown_ids": ["warning_sign_unsure"],
+      "status": "draft",
+      "required_decision": "Confirm unknown evidence yields an information gap, never an absent finding."
+    }
+  ]
+}

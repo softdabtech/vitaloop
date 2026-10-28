@@ -1,0 +1,13 @@
+@model PageHeaderViewModel
+
+<section class="vo-page-header">
+  @if (!string.IsNullOrWhiteSpace(Model.Eyebrow))
+  {
+    <p class="vo-eyebrow">@Model.Eyebrow</p>
+  }
+  <h2 class="vo-page-title">@Model.Title</h2>
+  @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+  {
+    <p class="vo-page-subtitle">@Model.Subtitle</p>
+  }
+</section>

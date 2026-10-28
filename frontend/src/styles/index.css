@@ -1,0 +1,168 @@
+/* Design System Imports - MUST come first */
+@import './design-tokens.css';
+@import './animations.css';
+@import './cabinet-design-system.css';
+@import './dashboard2026.css';
+@import './userDashboard.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #1d9e75;
+  --brand-rgb: 29, 158, 117;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vtl-font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--vtl-color-canvas);
+  color: var(--vtl-color-ink);
+  min-height: 100vh;
+  /* Prevent layout shift when scrollbar appears on content load */
+  scrollbar-gutter: stable;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+}
+
+.vtl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vtl-space-1);
+  border: 1px solid var(--vtl-color-border-strong);
+  border-radius: var(--vtl-radius-pill);
+  padding: var(--vtl-space-1) var(--vtl-space-2);
+  font-size: var(--vtl-font-size-meta);
+  font-weight: var(--vtl-font-weight-bold);
+  line-height: var(--vtl-line-height-tight);
+}
+
+.vtl-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--vtl-radius-pill); }
+.vtl-status-badge--stable { background: var(--vtl-status-stable-bg); color: var(--vtl-status-stable); }
+.vtl-status-dot--stable { background: var(--vtl-status-stable); }
+.vtl-status-badge--monitor { background: var(--vtl-status-monitor-bg); color: var(--vtl-status-monitor); }
+.vtl-status-dot--monitor { background: var(--vtl-status-monitor); }
+.vtl-status-badge--review { background: var(--vtl-status-review-bg); color: var(--vtl-status-review); }
+.vtl-status-dot--review { background: var(--vtl-status-review); }
+.vtl-status-badge--unavailable { background: var(--vtl-status-unavailable-bg); color: var(--vtl-status-unavailable); }
+.vtl-status-dot--unavailable { background: var(--vtl-status-unavailable); }
+
+.vtl-toast {
+  max-width: 420px;
+  border: 1px solid var(--vtl-color-border-strong) !important;
+  border-radius: var(--vtl-radius-field) !important;
+  background: var(--vtl-color-surface) !important;
+  color: var(--vtl-color-ink) !important;
+  box-shadow: var(--vtl-shadow-raised) !important;
+  font-family: var(--vtl-font-sans) !important;
+  font-size: var(--vtl-font-size-body) !important;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+:focus-visible {
+  outline: 3px solid var(--vtl-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ──────────────── PUBLIC ACTION CONTRACT ────────────────
+ *
+ * Shared by public marketing and Health Hub surfaces. Cabinet controls keep
+ * their dedicated Coach/cabinet primitives; status colours are never used as
+ * CTA colours.
+ */
+.vtl-public-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vtl-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--vtl-radius-pill);
+  padding: 0 var(--vtl-space-6);
+  font-family: var(--vtl-font-sans);
+  font-size: var(--vtl-font-size-body);
+  font-weight: var(--vtl-font-weight-bold);
+  line-height: var(--vtl-line-height-tight);
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.vtl-public-button:focus-visible {
+  outline: 3px solid var(--vtl-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.vtl-public-button:disabled,
+.vtl-public-button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.vtl-public-button--primary {
+  background: var(--vtl-action-primary-bg);
+  color: var(--vtl-action-primary-fg);
+  box-shadow: var(--vtl-shadow-primary);
+}
+
+.vtl-public-button--primary:hover {
+  background: var(--vtl-action-primary-bg-hover);
+  color: var(--vtl-action-primary-fg);
+  transform: translateY(-1px);
+}
+
+.vtl-public-button--large {
+  min-height: 48px;
+}
+
+.vtl-public-button--secondary {
+  border-color: var(--vtl-action-secondary-border);
+  background: var(--vtl-action-secondary-bg);
+  color: var(--vtl-action-secondary-fg);
+}
+
+.vtl-public-button--secondary:hover {
+  border-color: var(--vtl-color-brand-500);
+  background: var(--vtl-color-brand-50);
+  color: var(--vtl-color-brand-800);
+}
+
+.vtl-public-button--quiet {
+  background: transparent;
+  color: var(--vtl-color-brand-700);
+}
+
+.vtl-public-button--quiet:hover {
+  background: var(--vtl-color-brand-50);
+  color: var(--vtl-color-brand-800);
+}
+
+/* ──────────────── SAFE MOBILE BASELINE ──────────────── */
+@media (max-width: 600px) {
+  body {
+    font-size: 16px;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  #root {
+    overflow-x: hidden;
+  }
+}

@@ -1,0 +1,209 @@
+from __future__ import annotations
+
+from typing import Any, Dict, Iterable, List
+
+from app.services.knowledge.integration import (
+    build_deidentified_person_avatar,
+    build_deidentified_safety_context,
+)
+
+HEALTH_CONTEXT_VERSION = "health_context_v1"
+
+
+def _clean_list(values: Iterable[Any] | None, *, limit: int = 50) -> List[str]:
+    result: List[str] = []
+    for value in values or []:
+        text = str(value or "").strip().lower()
+        if text:
+            result.append(text)
+        if len(result) >= limit:
+            break
+    return result
+
+
+def _present_fields(payload: Dict[str, Any] | None) -> List[str]:
+    payload = payload if isinstance(payload, dict) else {}
+    return sorted([key for key, value in payload.items() if value not in (None, "", [], {})])
+
+
+def _biomarker_category_summary(biomarkers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    categories: Dict[str, int] = {}
+    abnormal_categories: Dict[str, int] = {}
+    statuses: Dict[str, int] = {}
+    for item in biomarkers or []:
+        category = str(item.get("category") or "other").strip().lower() or "other"
+        status = str(item.get("status") or "BORDERLINE").strip().upper()
+        categories[category] = categories.get(category, 0) + 1
+        statuses[status] = statuses.get(status, 0) + 1
+        if status in {"DEFICIENT", "ELEVATED", "BORDERLINE"}:
+            abnormal_categories[category] = abnormal_categories.get(category, 0) + 1
+    return {
+        "total": len(biomarkers or []),
+        "categories": categories,
+        "statuses": statuses,
+        "abnormal_categories": abnormal_categories,
+    }
+
+
+def _questionnaire_summary(questionnaire: Dict[str, Any] | None) -> Dict[str, Any]:
+    questionnaire = questionnaire if isinstance(questionnaire, dict) else {}
+    if not questionnaire:
+        return {"present": False, "fields": []}
+
+    domain_scores: Dict[str, Any] = {}
+    for key in ("domain_scores", "scores", "domains"):
+        value = questionnaire.get(key)
+        if isinstance(value, dict):
+            domain_scores = {
+                str(domain).strip().lower(): score
+                for domain, score in value.items()
+                if str(domain).strip()
+            }
+            break
+
+    return {
+        "present": True,
+        "fields": _present_fields(questionnaire),
+        "domain_scores": domain_scores,
+    }
+
+
+def _symptom_context_summary(symptom_context: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Summarizes an explicitly supplied legacy/offline symptom context.
+
+    Deliberately does NOT scan for/extract a `domain_scores`/`scores`/`domains`
+    key the way `_questionnaire_summary()` does. `run_lab_analysis_pipeline()`'s
+    `questionnaire` argument feeds `_questionnaire_summary()`, whose
+    `domain_scores` extraction is the one path client-computed health
+    interpretation (e.g. Questionnaire.jsx's buildDomainScores()) could ever
+    blend into provenance-sensitive output (see
+    tests/test_stage2f2_domain_scores_provenance.py). `symptom_context` is a
+    separate, narrower field retained for non-B2C callers. B2C flows use the
+    immutable structured ``symptom_snapshot`` input instead.
+    """
+    symptom_context = symptom_context if isinstance(symptom_context, dict) else {}
+    if not symptom_context:
+        return {"present": False, "fields": []}
+    return {
+        "present": True,
+        "fields": _present_fields(symptom_context),
+    }
+
+
+def _symptom_snapshot_summary(symptom_snapshot: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Expose structured choices without provider identifiers or predictions."""
+    snapshot = symptom_snapshot if isinstance(symptom_snapshot, dict) else {}
+    if not snapshot:
+        return {"present": False, "version": None, "evidence": {}}
+
+    raw_evidence = snapshot.get("evidence")
+    raw_evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
+    evidence: Dict[str, Any] = {}
+    for choice in ("present", "absent", "unknown"):
+        items = []
+        for item in raw_evidence.get(choice) or []:
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "vitaloop_concept_id": item.get("vitaloop_concept_id"),
+                    "display_name_en": item.get("display_name_en"),
+                    "concept_type": item.get("concept_type"),
+                    "is_primary": bool(item.get("is_primary")),
+                    "domain_keys": list(item.get("domain_keys") or []),
+                }
+            )
+        evidence[choice] = {"count": len(items), "items": items}
+
+    safety = snapshot.get("safety") if isinstance(snapshot.get("safety"), dict) else {}
+    assessment = snapshot.get("assessment") if isinstance(snapshot.get("assessment"), dict) else {}
+    return {
+        "present": True,
+        "version": snapshot.get("version"),
+        "session_id": snapshot.get("session_id"),
+        "questionnaire_version": snapshot.get("questionnaire_version"),
+        "overall_wellbeing": snapshot.get("overall_wellbeing"),
+        "duration_bucket": snapshot.get("duration_bucket"),
+        "evidence": evidence,
+        "assessment": {
+            key: assessment.get(key)
+            for key in ("severity", "trajectory", "functional_impact", "domain_detail", "urgent_warning")
+            if assessment.get(key) is not None
+        },
+        "safety": {"final_level": safety.get("final_level")},
+        "completed_at": snapshot.get("completed_at"),
+    }
+
+
+def build_health_context(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    symptoms: List[str] | None = None,
+    questionnaire: Dict[str, Any] | None = None,
+    symptom_context: Dict[str, Any] | None = None,
+    symptom_snapshot: Dict[str, Any] | None = None,
+    user_profile: Dict[str, Any] | None = None,
+    source_metadata: Dict[str, Any] | None = None,
+    locale: str = "en",
+) -> Dict[str, Any]:
+    profile = user_profile if isinstance(user_profile, dict) else {}
+    source = source_metadata if isinstance(source_metadata, dict) else {}
+    normalized_symptoms = _clean_list(symptoms, limit=100)
+    person_avatar = build_deidentified_person_avatar(profile)
+    safety_context = build_deidentified_safety_context(profile)
+    readiness = {
+        "has_biomarkers": bool(biomarkers),
+        "has_symptoms": bool(normalized_symptoms),
+        "has_questionnaire": bool(questionnaire),
+        "has_symptom_context": bool(symptom_context),
+        "has_profile": bool(profile),
+        "has_safety_context": bool(safety_context),
+    }
+    # Preserve the established response shape for reports created without a
+    # structured interview; add the new capability flag only when applicable.
+    if symptom_snapshot:
+        readiness["has_symptom_snapshot"] = True
+
+    return {
+        "version": HEALTH_CONTEXT_VERSION,
+        "locale": str(locale or "en").lower(),
+        "inputs": {
+            "biomarkers": _biomarker_category_summary(biomarkers or []),
+            "symptoms": {
+                "present": bool(normalized_symptoms),
+                "count": len(normalized_symptoms),
+                "items": normalized_symptoms,
+            },
+            "questionnaire": _questionnaire_summary(questionnaire),
+            "symptom_context": _symptom_context_summary(symptom_context),
+            "symptom_snapshot": _symptom_snapshot_summary(symptom_snapshot),
+            "profile": {
+                "present": bool(profile),
+                "fields": _present_fields(profile),
+                "person_avatar": person_avatar,
+                "safety_context": safety_context,
+            },
+        },
+        "source": {
+            "type": source.get("source") or source.get("type") or "unknown",
+            "api_version": source.get("api_version"),
+            "partner_present": bool(source.get("partner_id") or source.get("partner_name")),
+        },
+        "readiness": readiness,
+    }
+
+
+def build_knowledge_context_from_health_context(health_context: Dict[str, Any] | None) -> Dict[str, Any]:
+    context = health_context if isinstance(health_context, dict) else {}
+    profile = ((context.get("inputs") or {}).get("profile") or {}) if isinstance(context.get("inputs"), dict) else {}
+    return {
+        "health_context_version": context.get("version"),
+        "locale": context.get("locale"),
+        "person_avatar": profile.get("person_avatar") or {},
+        "safety_context": profile.get("safety_context") or {},
+        "profile_context_fields": profile.get("fields") or [],
+        "readiness": context.get("readiness") or {},
+        "biomarker_summary": ((context.get("inputs") or {}).get("biomarkers") or {}),
+        "questionnaire_summary": ((context.get("inputs") or {}).get("questionnaire") or {}),
+        "symptom_snapshot": ((context.get("inputs") or {}).get("symptom_snapshot") or {}),
+    }

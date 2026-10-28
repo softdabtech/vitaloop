@@ -1,0 +1,477 @@
+@model MembersPageViewModel
+@{
+    ViewData["Title"] = "Team Members";
+    Layout = "_CrmLayout";
+    var members = Model?.Members ?? Array.Empty<MemberViewModel>();
+    var activeCount = members.Count(m => string.Equals(m.MembershipStatus,"active",StringComparison.OrdinalIgnoreCase));
+    var practCount  = Model?.PractitionerCount ?? 0;
+}
+<style>
+.pg-wrap { padding:24px; max-width:1400px; }
+.pg-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
+.pg-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.btn-primary { background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary:hover { background:#0F6E56; }
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.stat-c { background:#fff; border:1px solid #e8ecf2; border-radius:10px; padding:16px 20px; }
+.stat-c .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:0 0 4px; }
+.stat-c .val { font-size:28px; font-weight:900; color:#0f172a; margin:0; }
+.members-card { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.members-bar { padding:10px 16px; border-bottom:1px solid #e8ecf2; background:#fafbfc; display:flex; gap:10px; flex-wrap:wrap; }
+.members-bar input { flex:1; min-width:200px; padding:7px 12px 7px 32px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center; box-sizing:border-box; color:#0f172a; }
+.members-bar input:focus { border-color:#1D9E75; outline:none; }
+.members-bar select { border:1px solid #e2e8f0; border-radius:8px; padding:7px 10px; font-size:13px; outline:none; }
+.members-bar select:focus { border-color:#1D9E75; }
+.mtbl { width:100%; border-collapse:collapse; font-size:13px; }
+.mtbl th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:9px 16px; border-bottom:1px solid #e8ecf2; text-align:left; background:#fafbfc; }
+.mtbl td { padding:11px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.mtbl tbody tr:last-child td { border-bottom:none; }
+.mtbl tbody tr:hover td { background:#f8fafc; }
+.tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.tag-teal   { background:#d1fae5; color:#065f46; }
+.tag-blue   { background:#dbeafe; color:#1e40af; }
+.tag-amber  { background:#fef3c7; color:#92400e; }
+.tag-red    { background:#fee2e2; color:#991b1b; }
+.tag-gray   { background:#f1f5f9; color:#475569; }
+.tag-purple { background:#ede9fe; color:#5b21b6; }
+.act-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.act-row select, .act-row input[type=text] { border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; font-size:12px; outline:none; }
+.act-row select:focus, .act-row input:focus { border-color:#1D9E75; }
+.btn-xs { padding:4px 11px; border-radius:6px; font-size:12px; font-weight:600; border:none; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; }
+.btn-save   { background:#1D9E75; color:#fff; }
+.btn-save:hover { background:#0F6E56; }
+.btn-ghost  { background:#f1f5f9; color:#475569; }
+.btn-ghost:hover { background:#e2e8f0; }
+.btn-danger { background:#fee2e2; color:#991b1b; }
+.btn-danger:hover { background:#fecaca; }
+.m-name  { font-weight:600; color:#0f172a; }
+.m-email { font-size:11px; color:#94a3b8; margin-top:2px; }
+@@media (max-width:900px) {
+  .pg-wrap { padding:16px; }
+  .stat-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@@media (max-width:560px) {
+  .pg-head { align-items:stretch; }
+  .btn-primary { justify-content:center; }
+  .stat-row { grid-template-columns:1fr; gap:10px; }
+  .members-bar { flex-direction:column; }
+  .members-bar input, .members-bar select { width:100%; min-width:0; }
+}
+</style>
+
+<div class="pg-wrap">
+  <div class="pg-head">
+    <div>
+      <h1 class="pg-title">👥 Team Members</h1>
+      <p class="pg-sub">Manage your organization's team and roles</p>
+    </div>
+    <a href="@Url.Action("Invite")" class="btn-primary">✉️ Invite Member</a>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-c"><p class="lbl">Total Members</p><p class="val">@(Model?.TotalMembers)</p></div>
+    <div class="stat-c"><p class="lbl">Active</p><p class="val" style="color:#065f46">@activeCount</p></div>
+    <div class="stat-c"><p class="lbl">Practitioners</p><p class="val" style="color:#5b21b6">@practCount</p></div>
+    <div class="stat-c"><p class="lbl">Inactive</p><p class="val" style="color:#94a3b8">@(members.Count - activeCount)</p></div>
+  </div>
+
+  <div class="members-card">
+    <div class="members-bar">
+      <input type="text" id="members-search" placeholder="Search by name, email, role…" oninput="mFilter()">
+      <select id="role-filter" onchange="mFilter()">
+        <option value="">All roles</option>
+        @foreach (var r in new[]{"org_owner","client_admin","manager","practitioner","support","member"})
+        { <option value="@r">@r</option> }
+      </select>
+      <select id="status-filter" onchange="mFilter()">
+        <option value="">All statuses</option>
+        <option value="active">active</option>
+        <option value="inactive">inactive</option>
+        <option value="pending">pending</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="mtbl">
+        <thead>
+          <tr>
+            <th>Member</th><th>Age / Sex</th><th>Role</th>
+            <th>Status</th><th>Subscription</th><th style="min-width:340px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody">
+          @if (!members.Any())
+          {
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8">
+              No team members yet. <a href="@Url.Action("Invite")" style="color:#1D9E75">Invite someone →</a>
+            </td></tr>
+          }
+          @foreach (var m in members)
+          {
+            var roleCls = m.OrgRole switch {
+              "org_owner"=>"tag-teal","client_admin"=>"tag-blue",
+              "practitioner"=>"tag-purple","manager"=>"tag-amber",
+              "support"=>"tag-amber",_=>"tag-gray"
+            };
+            var statusCls = string.Equals(m.MembershipStatus,"active",StringComparison.OrdinalIgnoreCase)?"tag-teal":"tag-gray";
+            var tariffCls = m.SubscriptionStatus switch {
+              "active"or"trialing"=>"tag-teal","past_due"or"unpaid"=>"tag-red","canceled"=>"tag-amber",_=>"tag-gray"
+            };
+            var sr = (m.DisplayName+" "+m.Email+" "+(m.OrgRole??"")+" "+(m.MembershipStatus??"")).ToLower();
+            <tr data-s="@sr" data-role="@(m.OrgRole?.ToLower()??"")" data-status="@(m.MembershipStatus?.ToLower()??"")">
+              <td>
+                <div class="m-name">@m.DisplayName</div>
+                <div class="m-email">@m.Email</div>
+              </td>
+              <td style="color:#64748b">@(m.Age?.ToString()??"—") / @(string.IsNullOrEmpty(m.Sex)?"—":m.Sex)</td>
+              <td><span class="tag @roleCls">@m.OrgRole</span></td>
+              <td><span class="tag @statusCls">@m.MembershipStatus</span></td>
+              <td><span class="tag @tariffCls">@(string.IsNullOrEmpty(m.SubscriptionStatus)?"free":m.SubscriptionStatus)</span></td>
+              <td>
+                <div class="act-row">
+                  <form method="post" action="/org/members/@m.UserId/profile" style="display:contents">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="fullName" value="@m.FullName" placeholder="Full name" style="width:100px">
+                    <button type="submit" class="btn-xs btn-save">Save</button>
+                  </form>
+                  <form method="post" action="/org/members/@m.UserId/role" style="display:contents">
+                    @Html.AntiForgeryToken()
+                    <select name="newRole">
+                      @foreach (var r in new[]{"org_owner","client_admin","manager","practitioner","support","member"})
+                      {
+                        if (string.Equals(r,m.OrgRole,StringComparison.OrdinalIgnoreCase)){ <option value="@r" selected="selected">@r</option> }
+                        else { <option value="@r">@r</option> }
+                      }
+                    </select>
+                    <button type="submit" class="btn-xs btn-ghost">Role</button>
+                  </form>
+                  <a href="/org/members/@m.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                  <form method="post" action="/org/members/@m.UserId/remove" style="display:contents"
+                        onsubmit="return confirm('Remove @(m.DisplayName.Replace("'","\'")) from organization?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-xs btn-danger">Remove</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+function mFilter() {
+  const q = document.getElementById('members-search').value.toLowerCase()
+  const rf = document.getElementById('role-filter').value.toLowerCase()
+  const sf = document.getElementById('status-filter').value.toLowerCase()
+  document.querySelectorAll('#members-tbody tr[data-s]').forEach(tr => {
+    tr.style.display = (
+      (!q || tr.dataset.s.includes(q)) &&
+      (!rf || tr.dataset.role === rf) &&
+      (!sf || tr.dataset.status === sf)
+    ) ? '' : 'none'
+  })
+}
+</script>
+
+@* Old duplicate layout is disabled so only the redesigned page renders.
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+<div class="container-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Team Members</h1>
+            <p class="page-subtitle">Manage your organization's team</p>
+        </div>
+        <a href="@Url.Action("Invite")" class="btn btn-primary">
+            <span class="btn-icon">➕</span> Invite Member
+        </a>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-label">Total Members</span>
+            <span class="stat-value">@Model?.TotalMembers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Practitioners</span>
+            <span class="stat-value">@Model?.PractitionerCount</span>
+        </div>
+    </div>
+
+    @if (Model?.Members.Any() == true)
+    {
+        var rows = Model.Members.Select(member => new EditableTableRowViewModel
+        {
+            RowKey = member.UserId.ToString("N"),
+            Cells = new List<EditableTableCellViewModel>
+            {
+                new() { Kind = EditableTableCellKind.Text, Text = string.IsNullOrWhiteSpace(member.FullName) ? member.Email : member.FullName },
+                new() { Kind = EditableTableCellKind.Code, Text = member.Email },
+                new() { Kind = EditableTableCellKind.Text, Text = (member.Age?.ToString() ?? "-") + " / " + (!string.IsNullOrWhiteSpace(member.Sex) ? member.Sex : "-") },
+                new() { Kind = EditableTableCellKind.Badge, Text = member.OrgRole, BadgeTone = string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) ? "primary" : "secondary" },
+                new() { Kind = EditableTableCellKind.Badge, Text = member.MembershipStatus, BadgeTone = string.Equals(member.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase) ? "success" : "warning" },
+                new()
+                {
+                    Kind = EditableTableCellKind.Select,
+                    Name = "subscriptionStatus",
+                    CssClass = "inline-input",
+                    Options = new List<EditableTableOptionViewModel>
+                    {
+                        new() { Value = "free", Label = "free", Selected = string.Equals(member.SubscriptionStatus, "free", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "active", Label = "active", Selected = string.Equals(member.SubscriptionStatus, "active", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "past_due", Label = "past_due", Selected = string.Equals(member.SubscriptionStatus, "past_due", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "cancelled", Label = "cancelled", Selected = string.Equals(member.SubscriptionStatus, "cancelled", StringComparison.OrdinalIgnoreCase) },
+                    }
+                },
+            },
+            PrimaryAction = new EditableTableActionViewModel
+            {
+                ActionUrl = $"/org/members/{member.UserId}/profile",
+                SubmitLabel = "Save Profile",
+                Fields = new List<EditableTableFieldViewModel>
+                {
+                    new() { Kind = EditableTableFieldKind.Text, Name = "fullName", Value = member.FullName, Placeholder = "Full name", CssClass = "inline-input" },
+                    new() { Kind = EditableTableFieldKind.Number, Name = "age", Value = member.Age?.ToString() ?? string.Empty, Placeholder = "Age", CssClass = "inline-input inline-input-small" },
+                    new()
+                    {
+                        Kind = EditableTableFieldKind.Select,
+                        Name = "sex",
+                        CssClass = "inline-input inline-input-small",
+                        Options = new List<EditableTableOptionViewModel>
+                        {
+                            new() { Value = string.Empty, Label = "-", Selected = string.IsNullOrWhiteSpace(member.Sex) },
+                            new() { Value = "m", Label = "m", Selected = string.Equals(member.Sex, "m", StringComparison.OrdinalIgnoreCase) },
+                            new() { Value = "f", Label = "f", Selected = string.Equals(member.Sex, "f", StringComparison.OrdinalIgnoreCase) },
+                        }
+                    },
+                }
+            },
+            SecondaryActions = new List<EditableTableActionViewModel>
+            {
+                new()
+                {
+                    ActionUrl = $"/org/members/{member.UserId}/role",
+                    SubmitLabel = "Change Role",
+                    Fields = new List<EditableTableFieldViewModel>
+                    {
+                        new()
+                        {
+                            Kind = EditableTableFieldKind.Select,
+                            Name = "newRole",
+                            CssClass = "inline-input",
+                            Options = new List<EditableTableOptionViewModel>
+                            {
+                                new() { Value = "org_owner", Label = "org_owner", Selected = string.Equals(member.OrgRole, "org_owner", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "client_admin", Label = "client_admin", Selected = string.Equals(member.OrgRole, "client_admin", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "manager", Label = "manager", Selected = string.Equals(member.OrgRole, "manager", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "practitioner", Label = "practitioner", Selected = string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "support", Label = "support", Selected = string.Equals(member.OrgRole, "support", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "member", Label = "member", Selected = string.Equals(member.OrgRole, "member", StringComparison.OrdinalIgnoreCase) },
+                            }
+                        },
+                    }
+                },
+                new()
+                {
+                    ActionUrl = $"/org/members/{member.UserId}/remove",
+                    SubmitLabel = "Remove",
+                    SubmitButtonClass = "btn btn-xs btn-danger",
+                    ConfirmMessage = "Remove this member from organization?"
+                },
+            }
+        }).ToList();
+
+        <div id="team-members-wrap">
+        @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
+        {
+            Title = "Team Members",
+            Columns = new[] { "Name", "Email", "Age/Sex", "Role", "Status", "Subscription" },
+            EmptyMessage = "No team members found.",
+            Rows = rows,
+        })
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p class="empty-icon">👥</p>
+            <h2>No Team Members</h2>
+            <p>Start by inviting your first team member.</p>
+            <a href="@Url.Action("Invite")" class="btn btn-primary btn-lg">Invite Team Member</a>
+        </div>
+    }
+</div>
+
+<script>
+  voInitTable({ wrapId: 'team-members-wrap', pageSize: 25, searchPlaceholder: 'Search by name, email, role…' });
+</script>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+
+    .table-container {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background: var(--color-bg);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .table tbody tr:hover {
+        background: rgba(0,0,0,0.02);
+    }
+
+    .table code {
+        background: var(--color-bg);
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-primary {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .badge-secondary {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+
+    .btn-primary {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 320px;
+    }
+
+    .inline-form {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .inline-input {
+        min-width: 90px;
+        padding: 0.3rem 0.45rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .inline-input-small {
+        width: 64px;
+        min-width: 64px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
+*@

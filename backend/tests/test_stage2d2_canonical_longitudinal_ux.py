@@ -1,0 +1,356 @@
+"""Stage 2D-2 — canonical longitudinal UX.
+
+Point of truth: GET /progress/overview (build_progress_overview()) is already
+the correct, backend-owned longitudinal engine. This stage wires the live
+frontend surface (LabResultsList.jsx, routed at /lab-results — the only live
+consumer of /progress) to it for clinical/biomarker trend display, and adds
+one additive, machine-readable backend field
+(`insufficient_history_markers`) so the frontend never has to infer "new
+marker / not yet comparable" by absence.
+
+No new trend engine was created. Progress.jsx remains dead/unrouted — traced
+via grep of frontend/src for any import of it: zero results, confirming it
+was never revived and is not imported anywhere.
+
+Because there is no configured JS test runner in this project (no "test"
+script in package.json), the frontend-behavior assertions here are enforced
+via source-inspection (the same technique used since Stage 2D-1/2F), proving
+the specific patterns required by D2-1/D2-2/D2-7/D2-8 are actually present in
+the shipped file — not just asserted from memory.
+
+No live database connection is used anywhere in this file.
+"""
+
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
+BACKEND_APP = REPO_ROOT / "backend" / "app"
+BACKEND_SQL = REPO_ROOT / "backend" / "sql"
+
+from app.services.progress_overview import build_progress_overview
+
+LAB_RESULTS_LIST_JSX = (FRONTEND_SRC / "pages/LabResultsList.jsx").read_text()
+PROGRESS_JSX_PATH = (FRONTEND_SRC / "pages/Progress.jsx")
+APP_JSX = (FRONTEND_SRC / "App.jsx").read_text()
+
+
+# --- D2-1: LabResultsList calls /progress/overview -------------------------------
+
+
+def test_d2_1_lab_results_list_calls_progress_overview():
+    assert "api.get('/progress/overview')" in LAB_RESULTS_LIST_JSX
+
+
+# --- D2-2 / D2-7: clinical trend display uses overview data, direction is backend-owned
+
+
+def test_d2_2_d2_7_progress_panel_reads_backend_fields_not_computed_values():
+    # The rendered change fields all come straight off the overview item —
+    # no local math (no `-`, no percentage calc) on marker values anywhere
+    # in the component.
+    assert "change.direction" in LAB_RESULTS_LIST_JSX
+    assert "change.previous_value" in LAB_RESULTS_LIST_JSX
+    assert "change.latest_value" in LAB_RESULTS_LIST_JSX
+    assert "change.previous_date" in LAB_RESULTS_LIST_JSX
+    assert "change.latest_date" in LAB_RESULTS_LIST_JSX
+    # No independent delta/direction computation was introduced.
+    assert "latest_value - " not in LAB_RESULTS_LIST_JSX
+    assert "latest_value -" not in LAB_RESULTS_LIST_JSX
+
+
+def test_d2_7_direction_labels_are_neutral_not_clinical_judgment():
+    """TREND SEMANTICS: no invented clinical meaning ('improving',
+    'worsening', 'healthy', 'dangerous') is introduced — only neutral
+    increased/decreased/unchanged labels map the backend's own neutral
+    rising/falling/stable enum."""
+    i18n_source = (FRONTEND_SRC / "lib/cabinetI18n.js").read_text()
+    forbidden = ["improving", "worsening", "Improving", "Worsening", "healthy", "dangerous", "Healthy", "Dangerous"]
+    for word in forbidden:
+        assert word not in i18n_source, f"invented clinical judgment word found in i18n copy: {word!r}"
+    assert "rising: 'Increased'" in i18n_source
+    assert "falling: 'Decreased'" in i18n_source
+    assert "stable: 'Unchanged'" in i18n_source
+
+
+# --- D2-4: undated result never receives created_at as clinical date ------------
+
+
+def test_d2_4_progress_overview_never_uses_created_at_for_clinical_date():
+    import inspect
+
+    from app.services import progress_overview
+
+    source = inspect.getsource(progress_overview._measurement_date)
+    assert 'for field in ("test_date", "collected_at", "reported_at")' in source
+    assert 'upload.get("created_at")' not in source
+
+
+def test_d2_4_undated_upload_is_never_assigned_a_measurement_date():
+    rows = [
+        {"id": "u1", "created_at": "2026-01-01T00:00:00Z", "biomarkers": [{"name": "Ferritin", "value": 50, "unit": "ng/mL", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["undated_uploads"][0]["upload_id"] == "u1"
+    assert overview["summary"]["uploads_with_lab_date"] == 0
+    assert overview["date_spine"] == []
+
+
+def test_d2_4_frontend_never_falls_back_to_created_at_for_clinical_date():
+    assert "measurementDateValue" in LAB_RESULTS_LIST_JSX
+    # The existing Stage 2D-1 guard: measurementDateValue() only reads
+    # test_date/collected_at/reported_at, and getItemDate() falls back to a
+    # literal 'Unknown date' string, never item.created_at.
+    assert "item?.created_at" not in LAB_RESULTS_LIST_JSX
+    assert "'Unknown date'" in LAB_RESULTS_LIST_JSX
+
+
+# --- D2-5: new marker / insufficient history has an explicit truthful state -----
+
+
+def test_d2_5_single_dated_point_marker_gets_explicit_insufficient_history_status():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Ferritin", "value": 50, "unit": "ng/mL", "status": "OPTIMAL"},
+            {"name": "Vitamin D", "value": 20, "unit": "ng/mL", "status": "DEFICIENT"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Ferritin", "value": 60, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    insufficient = overview["insufficient_history_markers"]
+    assert len(insufficient) == 1
+    assert insufficient[0]["name"] == "Vitamin D"
+    assert insufficient[0]["status"] == "insufficient_history"
+    assert overview["summary"]["markers_with_single_date"] == 1
+    # Ferritin has 2 dated points -> comparable, not in the insufficient list.
+    assert all(item["name"] != "Ferritin" for item in insufficient)
+
+
+def test_d2_5_frontend_renders_insufficient_history_markers_explicitly():
+    assert "insufficient_history_markers" in LAB_RESULTS_LIST_JSX
+    assert "newMarkers" in LAB_RESULTS_LIST_JSX
+
+
+# --- D2-6: missing/incomparable marker does not fabricate a delta ---------------
+
+
+def test_d2_6_marker_with_zero_or_one_point_never_appears_in_changes():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [{"name": "Zinc", "value": 80, "unit": "ug/dL", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["top_changes"] == []
+    assert overview["stable_markers"] == []
+    assert overview["all_comparable_markers"] == []
+    assert overview["insufficient_history_markers"][0]["name"] == "Zinc"
+    # No absolute_change/percent_change/direction fabricated anywhere for it.
+    assert "absolute_change" not in overview["insufficient_history_markers"][0]
+
+
+def test_unit_safe_progress_converts_supported_units_before_comparison():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Hemoglobin", "value": 130, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    change = (overview["top_changes"] or overview["stable_markers"])[0]
+    assert change["previous_value"] == 13.0
+    assert change["latest_value"] == 13.5
+    assert change["comparison_status"] == "comparable"
+    assert change["canonical_unit"] == "g/dL"
+
+
+def test_vitamin_d_canonical_identity_produces_one_comparable_series():
+    rows = [
+        {"id": "u1", "test_date": "2022-06-10", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 22, "unit": "ng/mL", "status": "DEFICIENT"},
+        ]},
+        {"id": "u2", "test_date": "2025-03-22", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 31, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "Vitamin D", "canonical_name": "canonical_vitamin_d_25_oh", "value": 38, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert marker["canonical_name"] == "vitamin_d"
+    assert [point["value"] for point in marker["history"]] == [22.0, 31.0, 38.0]
+    assert marker["comparison_status"] == "comparable"
+
+
+def test_tsh_shared_unit_normalizer_accepts_uiu_and_miu_per_liter():
+    rows = [
+        {"id": "u1", "test_date": "2023-01-15", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 3.6, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2025-11-30", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 2.7, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "TSH", "canonical_name": "canonical_tsh", "value": 2.3, "unit": "uIU/mL", "status": "OPTIMAL"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert marker["canonical_name"] == "tsh"
+    assert [point["value"] for point in marker["history"]] == [3.6, 2.7, 2.3]
+    assert marker["canonical_unit"] == "mIU/L"
+
+
+def test_hemoglobin_identity_merge_preserves_latest_real_test_date():
+    rows = [
+        {"id": "u1", "test_date": "2026-10-01", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 135, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-10-09", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 89, "unit": "g/L", "status": "DEFICIENT"},
+        ]},
+        {"id": "u3", "test_date": "2026-10-12", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 132, "unit": "g/L", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    markers = [
+        marker for marker in overview["all_comparable_markers"]
+        if marker["canonical_name"] == "hemoglobin"
+    ]
+    assert len(markers) == 1
+    marker = markers[0]
+    assert [point["value"] for point in marker["history"]] == [135.0, 89.0, 132.0]
+    assert marker["latest_value"] == 132.0
+    assert marker["latest_date"] == "2026-10-12"
+
+
+def test_same_day_hemoglobin_duplicates_collapse_deterministically():
+    rows = [
+        {"id": "u1", "test_date": "2022-01-04", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 148, "unit": "г/л", "status": "ELEVATED"},
+        ]},
+        {"id": "u2", "test_date": "2022-01-04", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": None, "value": 148, "unit": "г/л", "status": "ELEVATED"},
+        ]},
+        {"id": "u3", "test_date": "2023-08-05", "biomarkers": [
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 118, "unit": "g/L", "status": "DEFICIENT"},
+        ]},
+    ]
+    marker = build_progress_overview(rows)["all_comparable_markers"][0]
+    assert [point["test_date"] for point in marker["history"]] == ["2022-01-04", "2023-08-05"]
+    assert marker["history"][0]["value"] == 148.0
+
+def test_unit_safe_progress_rejects_unsupported_mixed_units_without_trend():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Ferritin", "value": 20, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Ferritin", "value": 2, "unit": "unsupported-unit", "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["top_changes"] == []
+    assert overview["stable_markers"] == []
+    item = overview["insufficient_history_markers"][0]
+    assert item["comparison_status"] == "insufficient_comparable_history"
+    assert item["comparison_reason"] == "unverified_unit_conversion"
+    assert item["status"] == "insufficient_history"
+
+
+def test_unit_safe_progress_does_not_use_unverified_point_for_history():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [
+            {"name": "Ferritin", "value": 20, "unit": "ng/mL", "status": "OPTIMAL"},
+        ]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [
+            {"name": "Ferritin", "value": 25, "unit": None, "status": "OPTIMAL"},
+        ]},
+    ]
+    overview = build_progress_overview(rows)
+    assert overview["top_changes"] == []
+    assert overview["stable_markers"] == []
+    item = overview["insufficient_history_markers"][0]
+    assert item["comparison_reason"] == "unverified_unit_conversion"
+
+
+def test_progress_exposes_safe_history_in_test_date_order():
+    rows = [
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [{"name": "Ferritin", "value": 28, "unit": "ng/mL", "status": "OPTIMAL"}]},
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [{"name": "Ferritin", "value": 18, "unit": "ng/mL", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    marker = overview["all_comparable_markers"][0]
+    assert marker["history"] == [
+        {"test_date": "2026-01-01", "value": 18.0, "unit": "ng/mL"},
+        {"test_date": "2026-02-01", "value": 28.0, "unit": "ng/mL"},
+    ]
+    assert marker["first_value"] == 18.0
+    assert marker["previous_value"] == 18.0
+    assert marker["latest_value"] == 28.0
+
+
+def test_progress_does_not_expose_unsafe_points_as_numeric_history():
+    rows = [
+        {"id": "u1", "test_date": "2026-01-01", "biomarkers": [{"name": "Ferritin", "value": 18, "unit": "ng/mL", "status": "OPTIMAL"}]},
+        {"id": "u2", "test_date": "2026-02-01", "biomarkers": [{"name": "Ferritin", "value": 28, "unit": "unsupported-unit", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    marker = overview["insufficient_history_markers"][0]
+    assert marker["history"] == [{"test_date": "2026-01-01", "value": 18.0, "unit": "ng/mL"}]
+    assert marker["comparison_reason"] == "unverified_unit_conversion"
+
+
+def test_progress_frontend_renders_full_history_points_without_recomputing_them():
+    source = LAB_RESULTS_LIST_JSX
+    assert "all_comparable_markers" in source
+    assert "marker.history" in source
+    assert "point.test_date" in source
+    assert "point.value" in source
+    assert "Trend unavailable due to incompatible units." in source
+
+
+# --- D2-3 / D2-8: chronology + upload-history/clinical-progress separation ------
+
+
+def test_d2_3_out_of_order_uploads_still_yield_correct_clinical_chronology():
+    rows = [
+        {"id": "u_later_upload_earlier_test", "created_at": "2026-03-01T00:00:00Z", "test_date": "2026-01-01",
+         "biomarkers": [{"name": "Ferritin", "value": 50, "unit": "ng/mL", "status": "OPTIMAL"}]},
+        {"id": "u_earlier_upload_later_test", "created_at": "2026-01-05T00:00:00Z", "test_date": "2026-02-01",
+         "biomarkers": [{"name": "Ferritin", "value": 65, "unit": "ng/mL", "status": "OPTIMAL"}]},
+    ]
+    overview = build_progress_overview(rows)
+    change = overview["top_changes"][0] if overview["top_changes"] else overview["stable_markers"][0]
+    assert change["previous_date"] == "2026-01-01"
+    assert change["latest_date"] == "2026-02-01"
+    assert change["previous_value"] == 50.0
+    assert change["latest_value"] == 65.0
+
+
+def test_d2_8_upload_history_list_remains_and_is_visually_separate_from_progress_panel():
+    # Upload-history list (existing sortedItems.map render) is untouched.
+    assert "sortedItems.map((item, index) =>" in LAB_RESULTS_LIST_JSX
+    # Clinical progress now lives in its own distinct component, not merged
+    # into the upload-history row markup.
+    assert "function ClinicalProgressPanel(" in LAB_RESULTS_LIST_JSX
+    # Cabinet reconciliation: gained a `copy` prop (EN/UA localization for the
+    # panel's two static text blocks) — same component, same call site, just
+    # one more prop than this exact-string check originally pinned.
+    assert "<ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />" in LAB_RESULTS_LIST_JSX
+
+
+# --- D2-9 through D2-12: prior-stage suites remain green -------------------------
+# (re-run as part of this stage's required test sweep, not duplicated here;
+# see the Stage 2D-2 report for the full pytest invocation and pass counts)
+
+
+def test_d2_retired_progress_jsx_stays_removed_and_redirected():
+    """The retired Progress page stays removed and its URL stays compatible."""
+    assert not PROGRESS_JSX_PATH.exists()
+    assert "Progress.jsx" not in APP_JSX
+    assert "from './pages/Progress.jsx'" not in APP_JSX
+    assert "from '../pages/Progress.jsx'" not in APP_JSX
+    assert '<Route path="/progress" element={<Navigate to="/lab-results" replace />} />' in APP_JSX

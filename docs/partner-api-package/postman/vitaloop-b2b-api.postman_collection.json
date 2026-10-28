@@ -1,0 +1,220 @@
+{
+  "info": {
+    "name": "VITALOOP B2B Analyze Labs API",
+    "description": "Smoke tests for the VITALOOP B2B Analyze Labs API. Configure base_url and partner_api_key before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://staging-api.vitaloop.today"
+    },
+    {
+      "key": "partner_api_key",
+      "value": "replace-with-partner-api-key",
+      "type": "secret"
+    },
+    {
+      "key": "idempotency_key",
+      "value": "postman-smoke-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Valid analyze labs request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          },
+          {
+            "key": "X-Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/b2b/analyze-labs",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "b2b", "analyze-labs"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_user_id\": \"postman-user-001\",\n  \"biomarkers\": [\n    {\"name\": \"Ferritin\", \"value\": 12, \"unit\": \"ng/mL\", \"reference_range\": \"30-150\"},\n    {\"name\": \"Glucose\", \"value\": 92, \"unit\": \"mg/dL\", \"reference_range\": \"70-100\"}\n  ],\n  \"symptoms\": [\"fatigue\"],\n  \"metadata\": {\"source_lab\": \"postman\", \"integration_version\": \"pilot-v1\"}\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('has analysis_id', function () { pm.expect(body.analysis_id).to.be.a('string'); });",
+              "pm.test('has disclaimer', function () { pm.expect(body.disclaimer).to.include('diagnosis'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Idempotency replay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          },
+          {
+            "key": "X-Idempotency-Key",
+            "value": "{{idempotency_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/b2b/analyze-labs",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "b2b", "analyze-labs"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_user_id\": \"postman-user-001\",\n  \"biomarkers\": [\n    {\"name\": \"Ferritin\", \"value\": 12, \"unit\": \"ng/mL\", \"reference_range\": \"30-150\"},\n    {\"name\": \"Glucose\", \"value\": 92, \"unit\": \"mg/dL\", \"reference_range\": \"70-100\"}\n  ],\n  \"symptoms\": [\"fatigue\"],\n  \"metadata\": {\"source_lab\": \"postman\", \"integration_version\": \"pilot-v1\"}\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 or 409 if still processing', function () { pm.expect([200, 409]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid API key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "invalid-test-key"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/b2b/analyze-labs",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "b2b", "analyze-labs"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_user_id\": \"postman-user-invalid-key\",\n  \"biomarkers\": [{\"name\": \"Ferritin\", \"value\": 12, \"unit\": \"ng/mL\"}]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wrong unit",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/b2b/analyze-labs",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "b2b", "analyze-labs"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_user_id\": \"postman-user-wrong-unit\",\n  \"biomarkers\": [{\"name\": \"Ferritin\", \"value\": 12, \"unit\": \"bananas\"}]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+              "pm.test('invalid unit code', function () { pm.expect(JSON.stringify(pm.response.json())).to.include('INVALID_BIOMARKER_UNIT'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rate limit probe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          },
+          {
+            "key": "X-Idempotency-Key",
+            "value": "rate-limit-probe-{{$timestamp}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/b2b/analyze-labs",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "b2b", "analyze-labs"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_user_id\": \"postman-user-rate-limit\",\n  \"biomarkers\": [{\"name\": \"Ferritin\", \"value\": 12, \"unit\": \"ng/mL\", \"reference_range\": \"30-150\"}]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200 or 429 depending on configured limit', function () { pm.expect([200, 429]).to.include(pm.response.code); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

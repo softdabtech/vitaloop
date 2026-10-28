@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #vitaloop-boot-cover {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background: #f8fafc;
+        transition: opacity 160ms ease;
+      }
+      #vitaloop-boot-cover[data-ready="true"] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #vitaloop-boot-cover-mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        object-fit: contain;
+      }
+    </style>
+    <!-- Primary SEO -->
+    <title>Clinical Reasoning for Blood Tests & Symptoms | VITALOOP</title>
+    <meta name="description" content="Start with symptoms or upload blood test results. Get an explainable clinical reasoning map, biomarker context, lab discussion guidance, and next steps you can track." data-rh="true" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" data-rh="true" />
+    <meta name="author" content="VITALOOP" />
+    <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A0F1C" media="(prefers-color-scheme: dark)" />
+    <meta name="application-name" content="Vitaloop" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vitaloop" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" href="/images/favicon_1.png?v=20260525" />
+    <link rel="alternate icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=20260601-brand" />
+    <link rel="shortcut icon" href="/images/favicon_1.png?v=20260525" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png?v=20260601-brand" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png?v=20260601-brand" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png?v=20260601-brand" />
+    <link rel="canonical" href="https://vitaloop.today/" data-rh="true" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" data-rh="true" />
+    <meta property="og:site_name" content="VITALOOP" data-rh="true" />
+    <meta property="og:title" content="Clinical Reasoning for Blood Tests & Symptoms | VITALOOP" data-rh="true" />
+    <meta property="og:description" content="Connect symptoms, blood test results, evidence gaps, biomarker explanations, and weekly progress in one clear health action loop." data-rh="true" />
+    <meta property="og:url" content="https://vitaloop.today/" data-rh="true" />
+    <meta property="og:image" content="https://vitaloop.today/vitaloop-social-preview-2026-06.png" data-rh="true" />
+    <meta property="og:image:width" content="1200" data-rh="true" />
+    <meta property="og:image:height" content="630" data-rh="true" />
+    <meta property="og:image:alt" content="VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking" data-rh="true" />
+    <meta property="og:locale" content="en_US" data-rh="true" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" data-rh="true" />
+    <meta name="twitter:site" content="@vitaloop_today" data-rh="true" />
+    <meta name="twitter:title" content="Clinical Reasoning for Blood Tests & Symptoms | VITALOOP" data-rh="true" />
+    <meta name="twitter:description" content="Understand symptoms and blood test results, then follow a clear reasoning map for what to do next." data-rh="true" />
+    <meta name="twitter:image" content="https://vitaloop.today/vitaloop-social-preview-2026-06.png" data-rh="true" />
+    <meta name="twitter:image:alt" content="VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking" data-rh="true" />
+
+    <!-- Hreflang -->
+    <link rel="alternate" hreflang="en" href="https://vitaloop.today/" />
+    <link rel="alternate" hreflang="uk-UA" href="https://ua.vitaloop.today/" />
+    <link rel="alternate" hreflang="x-default" href="https://vitaloop.today/" />
+
+    <!-- Performance: preconnect -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+    <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": "https://vitaloop.today/#organization",
+      "name": "VITALOOP",
+      "url": "https://vitaloop.today",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://vitaloop.today/icons/icon-192.png",
+        "width": 192,
+        "height": 192
+      },
+      "description": "VITALOOP combines symptom intake, biomarker reasoning, evidence gaps, lab explanations, and longitudinal progress tracking.",
+      "foundingDate": "2024",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "email": "hello@vitaloop.today",
+        "availableLanguage": ["English"]
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: WebSite with SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://vitaloop.today/#website",
+      "url": "https://vitaloop.today",
+      "name": "VITALOOP",
+      "description": "Symptom-first clinical reasoning platform for biomarker explanations, evidence gaps, and trackable action plans",
+      "publisher": {
+        "@id": "https://vitaloop.today/#organization"
+      },
+      "inLanguage": "en-US"
+    }
+    </script>
+
+    <!-- JSON-LD: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "@id": "https://vitaloop.today/#app",
+      "name": "VITALOOP",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web",
+      "url": "https://vitaloop.today",
+      "description": "Start with symptoms, understand what lab markers may be worth checking, upload results, and receive a personalized health action plan with longitudinal tracking.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free Plan",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "1 active upload, basic biomarker summary, core dashboard"
+        },
+        {
+          "@type": "Offer",
+          "name": "Premium",
+          "price": "9.99",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "9.99",
+            "priceCurrency": "USD",
+            "unitText": "MONTH"
+          },
+          "description": "Unlimited uploads, explainable protocol, weekly check-ins, priority insights"
+        }
+      ],
+      "publisher": {
+        "@id": "https://vitaloop.today/#organization"
+      }
+    }
+    </script>
+
+    <!-- Analytics queue. External analytics load after the initial user experience. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
+      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
+
+      if (!window.__fbPixelInit) {
+        window.__fbPixelInit = true;
+        window.fbq = window.fbq || function(){window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments)};
+        if (!window._fbq) window._fbq = window.fbq;
+        window.fbq.push = window.fbq;
+        window.fbq.loaded = true;
+        window.fbq.version = '2.0';
+        window.fbq.queue = window.fbq.queue || [];
+        fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
+        fbq('track', 'PageView');
+      }
+
+      // Analytics loader — called by React CookieConsent after consent decision.
+      // Consent flags: window.__vitaloopConsent = { analytics, marketing, functional }
+      window.loadVitaloopAnalytics = function(consent) {
+        consent = consent || {};
+        if (window.__vitaloopAnalyticsLoaded) return;
+        window.__vitaloopAnalyticsLoaded = true;
+
+        var scripts = [];
+        if (consent.analytics !== false) {
+          scripts.push('https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE');
+          scripts.push('https://t.contentsquare.net/uxa/e823a98ecd1a5.js');
+        } else {
+          // GA opt-out
+          window['ga-disable-G-LG0BCMBJJE'] = true;
+        }
+        if (consent.marketing !== false) {
+          scripts.push('https://connect.facebook.net/en_US/fbevents.js');
+        } else {
+          // Disable FB pixel tracking
+          if (window.fbq) { window.fbq = function(){}; }
+        }
+        scripts.forEach(function(src) {
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = src;
+          document.head.appendChild(script);
+        });
+      };
+
+      // Fallback: load analytics 30s after page load ONLY if user had previously consented.
+      window.addEventListener('load', function() {
+        window.setTimeout(function() {
+          try {
+            var stored = JSON.parse(localStorage.getItem('vitaloop-cookie-consent') || 'null');
+            if (stored && stored.decided) {
+              window.loadVitaloopAnalytics(stored);
+            }
+          } catch(e) {}
+        }, 30000);
+      }, { once: true });
+    </script>
+  </head>
+  <body>
+    <div id="vitaloop-boot-cover" aria-hidden="true">
+      <img id="vitaloop-boot-cover-mark" src="/images/favicon_1.png?v=20260525" width="44" height="44" alt="" />
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  
+<script id="vitaloop-cookie-consent-script">
+(function(){
+  var STORAGE_KEY = 'vitaloop-cookie-consent';
+  var CONSENT_VERSION = '1';
+
+  function stored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var p = JSON.parse(raw);
+      return (p && p.version === CONSENT_VERSION && p.decided) ? p : null;
+    } catch(e) { return null; }
+  }
+
+  function save(prefs) {
+    var rec = Object.assign({}, prefs, { version: CONSENT_VERSION, timestamp: new Date().toISOString() });
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); } catch(e) {}
+    if (typeof window.loadVitaloopAnalytics === 'function') {
+      window.loadVitaloopAnalytics(rec);
+    }
+  }
+
+  function destroy() {
+    var el = document.getElementById('vl-cookie-banner');
+    if (el) el.remove();
+    delete document.body.dataset.vtlCookieBanner;
+    window.removeEventListener('resize', updatePlacement);
+  }
+
+  function updatePlacement() {
+    var el = document.getElementById('vl-cookie-banner');
+    if (!el) return;
+    var isCabinet = !!document.querySelector('.vtl-cabinet-content');
+    var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    el.style.bottom = isCabinet && isMobile
+      ? 'calc(var(--vtl-bottom-bar-height) + env(safe-area-inset-bottom) + 12px)'
+      : '0';
+  }
+
+  function acceptAll() { save({ decided:true, essential:true, analytics:true, marketing:true, functional:true }); destroy(); }
+  function rejectOptional() { save({ decided:true, essential:true, analytics:false, marketing:false, functional:false }); destroy(); }
+
+  function isUk() {
+    var h = (window.location.hostname || '').toLowerCase();
+    var s = (window.location.search || '');
+    return h === 'ua.vitaloop.today' || s.indexOf('lang=uk') !== -1;
+  }
+
+  var L = isUk() ? {
+    title: 'Ми використовуємо cookie',
+    text: 'Необхідні cookie підтримують роботу VITALOOP. Додаткові аналітичні й маркетингові cookie допомагають покращувати продукт і вимірювати кампанії.',
+    acceptAll: 'Прийняти всі',
+    rejectOpt: 'Відхилити необов’язкові',
+    manage: 'Налаштування',
+    privacy: 'Конфіденційність',
+    cookie: 'Налаштування Cookie',
+    saveBtn: 'Зберегти',
+    essLabel: 'Необхідні', essDesc: 'Для авторизації та безпеки. Не можна вимкнути.',
+    anaLabel: 'Аналітика', anaDesc: 'Google Analytics та ContentSquare — агреговані дані.',
+    mktLabel: 'Маркетинг', mktDesc: 'Meta Pixel для звіту про конверсії.',
+    funLabel: 'Функціональні', funDesc: 'Мова, регіон та параметри відображення.',
+    alwaysOn: 'Завжди увімк.',
+    back: '← Назад'
+  } : {
+    title: 'We use cookies',
+    text: 'Essential cookies keep VITALOOP running. Optional analytics and marketing cookies help us improve the product and measure campaigns.',
+    acceptAll: 'Accept All',
+    rejectOpt: 'Reject Non-Essential',
+    manage: 'Manage Settings',
+    privacy: 'Privacy Policy',
+    cookie: 'Cookie Policy',
+    saveBtn: 'Save Preferences',
+    essLabel: 'Essential', essDesc: 'Required for login, security and core features. Cannot be disabled.',
+    anaLabel: 'Analytics', anaDesc: 'Google Analytics & ContentSquare — aggregate usage data only.',
+    mktLabel: 'Marketing', mktDesc: 'Meta Pixel for conversion tracking. No personal data sold.',
+    funLabel: 'Functional', funDesc: 'Language, region and display preference memory.',
+    alwaysOn: 'Always on',
+    back: '← Back'
+  };
+
+  function toggle(id, initial) {
+    var state = initial;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.role = 'switch';
+    btn.setAttribute('aria-checked', state ? 'true' : 'false');
+    btn.setAttribute('data-vl-toggle', id);
+    btn.style.cssText = 'position:relative;display:inline-flex;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;padding:0;transition:background .2s;flex-shrink:0;background:' + (state ? '#0d9488' : '#d1d5db');
+    var dot = document.createElement('span');
+    dot.style.cssText = 'position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s;left:' + (state ? '23px' : '3px');
+    btn.appendChild(dot);
+    btn.addEventListener('click', function(){
+      state = !state;
+      btn.style.background = state ? '#0d9488' : '#d1d5db';
+      dot.style.left = state ? '23px' : '3px';
+      btn.setAttribute('aria-checked', state ? 'true' : 'false');
+    });
+    btn.getValue = function(){ return state; };
+    return btn;
+  }
+
+  function buildSettingsPanel(container) {
+    container.innerHTML = '';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 20px 60px rgba(15,23,42,.22);padding:20px;width:100%;max-width:520px;max-height:min(78vh,560px);overflow-y:auto;box-sizing:border-box;';
+
+    var backBtn = document.createElement('button');
+    backBtn.textContent = L.back;
+    backBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #e2e8f0;background:transparent;cursor:pointer;color:#64748b;font-size:13px;font-weight:600;margin-bottom:12px;';
+    backBtn.addEventListener('click', function(){ buildBanner(container); });
+
+    var h2 = document.createElement('h2');
+    h2.textContent = L.title;
+    h2.style.cssText = 'margin:0 0 6px;font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+
+    var sub = document.createElement('p');
+    sub.textContent = L.text;
+    sub.style.cssText = 'margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.55;';
+
+    var cats = [
+      { key:'essential', label:L.essLabel, desc:L.essDesc, locked:true, init:true },
+      { key:'analytics', label:L.anaLabel, desc:L.anaDesc, locked:false, init:true },
+      { key:'marketing', label:L.mktLabel, desc:L.mktDesc, locked:false, init:true },
+      { key:'functional', label:L.funLabel, desc:L.funDesc, locked:false, init:true },
+    ];
+
+    var toggles = {};
+    var rows = document.createElement('div');
+    rows.style.cssText = 'display:flex;flex-direction:column;gap:12px;margin-bottom:20px;';
+
+    cats.forEach(function(c){
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;gap:16px;padding:14px 16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;';
+      var info = document.createElement('div');
+      info.style.flex = '1';
+      var head = document.createElement('div');
+      head.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      var lbl = document.createElement('span');
+      lbl.textContent = c.label;
+      lbl.style.cssText = 'font-weight:700;font-size:14px;color:#0f172a;';
+      head.appendChild(lbl);
+      if (c.locked) {
+        var chip = document.createElement('span');
+        chip.textContent = L.alwaysOn;
+        chip.style.cssText = 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0d9488;background:#f0fdfa;border:1px solid #99f6e4;border-radius:100px;padding:2px 8px;';
+        head.appendChild(chip);
+      }
+      var desc = document.createElement('p');
+      desc.textContent = c.desc;
+      desc.style.cssText = 'margin:4px 0 0;font-size:12.5px;color:#64748b;line-height:1.5;';
+      info.appendChild(head);
+      info.appendChild(desc);
+
+      var ctrl = document.createElement('div');
+      ctrl.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+
+      if (c.locked) {
+        var lt = document.createElement('button');
+        lt.type = 'button';
+        lt.setAttribute('aria-checked', 'true');
+        lt.style.cssText = 'position:relative;display:inline-flex;width:44px;height:24px;border-radius:12px;border:none;cursor:not-allowed;padding:0;background:#9ca3af;flex-shrink:0;';
+        var ld = document.createElement('span');
+        ld.style.cssText = 'position:absolute;top:3px;left:23px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);';
+        lt.appendChild(ld);
+        ctrl.appendChild(lt);
+      } else {
+        var tg = toggle(c.key, c.init);
+        toggles[c.key] = tg;
+        ctrl.appendChild(tg);
+      }
+      row.appendChild(info);
+      row.appendChild(ctrl);
+      rows.appendChild(row);
+    });
+
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = L.saveBtn;
+    saveBtn.style.cssText = PRIMARY_BTN;
+    saveBtn.addEventListener('click', function(){
+      save({ decided:true, essential:true,
+        analytics: toggles.analytics ? toggles.analytics.getValue() : false,
+        marketing: toggles.marketing ? toggles.marketing.getValue() : false,
+        functional: toggles.functional ? toggles.functional.getValue() : false });
+      destroy();
+    });
+
+    var allBtn = document.createElement('button');
+    allBtn.textContent = L.acceptAll;
+    allBtn.style.cssText = SECONDARY_BTN;
+    allBtn.addEventListener('click', acceptAll);
+
+    btnRow.appendChild(saveBtn);
+    btnRow.appendChild(allBtn);
+    panel.appendChild(backBtn);
+    panel.appendChild(h2);
+    panel.appendChild(sub);
+    panel.appendChild(rows);
+    panel.appendChild(btnRow);
+    container.appendChild(panel);
+  }
+
+  function buildBanner(container) {
+    container.innerHTML = '';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 45px rgba(15,23,42,.18);padding:12px 14px;width:min(100%,620px);max-width:calc(100vw - 24px);max-height:min(30vh,220px);overflow:auto;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;';
+
+    var top = document.createElement('div');
+    top.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
+    var textBlock = document.createElement('div');
+    textBlock.style.flex = '1';
+    var h2 = document.createElement('h2');
+    h2.textContent = L.title;
+    h2.style.cssText = 'margin:0;font-size:14.5px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+    var p = document.createElement('p');
+    p.style.cssText = 'margin:4px 0 0;font-size:12px;color:#475569;line-height:1.4;max-width:520px;';
+    p.textContent = L.text + ' ';
+    var privA = document.createElement('a');
+    privA.href = '/privacy-policy/'; privA.target = '_blank'; privA.rel = 'noreferrer';
+    privA.textContent = L.privacy;
+    privA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
+    var sep = document.createTextNode(' · ');
+    var cookA = document.createElement('a');
+    cookA.href = '/privacy-policy/#cookies'; cookA.target = '_blank'; cookA.rel = 'noreferrer';
+    cookA.textContent = L.cookie;
+    cookA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
+    p.appendChild(privA); p.appendChild(sep); p.appendChild(cookA);
+    textBlock.appendChild(h2); textBlock.appendChild(p);
+    top.appendChild(textBlock);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;';
+
+    var aBtn = document.createElement('button'); aBtn.textContent = L.acceptAll; aBtn.style.cssText = PRIMARY_BTN;
+    aBtn.addEventListener('click', acceptAll);
+    var rBtn = document.createElement('button'); rBtn.textContent = L.rejectOpt; rBtn.style.cssText = OUTLINE_BTN;
+    rBtn.addEventListener('click', rejectOptional);
+    var mBtn = document.createElement('button'); mBtn.textContent = L.manage; mBtn.style.cssText = GHOST_BTN;
+    mBtn.addEventListener('click', function(){ buildSettingsPanel(container); });
+
+    btns.appendChild(aBtn); btns.appendChild(rBtn); btns.appendChild(mBtn);
+    inner.appendChild(top); inner.appendChild(btns);
+    container.appendChild(inner);
+  }
+
+  var PRIMARY_BTN = 'padding:8px 14px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:12px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
+  var SECONDARY_BTN = 'padding:8px 14px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:12px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
+  var OUTLINE_BTN = 'padding:8px 14px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:12px;white-space:nowrap;font-family:inherit;';
+  var GHOST_BTN = 'padding:8px 8px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#64748b;font-weight:600;font-size:12px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
+
+  if (stored()) return; // Already decided — don't show
+
+  function init() {
+    var wrap = document.createElement('div');
+    wrap.id = 'vl-cookie-banner';
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 12px max(12px,env(safe-area-inset-bottom));display:flex;justify-content:flex-end;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    buildBanner(wrap);
+    document.body.appendChild(wrap);
+    document.body.dataset.vtlCookieBanner = 'open';
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 800); });
+  } else {
+    setTimeout(init, 800);
+  }
+})();
+</script>
+
+</body>
+</html>

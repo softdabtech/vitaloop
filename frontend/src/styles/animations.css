@@ -1,0 +1,262 @@
+/* ============================================
+   VITALOOP Design System — Variables + Animations
+   ============================================ */
+
+:root {
+  --teal-900: #04342C;
+  --teal-800: #085041;
+  --teal-600: #0F6E56;
+  --teal-500: #1D9E75;
+  --teal-400: #2DB887;
+  --teal-300: #5DCAA5;
+  --teal-100: #9FE1CB;
+  --teal-50:  #E1F5EE;
+
+  --gray-950: #0a0a0a;
+  --gray-900: #1d1d1f;
+  --gray-700: #3d3d3f;
+  --gray-500: #6e6e73;
+  --gray-300: #aeaeb2;
+  --gray-100: #d2d2d7;
+  --gray-50:  #f5f5f7;
+  --white:    #ffffff;
+}
+
+/* ── Scroll reveal ── */
+.reveal {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.reveal.reveal-ready {
+  opacity: 0;
+  transform: translateY(28px);
+}
+.reveal.reveal-ready.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.stagger-children > *:nth-child(1) { transition-delay: 0ms; }
+.stagger-children > *:nth-child(2) { transition-delay: 80ms; }
+.stagger-children > *:nth-child(3) { transition-delay: 160ms; }
+.stagger-children > *:nth-child(4) { transition-delay: 240ms; }
+.stagger-children > *:nth-child(5) { transition-delay: 320ms; }
+.stagger-children > *:nth-child(6) { transition-delay: 400ms; }
+
+/* ── Marquee ticker ── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.33%); }
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 40s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ── Float (hero visual) ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.floating {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Pulse ring (avatar zones) ── */
+@keyframes zonePulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+.zone-pulse {
+  /* animation removed - static display only */
+}
+
+/* ── Upload ring pulse ── */
+@keyframes ringExpand {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.6); }
+}
+.ring-pulse {
+  animation: ringExpand 1.6s ease-out infinite;
+}
+
+/* ── Typewriter lines ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.typewriter-line {
+  opacity: 0;
+  animation: fadeSlideIn 0.4s ease forwards;
+}
+.typewriter-line:nth-child(1) { animation-delay: 0.4s; }
+.typewriter-line:nth-child(2) { animation-delay: 1.0s; }
+.typewriter-line:nth-child(3) { animation-delay: 1.6s; }
+.typewriter-line:nth-child(4) { animation-delay: 2.2s; }
+.typewriter-badge              { animation: fadeSlideIn 0.4s ease 2.8s forwards; opacity: 0; }
+
+/* ── Count-up trigger ── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-anim {
+  animation: countUp 0.5s ease forwards;
+}
+
+/* ── Progress bar fill ── */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+.fill-bar {
+  animation: fillBar 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: 0.3s;
+  animation-fill-mode: both;
+  will-change: width;
+  width: 0%;
+}
+
+/* ── Reduce motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .stagger-children > * {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .ticker-track { animation: none; }
+  .zone-pulse   { animation: none; }
+  .floating     { animation: none; }
+  .typewriter-line { animation: none; opacity: 1; }
+  .typewriter-badge { animation: none; opacity: 1; }
+}
+
+/* ── Responsive section spacing ── */
+:root {
+  --py-xl:   160px;
+  --py-lg:   120px;
+  --py-md:    96px;
+  --py-sm:    80px;
+  --hero-pt: 120px;
+  --hero-pb:  96px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --py-xl:   72px;
+    --py-lg:   64px;
+    --py-md:   56px;
+    --py-sm:   48px;
+    --hero-pt: 88px;
+    --hero-pb: 56px;
+  }
+
+  /* Hide decorative side icons on mobile */
+  .hero-deco { display: none; }
+
+  /* Collapse loop diagram to 2×2 on mobile */
+  .longevity-loop { grid-template-columns: 1fr 1fr !important; }
+
+  /* Show 1 testimonial card at a time on mobile */
+  .testimonial-grid { grid-template-columns: 1fr !important; }
+
+  /* Hide step connector on stacked mobile layout */
+  .how-step-connector { display: none; }
+
+}
+
+@media (min-width: 768px) {
+  .how-step-row {
+    position: relative;
+  }
+
+  .how-step-connector {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 1.5px;
+    background: var(--teal-300);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+  }
+
+  /* ── Hero radial glow entrance ── */
+  @keyframes hero-glow-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 0.18; transform: scale(1); }
+  }
+  .hero-radial-glow {
+    animation: hero-glow-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* ── CTA section glow pulse ── */
+  @keyframes cta-breathe {
+    0%,100% { opacity: 0.35; transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(1.04); }
+  }
+  .cta-glow {
+    animation: cta-breathe 6s ease-in-out infinite;
+  }
+
+  /* ── Primary button ripple ── */
+  .btn-primary {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 70%);
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.4s;
+  }
+  .btn-primary:hover::after {
+    transform: scale(2.5);
+    opacity: 1;
+  }
+
+  /* ── Mobile responsive ── */
+  @media (max-width: 767px) {
+    .hero-cta-row {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .hero-proof-divider {
+      display: none !important;
+    }
+    .final-cta-btn {
+      width: 100%;
+      justify-content: center;
+    }
+    .pricing-scroll-wrapper {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: 16px !important;
+      padding-bottom: 12px;
+    }
+    .pricing-scroll-wrapper > * {
+      flex: 0 0 min(85vw, 320px);
+      scroll-snap-align: start;
+    }
+  }
+
+  /* ── Reduced motion global override ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
